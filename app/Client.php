@@ -1,0 +1,23 @@
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Client extends Model
+{
+    /* Accediendo a la base de datos por default del proyecto */
+    protected $connection = 'mysql';
+    
+    /* public function user(){
+        return $this->hasOne(User::class);
+    } */
+
+    public function contacts(){
+        return $this->belongsToMany('App\Client');
+    }
+
+    protected $hidden = [
+        'id','user_id','created_at', 'updated_at',
+    ];
+}
