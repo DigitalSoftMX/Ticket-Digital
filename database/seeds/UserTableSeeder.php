@@ -25,7 +25,6 @@ class UserTableSeeder extends Seeder
         $user->phone = '';
         $user->email = 'admin@material.com';
         $user->active = '1';
-        $user->birthdate='01-01-0000';
         $user->remember_token = '';
         $user->email_verified_at = now();
         $user->created_at = now();
