@@ -12,7 +12,10 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+// Rutas del usuario, login, registro y cierre de sesion
+Route::post('login', 'Api\AuthController@login');
+Route::post('register', 'Api\AuthController@register');
+Route::get('logout', 'Api\AuthController@logout');
 
-Route::post('login','Api\AuthController@login');
-Route::post('register','Api\AuthController@register');
-Route::get('logout','Api\AuthController@logout');
+// Rutas del main, princial, dashboard o home
+Route::get('main','Api\MainController@main')->middleware('jwtAuth');
