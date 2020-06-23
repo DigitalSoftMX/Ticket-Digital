@@ -20,7 +20,7 @@ class CreateClientsTable extends Migration
             $table->integer('current_balance');
             $table->integer('points');
             $table->string('image_qr');
-            $table->string('birthdate');
+            $table->string('birthdate')->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')

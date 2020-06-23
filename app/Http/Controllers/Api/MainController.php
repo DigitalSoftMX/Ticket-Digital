@@ -12,7 +12,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class MainController extends Controller
 {
     // funcion para obtener informacion del usuario hacia la pagina princial
-    public function main(Request $request){
+    public function main(){
         try {
             return response()->json([
                 'ok' => true,
