@@ -13,11 +13,15 @@ class Client extends Model
         return $this->hasOne(User::class);
     } */
 
+    public function historyDeposits(){
+        return $this->belongsTo(UserHistoryDeposit::class);
+    }
+
     public function contacts(){
         return $this->belongsToMany('App\Client');
     }
 
     protected $hidden = [
-        'id','user_id','created_at', 'updated_at',
+        'user_id','created_at', 'updated_at',
     ];
 }

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 /* La clase implementa un Interface de JWTSubject */
+
 class User extends Authenticatable implements JWTSubject
 {
     /* Accediendo a la base de datos por default del proyecto */
@@ -15,33 +16,37 @@ class User extends Authenticatable implements JWTSubject
     use Notifiable;
 
     /* Relacion a muchos para el rol del usuario */
-    public function roles(){
+    public function roles()
+    {
         return $this->belongsToMany('App\Role');
     }
 
     /* Relacion usuario cliente */
-    public function client(){
+    public function client()
+    {
         return $this->hasOne(Client::class);
     }
 
     /* funcion que pregunta si el rol esta autorizado */
-    public function authorizeRoles($roles){
-        if($this->hasAnyRole($roles)){
+    public function authorizeRoles($roles)
+    {
+        if ($this->hasAnyRole($roles)) {
             return true;
         }
-        abort(401,'This action is unauthorized');
+        abort(401, 'This action is unauthorized');
     }
 
     /* funcion para buscar el rol del usuario */
-    public function hasAnyRole($roles){
-        if(is_array($roles)){
+    public function hasAnyRole($roles)
+    {
+        if (is_array($roles)) {
             foreach ($roles as $role) {
-                if($this->hasRole($role)){
+                if ($this->hasRole($role)) {
                     return true;
                 }
             }
-        }else{
-            if($this->hasRole($roles)){
+        } else {
+            if ($this->hasRole($roles)) {
                 return true;
             }
         }
@@ -49,8 +54,9 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /* funcion para saber si el nombre del rol existe */
-    public function hasRole($role){
-        if($this->roles()->where('name',$role)->first()){
+    public function hasRole($role)
+    {
+        if ($this->roles()->where('name', $role)->first()) {
             return true;
         }
         return false;
@@ -62,7 +68,7 @@ class User extends Authenticatable implements JWTSubject
      * @var array
      */
     protected $fillable = [
-        'id','name', 'first_surname', 'second_surname','username', 'email', 'sex','phone', 'active', 'password',
+        'id', 'name', 'first_surname', 'second_surname', 'username', 'email', 'sex', 'phone', 'active', 'password',
     ];
 
     /**
@@ -71,7 +77,7 @@ class User extends Authenticatable implements JWTSubject
      * @var array
      */
     protected $hidden = [
-        'active','password', 'remember_token','email_verified_at',
+        'active', 'password', 'remember_token', 'email_verified_at', 'created_at', 'updated_at'
     ];
 
     /**

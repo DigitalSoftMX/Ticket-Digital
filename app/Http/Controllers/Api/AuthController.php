@@ -9,7 +9,6 @@ use App\Http\Controllers\Controller;
 use App\Role;
 use App\User;
 use Exception;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
