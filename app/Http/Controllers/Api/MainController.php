@@ -43,7 +43,7 @@ class MainController extends Controller
         $user->client->update();
         return response()->json([
             'ok' => true,
-            'message' => 'Salgo agregado correctamente'
+            'message' => 'Saldo agregado correctamente'
         ]);
     }
 }
