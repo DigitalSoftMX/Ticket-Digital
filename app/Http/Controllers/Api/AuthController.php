@@ -121,7 +121,7 @@ class AuthController extends Controller
         $client->membership = $data->image;
         $client->current_balance = 0;
         /* Falta obtener los puntos del cliente */
-        $client->points = 100;
+        $client->points = 0;
         /* Verificar la imagen qr del cliente */
         $client->image_qr = $data->image;
         /* El cumpleaños esta en la tabla usuarios */

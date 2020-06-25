@@ -63,29 +63,13 @@ return [
             'bucket' => env('AWS_BUCKET'),
             'url' => env('AWS_URL'),
         ],
-
-        'estaciones' => [
+        // Directorio de almacenamiento de archivos (imagenes de pago de los clientes)
+        'payments' => [
             'driver' => 'local',
-            'root' => storage_path('app/public/abonos'),
+            'root' => storage_path('app/public/payment'),
             'url' => env('APP_URL').'/storage',
             'visibility' => 'public',
         ],
-
-        'facturas_pdf' => [
-            'driver' => 'local',
-            'root' => storage_path('app/public/facturas_pdf'),
-            'url' => env('APP_URL').'/storage',
-            'visibility' => 'public',
-        ],
-
-        'facturas_xml' => [
-            'driver' => 'local',
-            'root' => storage_path('app/public/facturas_xml'),
-            'url' => env('APP_URL').'/storage',
-            'visibility' => 'public',
-        ],
-
-
 
     ],
 

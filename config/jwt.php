@@ -101,7 +101,8 @@ return [
     |
     */
 
-    'ttl' => env('JWT_TTL', 60),
+    // Cambia el tiempo de vida del token
+    'ttl' => env('JWT_TTL', null),
 
     /*
     |--------------------------------------------------------------------------
@@ -150,7 +151,8 @@ return [
     'required_claims' => [
         'iss',
         'iat',
-        'exp',
+        //llamada a la expiracion del token
+        //'exp',
         'nbf',
         'sub',
         'jti',

@@ -37,35 +37,58 @@ class MainController extends Controller
         ]);
     }
 
+    // Funcion para realizar un abono a la cuenta de un usuario
     public function pay(Request $request)
     {
-        // Comprobar que el saldo sea un multiplo de 100
-        if ($request->deposit % 100 != 0 || $request->deposit <= 0) {
+        // Comprobar que el saldo sea un multiplo de 100 y mayor a cero
+        if ($request->deposit % 100 == 0 && $request->deposit > 0) {
+            // Obteniendo el archivo de imagen de pago
+            $file = $request->file('image');
+            // Validando que el usuario subio un archivo
+            if ($file != NULL) {
+                // Validando que el archivo es de tipo imagen
+                if ((strpos($file->getClientMimeType(), 'image')) === false) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => 'El archivo no es una imagen'
+                    ]);
+                } else {
+                    //obtenemos el nombre del archivo
+                    // $nombre = $file->getClientOriginalName();        
+                    $user = User::find($request->id_user);
+                    // Verifica si el usuario es el correcto
+                    if (Auth::user()->id != $request->id_user) {
+                        return response()->json([
+                            'ok' => false,
+                            'message' => 'Acceso no autorizado'
+                        ]);
+                    }
+                    // Registrando en un historial los abonos del cliente
+                    $history = new UserHistoryDeposit();
+                    $history->client_id = $user->client->id;
+                    $history->balance = $request->deposit;
+                    // Falta guardar la imagen de pago
+                    $history->station_id = $request->id_station;
+                    $history->save();
+                    // Actualizando el saldo del usuario
+                    $user->client->current_balance += $request->deposit;
+                    $user->client->update();
+                    return response()->json([
+                        'ok' => true,
+                        'message' => 'Saldo agregado correctamente'
+                    ]);
+                }
+            } else {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Debe subir su comprobante'
+                ]);
+            }
+        } else {
             return response()->json([
                 'ok' => false,
                 'message' => 'La cantidad debe ser multiplo de $100'
             ]);
         }
-        $user = User::find($request->id_user);
-        // Verifica si el usuario es el correcto
-        if (Auth::user()->id != $request->id_user) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Acceso no autorizado'
-            ]);
-        }
-        // Registrando en un historial los abonos del cliente
-        $history = new UserHistoryDeposit();
-        $history->client_id = $user->client->id;
-        $history->balance = $request->deposit;
-        $history->station_id = $request->id_station;
-        $history->save();
-        // Actualizando el saldo del usuario
-        $user->client->current_balance += $request->deposit;
-        $user->client->update();
-        return response()->json([
-            'ok' => true,
-            'message' => 'Saldo agregado correctamente'
-        ]);
     }
 }
