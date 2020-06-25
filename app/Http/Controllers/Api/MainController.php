@@ -28,7 +28,6 @@ class MainController extends Controller
             ]);
         }
     }
-
     // Funcion principal para la ventana de abonos
     public function mainBalance()
     {
@@ -36,7 +35,6 @@ class MainController extends Controller
             'stations' => Station::all()
         ]);
     }
-
     // Funcion para realizar un abono a la cuenta de un usuario
     public function pay(Request $request)
     {
@@ -88,6 +86,37 @@ class MainController extends Controller
             return response()->json([
                 'ok' => false,
                 'message' => 'La cantidad debe ser multiplo de $100'
+            ]);
+        }
+    }
+    // Funcion para obtener la lista de los abonos realizados por el usuario a su cuenta
+    public function listPersonalPayments()
+    {
+        try {
+            $payments = UserHistoryDeposit::all()->where('client_id', '=', Auth::user()->client->id);
+            if (count($payments) != 0) {
+                $deposits = array();
+                // Obteniendo los abonos del usuario y las estaciones correspondientes
+                foreach ($payments as $payment) {
+                    array_push($deposits, $payment, $payment->station);
+                }
+                return response()->json([
+                    'ok' => true,
+                    'status_payment' => true,
+                    'payments' => $deposits
+                ]);
+            } else {
+                return response()->json([
+                    'ok' => false,
+                    'status_payment' => false,
+                    'message' => 'No hay abonos realizados'
+                ]);
+            }
+        } catch (Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'status_payment' => false,
+                'message' => '' . $e
             ]);
         }
     }
