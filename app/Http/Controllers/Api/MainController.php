@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Client;
+use App\Contact;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Station;
@@ -36,7 +38,7 @@ class MainController extends Controller
         ]);
     }
     // Funcion para realizar un abono a la cuenta de un usuario
-    public function pay(Request $request)
+    public function addBalance(Request $request)
     {
         // Comprobar que el saldo sea un multiplo de 100 y mayor a cero
         if ($request->deposit % 100 == 0 && $request->deposit > 0) {
@@ -53,28 +55,31 @@ class MainController extends Controller
                 } else {
                     //obtenemos el nombre del archivo
                     // $nombre = $file->getClientOriginalName();        
-                    $user = User::find($request->id_user);
                     // Verifica si el usuario es el correcto
-                    if (Auth::user()->id != $request->id_user) {
+                    if (Auth::user()->id == $request->id_user) {
+                        // Comprobando si el deposito es a la misma estacion
+                        $user = User::find($request->id_user);
+                        $station = UserHistoryDeposit::where('station_id', '=', $request->id_station)->first();
+                        if ($station != null) {
+                            $station->balance += $request->deposit;
+                            $station->save();
+                        } else {
+                            // Registrando en un historial los abonos del cliente
+                            $history = new UserHistoryDeposit();
+                            $history->client_id = $user->client->id;
+                            $history->balance = $request->deposit;
+                            // Falta guardar la imagen de pago
+                            $history->station_id = $request->id_station;
+                            $history->save();
+                        }
+                        // Actualizando el saldo del usuario
+                        $user->client->current_balance += $request->deposit;
+                        $user->client->update();
                         return response()->json([
-                            'ok' => false,
-                            'message' => 'Acceso no autorizado'
+                            'ok' => true,
+                            'message' => 'Saldo agregado correctamente'
                         ]);
                     }
-                    // Registrando en un historial los abonos del cliente
-                    $history = new UserHistoryDeposit();
-                    $history->client_id = $user->client->id;
-                    $history->balance = $request->deposit;
-                    // Falta guardar la imagen de pago
-                    $history->station_id = $request->id_station;
-                    $history->save();
-                    // Actualizando el saldo del usuario
-                    $user->client->current_balance += $request->deposit;
-                    $user->client->update();
-                    return response()->json([
-                        'ok' => true,
-                        'message' => 'Saldo agregado correctamente'
-                    ]);
                 }
             } else {
                 return response()->json([
@@ -117,6 +122,65 @@ class MainController extends Controller
                 'ok' => false,
                 'status_payment' => false,
                 'message' => '' . $e
+            ]);
+        }
+    }
+    // Funcion para obtener un contacto buscado por un usuario tipo cliente
+    public function lookingForContact(Request $request)
+    {
+        // Buscando la membresia del contacto en la BD de Ticket Digital para enviar saldo
+        if (Auth::user()->client->membership != $request->membership) {
+            $contact = Client::where('membership', '=', $request->membership)->first();
+            if ($contact != null) {
+                return response()->json([
+                    'ok' => true,
+                    'contact' => User::find($contact->user_id),
+                    'data' => $contact
+                ]);
+            } else {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Usuario no registrado en la aplicacion'
+                ]);
+            }
+        } else {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Membresia del cliente'
+            ]);
+        }
+    }
+    // Funcion para obtener los contactos de un usuario
+    public function getContact()
+    {
+        $contacts = Contact::where('transmitter_id', Auth::user()->client->id)->get();
+        $listContacts=array();
+        foreach($contacts as $contact){
+            $client=Client::find($contact->receiver_id);
+            $user=User::find($client->user_id);
+            array_push($listContacts,[$user,$client]);
+        }
+        return response()->json([
+            'ok' => true,
+            'contacts' => $listContacts
+        ]);
+    }
+    // Funcion para agregar un contacto a un usuario
+    public function addContact(Request $request)
+    {
+        if (!(Contact::where([['transmitter_id', Auth::user()->client->id], ['receiver_id', $request->id_contact]])->exists())) {
+            $contact = new Contact;
+            $contact->transmitter_id = Auth::user()->client->id;
+            $contact->receiver_id = $request->id_contact;
+            $contact->save();
+            return response()->json([
+                'ok' => true,
+                'message' => 'Contacto agregado correctamente'
+            ]);
+        } else {
+            return response()->json([
+                'ok' => false,
+                'message' => 'El usuario ya ha sido agregado anteriormente'
             ]);
         }
     }

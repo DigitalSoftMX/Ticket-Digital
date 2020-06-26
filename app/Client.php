@@ -18,7 +18,7 @@ class Client extends Model
     }
 
     public function contacts(){
-        return $this->belongsToMany('App\Client');
+        return $this->belongsTo(Contact::class);
     }
 
     protected $hidden = [

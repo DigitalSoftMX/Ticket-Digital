@@ -21,4 +21,10 @@ Route::get('main', 'Api\MainController@main')->middleware('jwtAuth');
 Route::get('payments','Api\MainController@listPersonalPayments')->middleware('jwtAuth');
 // Ruta para realizar un abono a la cuenta del cliente
 Route::get('balance','Api\MainController@mainBalance')->middleware('jwtAuth');
-Route::post('balance/pay', 'Api\MainController@pay')->middleware('jwtAuth');
+Route::post('balance/pay', 'Api\MainController@addBalance')->middleware('jwtAuth');
+// Ruta oara buscar un contacto
+Route::get('balance/contact','Api\MainController@lookingForContact')->middleware('jwtAuth');
+// Obtener lista de contactos o agregar un contacto a la lista
+Route::post('balance/contact/add','Api\MainController@addContact')->middleware('jwtAuth');
+Route::get('balance/contact/getlist','Api\MainController@getContact')->middleware('jwtAuth');
+
