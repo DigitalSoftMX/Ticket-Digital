@@ -24,7 +24,9 @@ Route::get('balance','Api\MainController@mainBalance')->middleware('jwtAuth');
 Route::post('balance/pay', 'Api\MainController@addBalance')->middleware('jwtAuth');
 // Ruta oara buscar un contacto
 Route::get('balance/contact','Api\MainController@lookingForContact')->middleware('jwtAuth');
-// Obtener lista de contactos o agregar un contacto a la lista
+// Obtener lista de contactos, agregar un contacto a la lista, enviar saldo a un contacto agregado o no
 Route::post('balance/contact/add','Api\MainController@addContact')->middleware('jwtAuth');
 Route::get('balance/contact/getlist','Api\MainController@getContact')->middleware('jwtAuth');
+Route::post('balance/contact/sendbalance','Api\MainController@sendBalance')->middleware('jwtAuth');
+
 

@@ -8,6 +8,7 @@ $baseDir = dirname($vendorDir);
 return array(
     'App\\Client' => $baseDir . '/app/Client.php',
     'App\\Console\\Kernel' => $baseDir . '/app/Console/Kernel.php',
+    'App\\Contact' => $baseDir . '/app/Contact.php',
     'App\\Dispatcher' => $baseDir . '/app/Dispatcher.php',
     'App\\Eucomb\\Station' => $baseDir . '/app/Eucomb/Station.php',
     'App\\Eucomb\\User' => $baseDir . '/app/Eucomb/User.php',
@@ -57,6 +58,7 @@ return array(
     'App\\Providers\\RouteServiceProvider' => $baseDir . '/app/Providers/RouteServiceProvider.php',
     'App\\Role' => $baseDir . '/app/Role.php',
     'App\\Rules\\CurrentPasswordCheckRule' => $baseDir . '/app/Rules/CurrentPasswordCheckRule.php',
+    'App\\SharedBalance' => $baseDir . '/app/SharedBalance.php',
     'App\\Station' => $baseDir . '/app/Station.php',
     'App\\User' => $baseDir . '/app/User.php',
     'App\\UserHistoryDeposit' => $baseDir . '/app/UserHistoryDeposit.php',

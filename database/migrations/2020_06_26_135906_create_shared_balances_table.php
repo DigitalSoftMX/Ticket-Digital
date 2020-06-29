@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateUserHistoryDepositsTable extends Migration
+class CreateSharedBalancesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,15 +13,21 @@ class CreateUserHistoryDepositsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('user_history_deposits', function (Blueprint $table) {
+
+        Schema::connection('mysql')->create('shared_balances', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->unsignedBigInteger('client_id');
+            $table->unsignedBigInteger('transmitter_id');
+            $table->unsignedBigInteger('receiver_id');
             $table->integer('balance');
             $table->unsignedBigInteger('station_id');
             $table->integer('status');
             $table->timestamps();
 
-            $table->foreign('client_id')->references('id')->on('clients')
+            $table->foreign('transmitter_id')->references('id')->on('clients')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+
+            $table->foreign('receiver_id')->references('id')->on('clients')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
 
@@ -38,6 +44,6 @@ class CreateUserHistoryDepositsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('user_history_deposits');
+        Schema::connection('mysql')->dropIfExists('shared_balances');
     }
 }

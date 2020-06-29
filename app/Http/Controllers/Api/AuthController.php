@@ -76,7 +76,7 @@ class AuthController extends Controller
                 $user->phone = $request->phone;
                 $user->email = $request->email;
                 $user->active = '1';
-                $user->birthdate = $request->birthdate;
+                // $user->birthdate = $request->birthdate;
                 $user->remember_token = '';
                 $user->email_verified_at = now();
                 $user->created_at = now();

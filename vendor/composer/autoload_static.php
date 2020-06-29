@@ -498,6 +498,7 @@ class ComposerStaticInit1bf4e49872f10ef256c53cbb8d729866
     public static $classMap = array (
         'App\\Client' => __DIR__ . '/../..' . '/app/Client.php',
         'App\\Console\\Kernel' => __DIR__ . '/../..' . '/app/Console/Kernel.php',
+        'App\\Contact' => __DIR__ . '/../..' . '/app/Contact.php',
         'App\\Dispatcher' => __DIR__ . '/../..' . '/app/Dispatcher.php',
         'App\\Eucomb\\Station' => __DIR__ . '/../..' . '/app/Eucomb/Station.php',
         'App\\Eucomb\\User' => __DIR__ . '/../..' . '/app/Eucomb/User.php',
@@ -547,6 +548,7 @@ class ComposerStaticInit1bf4e49872f10ef256c53cbb8d729866
         'App\\Providers\\RouteServiceProvider' => __DIR__ . '/../..' . '/app/Providers/RouteServiceProvider.php',
         'App\\Role' => __DIR__ . '/../..' . '/app/Role.php',
         'App\\Rules\\CurrentPasswordCheckRule' => __DIR__ . '/../..' . '/app/Rules/CurrentPasswordCheckRule.php',
+        'App\\SharedBalance' => __DIR__ . '/../..' . '/app/SharedBalance.php',
         'App\\Station' => __DIR__ . '/../..' . '/app/Station.php',
         'App\\User' => __DIR__ . '/../..' . '/app/User.php',
         'App\\UserHistoryDeposit' => __DIR__ . '/../..' . '/app/UserHistoryDeposit.php',
