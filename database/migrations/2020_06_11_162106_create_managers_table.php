@@ -13,7 +13,7 @@ class CreateManagersTable extends Migration
      */
     public function up()
     {
-        Schema::create('managers', function (Blueprint $table) {
+        Schema::connection('mysql')->create('managers', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('station_id');
@@ -36,6 +36,6 @@ class CreateManagersTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('managers');
+        Schema::connection('mysql')->dropIfExists('managers');
     }
 }
