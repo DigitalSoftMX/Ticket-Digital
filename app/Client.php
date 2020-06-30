@@ -8,20 +8,23 @@ class Client extends Model
 {
     /* Accediendo a la base de datos por default del proyecto */
     protected $connection = 'mysql';
-    
-    /* public function user(){
-        return $this->hasOne(User::class);
-    } */
 
-    public function historyDeposits(){
-        return $this->belongsTo(UserHistoryDeposit::class);
+    public function user(){
+        return $this->belongsTo(User::class);
     }
 
-    public function contacts(){
+    // Relacion para los depositos realizados por el cliente
+    public function historyDeposits()
+    {
+        return $this->belongsTo(UserHistoryDeposit::class);
+    }
+    // Relacion para los contactos del cliente
+    public function contacts()
+    {
         return $this->belongsTo(Contact::class);
     }
 
     protected $hidden = [
-        'user_id','created_at', 'updated_at',
+        'created_at', 'updated_at',
     ];
 }

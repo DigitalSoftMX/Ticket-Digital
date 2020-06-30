@@ -56,8 +56,9 @@ class MainController extends Controller
                 } else {
                     //obtenemos el nombre del archivo
                     // $nombre = $file->getClientOriginalName();        
+                    // Se puede ahorrar la linea siguiente por medio de Auth::user()->client->
                     $user = User::find(Auth::user()->id);
-                    $station = UserHistoryDeposit::where('station_id', '=', $request->id_station)->first();
+                    $station = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station]])->first();
                     if ($station != null) {
                         $station->balance += $request->deposit;
                         $station->status = 1;
@@ -187,12 +188,13 @@ class MainController extends Controller
     // Funcion para enviar saldo a un contacto del usuario
     public function sendBalance(Request $request)
     {
+        // Posible bug, arreglar, potencial codigo corrupto en el envio de saldo
         if ($request->balance % 100 == 0 && $request->balance > 0) {
             // $payment = UserHistoryDeposit::where([['client_id', Auth::user()->client->id], ['station_id', $request->id_station]])->first();
             // Obteniendo el saldo disponible en la estacion correspondiente
             $payment = UserHistoryDeposit::find($request->id_payment);
             if (!($request->balance > $payment->balance)) {
-                $receivedBalance = SharedBalance::where([['receiver_id', $request->id_contact], ['station_id', $payment->station_id]])->first();
+                $receivedBalance = SharedBalance::where([['transmitter_id', Auth::user()->client->id], ['receiver_id', $request->id_contact], ['station_id', $payment->station_id]])->first();
                 if ($receivedBalance != null) {
                     $receivedBalance->balance += $request->balance;
                     $receivedBalance->status = 1;
@@ -222,6 +224,31 @@ class MainController extends Controller
             return response()->json([
                 'ok' => false,
                 'message' => 'La cantidad debe ser multiplo de $100'
+            ]);
+        }
+    }
+    // Funcion que busca los abonos recibidos hacia el usuario por parte de otros clientes
+    public function listReceivedPayments()
+    {
+        $balances = SharedBalance::where('receiver_id', Auth::user()->client->id)->get();
+        if (count($balances) != 0) {
+            $receivedBalances = array();
+            foreach ($balances as $balance) {
+                $receiver = $balance->receiver;
+                $station = $balance->station;
+                $transmitter = $balance->transmitter->user;
+                array_push($receivedBalances, $balance);
+            }
+            return response()->json([
+                'ok' => true,
+                'status_payment' => true,
+                'payments' => $receivedBalances
+            ]);
+        } else {
+            return response()->json([
+                'ok' => false,
+                'status_payment' => false,
+                'message' => 'No hay abonos realizados'
             ]);
         }
     }

@@ -11,14 +11,6 @@
 |
 */
 
-Route::get('test', function () {
-	$user = App\User::findOrFail(2);
-	return response()->json([
-		'user' => $user,
-		'data' => $user->client
-	]);
-});
-
 Route::get('/', function () {
 	return view('auth.login');
 });
