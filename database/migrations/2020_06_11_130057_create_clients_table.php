@@ -18,6 +18,7 @@ class CreateClientsTable extends Migration
             $table->unsignedBigInteger('user_id');
             $table->string('membership');
             $table->integer('current_balance');
+            $table->integer('shared_balance');
             $table->integer('points');
             $table->string('image_qr');
             $table->string('birthdate')->nullable();
