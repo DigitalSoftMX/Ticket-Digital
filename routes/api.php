@@ -30,5 +30,6 @@ Route::get('balance/contact','Api\MainController@lookingForContact')->middleware
 Route::post('balance/contact/add','Api\MainController@addContact')->middleware('jwtAuth');
 Route::get('balance/contact/getlist','Api\MainController@getContact')->middleware('jwtAuth');
 Route::post('balance/contact/sendbalance','Api\MainController@sendBalance')->middleware('jwtAuth');
+Route::post('balance/contact/requestbalance','Api\MainController@requestBalance')->middleware('jwtAuth');
 
 

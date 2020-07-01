@@ -18,18 +18,13 @@ class MainController extends Controller
     // funcion para obtener informacion del usuario hacia la pagina princial
     public function main()
     {
-        try {
-            return response()->json([
-                'ok' => true,
-                'user' => Auth::user(),
-                'data' => Auth::user()->client
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'ok' => false,
-                'message' => '' . $e
-            ]);
-        }
+        $user = User::find(Auth::user()->id);
+        $user->client;
+        $data = array($user);
+        return response()->json([
+            'ok' => true,
+            'user' => $data[0]
+        ]);
     }
     // Funcion principal para la ventana de abonos
     public function mainBalance()
@@ -251,6 +246,11 @@ class MainController extends Controller
                 'message' => 'No hay abonos realizados'
             ]);
         }
+    }
+    // Funcion para solicitar saldo a un usuario desde la aplicacion
+    public function requestBalance(Request $request)
+    {
+        // Pendiente
     }
     // Crear una funcion para verificar si la cantidad a depositar o enviar es multiplo de 100
     // Crear una funcion para el error del punto anterior
