@@ -152,8 +152,8 @@ class AuthController extends Controller
     /* Metodo para iniciar sesion, delvuelve el token */
     private function getResponse($request)
     {
-        $creds = $request->only(['email', 'password']);
-        if (!$token = auth()->attempt($creds)) {
+        $creds = $request->only('email', 'password');
+        if (!$token = JWTAuth::attempt($creds)) {
             return response()->json([
                 'ok' => false,
                 'message' => 'Datos incorrectos'
