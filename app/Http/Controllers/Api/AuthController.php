@@ -18,7 +18,8 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         /* Pregunta si el usuario existe en la BD de Ticket Digital */
-        if (!(User::where('email', '=', $request->email)->exists())) {
+        $userTD = User::where('email', '=', $request->email)->first();
+        if ($userTD == null) {
             /* Pregunta si el usuario existe en la BD de Eucomb */
             if ((EucombUser::where('email', '=', $request->email)->exists())) {
                 /* Llamando el rol usuario */
@@ -47,7 +48,8 @@ class AuthController extends Controller
                 /* Registrando los datos del usuario tipo cliente */
                 $this->registerClient($userEucomb, $user->id);
                 $user->roles()->attach($role);
-                return $this->getResponse($request);
+                // Enviar id del usuario que se registra
+                return $this->getResponse($request, $user);
             } else {
                 return response()->json([
                     'ok' => false,
@@ -55,15 +57,14 @@ class AuthController extends Controller
                 ]);
             }
         } else {
-            return $this->getResponse($request);
+            return $this->getResponse($request, $userTD);
         }
     }
 
     /* Metodo para registrar a un usuario nuevo */
     public function register(Request $request)
     {
-        $userEucomb = EucombUser::where("email", '=', $request->email)->first();
-        if ($userEucomb == "") {
+        if (!(EucombUser::where("email", $request->email)->exists())) {
             $role = Role::where('name', 'usuario')->first();
             $user = new User();
             try {
@@ -83,11 +84,12 @@ class AuthController extends Controller
                 $user->updated_at = now();
                 $user->save();
                 $user->roles()->attach($role);
-                return $this->getResponse($request);
+                // Enviar el id del usuario recien registrado
+                return $this->getResponse($request, $user);
             } catch (Exception $e) {
                 return response()->json([
                     'ok' => false,
-                    'message' => '' . $e
+                    'message' => 'El usuario ya existe'
                 ]);
             }
         } else {
@@ -120,7 +122,7 @@ class AuthController extends Controller
         /* Esta en duda la membresia */
         $client->membership = $data->image;
         $client->current_balance = 0;
-        $client->shared_balance=0;
+        $client->shared_balance = 0;
         $client->points = 0;
         /* Verificar la imagen qr del cliente */
         $client->image_qr = $data->image;
@@ -150,7 +152,7 @@ class AuthController extends Controller
     }
 
     /* Metodo para iniciar sesion, delvuelve el token */
-    private function getResponse($request)
+    private function getResponse($request, $user)
     {
         $creds = $request->only('email', 'password');
         if (!$token = JWTAuth::attempt($creds)) {
@@ -159,6 +161,8 @@ class AuthController extends Controller
                 'message' => 'Datos incorrectos'
             ]);
         }
+        $user->remember_token = $token;
+        $user->save();
         return response()->json([
             'ok' => true,
             'token' => $token

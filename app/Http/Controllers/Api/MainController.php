@@ -8,31 +8,15 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
 use App\Station;
-use App\User;
 use App\UserHistoryDeposit;
-use Exception;
 use Illuminate\Support\Facades\Auth;
-use Tymon\JWTAuth\Facades\JWTAuth;
 
 class MainController extends Controller
 {
     // funcion para obtener informacion del usuario hacia la pagina princial
     public function main()
     {
-        // Prueba obteniendo informacion del token sin conectar a la base de datos
-        /* $token = JWTAuth::getToken();
-        $apy = JWTAuth::getPayload($token)->toArray();
-        return $apy;
-
-        return JWTAuth::parseToken()->authenticate(); */
-        /* $email = $this->getPayload()->get('email');
-        return $email;
-        $user = jwtAuth::user();
-        if ($email != $user->email) {
-            return false;
-        } */
-
-        $user = jwtAuth::user();
+        $user = Auth::user();
         $user->client;
         return response()->json([
             'ok' => true,
