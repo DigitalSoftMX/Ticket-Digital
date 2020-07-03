@@ -102,7 +102,7 @@ return [
     */
 
     // Cambia el tiempo de vida del token
-    'ttl' => env('JWT_TTL', 60),
+    'ttl' => env('JWT_TTL', null),
 
     /*
     |--------------------------------------------------------------------------
@@ -152,7 +152,7 @@ return [
         'iss',
         'iat',
         //llamada a la expiracion del token
-        'exp',
+        // 'exp',
         'nbf',
         'sub',
         'jti',

@@ -23,6 +23,8 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     // Ruta para realizar un abono a la cuenta del cliente
     Route::get('balance', 'Api\MainController@mainBalance');
     Route::post('balance/pay', 'Api\MainController@addBalance');
+    // Ruta para usar saldo del abono personal del usuario
+    Route::get('balance/use', 'Api\MainController@useBalance');
     // Obtiene la lista de los pagos recibidos
     Route::get('balance/getlistreceived', 'Api\MainController@listReceivedPayments');
     // Ruta oara buscar un contacto
@@ -31,5 +33,4 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     Route::post('balance/contact/add', 'Api\MainController@addContact');
     Route::get('balance/contact/getlist', 'Api\MainController@getContact');
     Route::post('balance/contact/sendbalance', 'Api\MainController@sendBalance');
-    Route::post('balance/contact/requestbalance', 'Api\MainController@requestBalance');
 });

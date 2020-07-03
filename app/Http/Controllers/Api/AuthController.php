@@ -146,7 +146,7 @@ class AuthController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'ok' => false,
-                'message' => '' . $e
+                'message' => 'Token invalido'
             ]);
         }
     }

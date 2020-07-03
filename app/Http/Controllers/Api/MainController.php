@@ -237,10 +237,10 @@ class MainController extends Controller
             return $this->thereAreNoBalances();
         }
     }
-    // Funcion para solicitar saldo a un usuario desde la aplicacion
-    public function requestBalance(Request $request)
+    // Funcion para devolver la membresía del cliente y la estacion
+    public function useBalance(Request $request)
     {
-        // Pendiente
+        return $request->id;
     }
     // Funcion mensaje de error para el saldo no multiplo de 100 o negativo
     private function responseErrorOneHundred()

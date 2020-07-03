@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\User;
 use Closure;
 use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -18,32 +17,29 @@ class JWTMiddleware
      */
     public function handle($request, Closure $next)
     {
-        $message = '';
         try {
-            // Verifica la validacion del token
             $token = JWTAuth::getToken();
-            $user = User::find(JWTAuth::parseToken()->authenticate()->id);
-            if ($user->remember_token == $token) {
-                JWTAuth::parseToken()->authenticate();
+            // Valida que el token sea igual al remember token proporcionado por el login
+            if (JWTAuth::parseToken()->authenticate()->remember_token == $token) {
                 return $next($request);
             } else {
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'Token invalido'
-                ]);
+                // Inhabilita el token si este no es valido
+                JWTAuth::invalidate(JWTAuth::parseToken($token));
+                return $this->exceptionResponse('Token invalido');
             }
         } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
-            // Excepcion para la expiracion del token
-            $message = 'Token expirado';
+            return $this->exceptionResponse('Token expirado');
         } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
-            // Excepcion para el token invalido
-            $message = 'Token invalido';
+            return $this->exceptionResponse('Token invalido');
         } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
-            // Excepcion para JWT
-            $message = 'Proporcione el token';
+            return $this->exceptionResponse('Proporcione el token');
         } catch (Exception $e) {
-            $message = 'Token invalido';
+            return $this->exceptionResponse('Token invalido');
         }
+    }
+    // Funcion para devolver error de token
+    private function exceptionResponse($message)
+    {
         return response()->json([
             'ok' => false,
             'message' => $message
