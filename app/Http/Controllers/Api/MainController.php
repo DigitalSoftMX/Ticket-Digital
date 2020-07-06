@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
 use App\Station;
+use App\User;
 use App\UserHistoryDeposit;
 use Illuminate\Support\Facades\Auth;
 
@@ -240,7 +241,19 @@ class MainController extends Controller
     // Funcion para devolver la membresía del cliente y la estacion
     public function useBalance(Request $request)
     {
-        return $request->id;
+        $payment = UserHistoryDeposit::find($request->id_payment);
+        if ($payment != null && $payment->client_id == Auth::user()->client->id) {
+            return response()->json([
+                'ok' => true,
+                'membership' => Auth::user()->client->membership,
+                'station' => $payment->station
+            ]);
+        } else {
+            return response()->json([
+                'ok' => false,
+                'message' => 'No hay abono en la cuenta'
+            ]);
+        }
     }
     // Funcion mensaje de error para el saldo no multiplo de 100 o negativo
     private function responseErrorOneHundred()
