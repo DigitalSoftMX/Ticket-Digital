@@ -249,10 +249,22 @@ class MainController extends Controller
                 'station' => $payment->station
             ]);
         } else {
+            return $this->thereIsNoBalance();
+        }
+    }
+    // Funcion para devolver informacion de un saldo compartido
+    public function useSharedBalance(Request $request)
+    {
+        $payment = SharedBalance::find($request->id_payment);
+        if ($payment != null && $payment->receiver_id == Auth::user()->client->id) {
             return response()->json([
-                'ok' => false,
-                'message' => 'No hay abono en la cuenta'
+                'ok' => true,
+                'tr_membership' => $payment->transmitter->membership,
+                'membership' => $payment->receiver->membership,
+                'station' => $payment->station
             ]);
+        } else {
+            return $this->thereIsNoBalance();
         }
     }
     // Funcion mensaje de error para el saldo no multiplo de 100 o negativo
@@ -268,7 +280,6 @@ class MainController extends Controller
     {
         return response()->json([
             'ok' => false,
-            'status_payment' => false,
             'message' => 'No hay abonos realizados'
         ]);
     }
@@ -278,6 +289,14 @@ class MainController extends Controller
         return response()->json([
             'ok' => true,
             'message' => 'Abono realizado correctamente'
+        ]);
+    }
+    // Funcion mensaje de error no hay abono en la cuenta
+    private function thereIsNoBalance()
+    {
+        return response()->json([
+            'ok' => false,
+            'message' => 'No hay abono en la cuenta'
         ]);
     }
 }
