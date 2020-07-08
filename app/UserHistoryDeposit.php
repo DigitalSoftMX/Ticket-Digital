@@ -13,7 +13,4 @@ class UserHistoryDeposit extends Model
     {
         return $this->belongsTo(Station::class);
     }
-    protected $hidden = [
-        'station_id'
-    ];
 }

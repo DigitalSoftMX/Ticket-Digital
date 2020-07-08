@@ -24,6 +24,6 @@ class SharedBalance extends Model
         return $this->belongsTo(Client::class);
     }
     protected $hidden = [
-        'transmitter_id', 'receiver_id', 'station_id'
+        'transmitter_id'
     ];
 }

@@ -13,6 +13,7 @@ return array(
     'App\\Eucomb\\Station' => $baseDir . '/app/Eucomb/Station.php',
     'App\\Eucomb\\User' => $baseDir . '/app/Eucomb/User.php',
     'App\\Exceptions\\Handler' => $baseDir . '/app/Exceptions/Handler.php',
+    'App\\History' => $baseDir . '/app/History.php',
     'App\\Http\\Controllers\\Api\\AuthController' => $baseDir . '/app/Http/Controllers/Api/AuthController.php',
     'App\\Http\\Controllers\\Api\\MainController' => $baseDir . '/app/Http/Controllers/Api/MainController.php',
     'App\\Http\\Controllers\\Api\\UserController' => $baseDir . '/app/Http/Controllers/Api/UserController.php',

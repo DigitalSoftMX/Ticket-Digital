@@ -503,6 +503,7 @@ class ComposerStaticInit1bf4e49872f10ef256c53cbb8d729866
         'App\\Eucomb\\Station' => __DIR__ . '/../..' . '/app/Eucomb/Station.php',
         'App\\Eucomb\\User' => __DIR__ . '/../..' . '/app/Eucomb/User.php',
         'App\\Exceptions\\Handler' => __DIR__ . '/../..' . '/app/Exceptions/Handler.php',
+        'App\\History' => __DIR__ . '/../..' . '/app/History.php',
         'App\\Http\\Controllers\\Api\\AuthController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/AuthController.php',
         'App\\Http\\Controllers\\Api\\MainController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/MainController.php',
         'App\\Http\\Controllers\\Api\\UserController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/UserController.php',

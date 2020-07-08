@@ -35,4 +35,6 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     Route::post('balance/contact/add', 'Api\MainController@addContact');
     Route::get('balance/contact/getlist', 'Api\MainController@getContact');
     Route::post('balance/contact/sendbalance', 'Api\MainController@sendBalance');
+    // Rutas para obtener historiales
+    Route::get('balance/history','Api\MainController@history');
 });

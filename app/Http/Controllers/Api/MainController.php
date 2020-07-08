@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Client;
 use App\Contact;
+use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
 use App\Station;
-use App\User;
 use App\UserHistoryDeposit;
 use Illuminate\Support\Facades\Auth;
 
@@ -44,10 +44,7 @@ class MainController extends Controller
             if ($file != NULL) {
                 // Validando que el archivo es de tipo imagen
                 if ((strpos($file->getClientMimeType(), 'image')) === false) {
-                    return response()->json([
-                        'ok' => false,
-                        'message' => 'El archivo no es una imagen'
-                    ]);
+                    return $this->errorMessage('El archivo no es una imagen');
                 } else {
                     //obtenemos el nombre del archivo
                     // $nombre = $file->getClientOriginalName();        
@@ -56,6 +53,8 @@ class MainController extends Controller
                         $station->balance += $request->deposit;
                         $station->status = 1;
                         $station->save();
+                        // Guardando historial de transaccion
+                        $this->saveHistoryBalance($station, 'balance', $request->deposit);
                     } else {
                         // Registrando en un historial los abonos del cliente
                         $history = new UserHistoryDeposit();
@@ -65,6 +64,8 @@ class MainController extends Controller
                         $history->station_id = $request->id_station;
                         $history->status = 1;
                         $history->save();
+                        // Guardando historial de transaccion
+                        $this->saveHistoryBalance($history, 'balance', 0);
                     }
                     // Actualizando el saldo del usuario
                     $user->current_balance += $request->deposit;
@@ -72,13 +73,10 @@ class MainController extends Controller
                     return $this->successBalance();
                 }
             } else {
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'Debe subir su comprobante'
-                ]);
+                return $this->errorMessage('Debe subir su comprobante');
             }
         } else {
-            return $this->responseErrorOneHundred();
+            return $this->errorMessage('La cantidad debe ser multiplo de $100');
         }
     }
     // Funcion para obtener la lista de los abonos realizados por el usuario a su cuenta
@@ -94,11 +92,10 @@ class MainController extends Controller
             }
             return response()->json([
                 'ok' => true,
-                'status_payment' => true,
                 'payments' => $deposits
             ]);
         } else {
-            return $this->thereAreNoBalances();
+            return $this->errorMessage('No hay abonos realizados');
         }
     }
     // Funcion para obtener un contacto buscado por un usuario tipo cliente
@@ -115,16 +112,10 @@ class MainController extends Controller
                     'contact' => $contact,
                 ]);
             } else {
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'Usuario no registrado en la aplicacion'
-                ]);
+                return $this->errorMessage('Usuario no registrado en la aplicacion');
             }
         } else {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Membresia del cliente'
-            ]);
+            return $this->errorMessage('Membresia del cliente');
         }
     }
     // Funcion para obtener los contactos de un usuario
@@ -162,10 +153,7 @@ class MainController extends Controller
                 'message' => 'Contacto agregado correctamente'
             ]);
         } else {
-            return response()->json([
-                'ok' => false,
-                'message' => 'El usuario ya ha sido agregado anteriormente'
-            ]);
+            return $this->errorMessage('El usuario ya ha sido agregado anteriormente');
         }
     }
     // Funcion para enviar saldo a un contacto del usuario
@@ -182,6 +170,8 @@ class MainController extends Controller
                         $receivedBalance->balance += $request->balance;
                         $receivedBalance->status = 1;
                         $receivedBalance->save();
+                        // Guardando historial de transaccion
+                        $this->saveHistoryBalance($receivedBalance, 'share', $request->balance);
                     } else {
                         $sharedBalance = new SharedBalance();
                         $sharedBalance->transmitter_id = Auth::user()->client->id;
@@ -190,6 +180,8 @@ class MainController extends Controller
                         $sharedBalance->station_id = $payment->station_id;
                         $sharedBalance->status = 1;
                         $sharedBalance->save();
+                        // Guardando historial de transaccion
+                        $this->saveHistoryBalance($sharedBalance, 'share', 0);
                     }
                     $payment->balance -= $request->balance;
                     $payment->save();
@@ -202,19 +194,13 @@ class MainController extends Controller
                     $receiverUser->save();
                     return $this->successBalance();
                 } else {
-                    return response()->json([
-                        'ok' => false,
-                        'message' => 'El deposito es mayor al disponible'
-                    ]);
+                    return $this->errorMessage('El deposito es mayor al disponible');
                 }
             } else {
-                return response()->json([
-                    'ok' => false,
-                    'message' => 'El deposito no corresponde al usuario'
-                ]);
+                return $this->errorMessage('El deposito no corresponde al usuario');
             }
         } else {
-            return $this->responseErrorOneHundred();
+            return $this->errorMessage('La cantidad debe ser multiplo de $100');
         }
     }
     // Funcion que busca los abonos recibidos hacia el usuario por parte de otros clientes
@@ -231,11 +217,10 @@ class MainController extends Controller
             }
             return response()->json([
                 'ok' => true,
-                'status_payment' => true,
                 'payments' => $receivedBalances
             ]);
         } else {
-            return $this->thereAreNoBalances();
+            return $this->errorMessage('No hay abonos realizados');
         }
     }
     // Funcion para devolver la membresía del cliente y la estacion
@@ -249,7 +234,7 @@ class MainController extends Controller
                 'station' => $payment->station
             ]);
         } else {
-            return $this->thereIsNoBalance();
+            return $this->errorMessage('No hay abono en la cuenta');
         }
     }
     // Funcion para devolver informacion de un saldo compartido
@@ -264,23 +249,65 @@ class MainController extends Controller
                 'station' => $payment->station
             ]);
         } else {
-            return $this->thereIsNoBalance();
+            return $this->errorMessage('No hay abono en la cuenta');
         }
     }
-    // Funcion mensaje de error para el saldo no multiplo de 100 o negativo
-    private function responseErrorOneHundred()
+    // Funcion para devolver el historial de abonos a la cuenta del usuario
+    public function history(Request $request)
     {
-        return response()->json([
-            'ok' => false,
-            'message' => 'La cantidad debe ser multiplo de $100'
-        ]);
+        $historyBalances = History::where([['client_id', Auth::user()->client->id], ['type', $request->type]])->get();
+        if (count($historyBalances) > 0) {
+            $balances = array();
+            switch ($request->type) {
+                case 'balance':
+                    foreach ($historyBalances as $historyBalance) {
+                        $balance = json_decode($historyBalance->action);
+                        $station = Station::find($balance->station_id);
+                        $action = array('balance' => $balance->balance, 'station' => $station->name, 'date' => $historyBalance->created_at);
+                        array_push($balances, $action);
+                    }
+                    return $this->historyBalance($balances);
+                    break;
+                case 'share':
+                    foreach ($historyBalances as $historyBalance) {
+                        $balance = json_decode($historyBalance->action);
+                        $station = Station::find($balance->station_id);
+                        $receiver = Client::find($balance->receiver_id);
+                        $action = array('station' => $station->name, 'balance' => $balance->balance, 'membership' => $receiver->membership, 'name' => $receiver->user->name, 'date' => $historyBalance->created_at);
+                        array_push($balances, $action);
+                    }
+                    return $this->historyBalance($balances);
+                    break;
+            }
+        } else {
+            return $this->errorMessage('No se ha realizado abonos a su cuenta');
+        }
     }
-    // Funcion mensaje de error no hay abonos realizados
-    private function thereAreNoBalances()
+    // Funcion para guardar historial de abonos a la cuenta del cliente
+    private function saveHistoryBalance($history, $type, $balance)
+    {
+        $historyBalance = new History();
+        if ($balance != 0) {
+            $history->balance = $balance;
+        }
+        switch ($type) {
+            case 'balance':
+                $historyBalance->client_id = $history->client_id;
+                break;
+            case 'share':
+                $historyBalance->client_id = $history->transmitter_id;
+                break;
+        }
+        $historyBalance->action = $history;
+        $historyBalance->type = $type;
+        $historyBalance->save();
+    }
+    // Funcion mensajes de error
+    private function errorMessage($message)
     {
         return response()->json([
             'ok' => false,
-            'message' => 'No hay abonos realizados'
+            'message' => $message
         ]);
     }
     // Funcion mensaje de exito para el abono de una cuenta
@@ -291,12 +318,12 @@ class MainController extends Controller
             'message' => 'Abono realizado correctamente'
         ]);
     }
-    // Funcion mensaje de error no hay abono en la cuenta
-    private function thereIsNoBalance()
+    // Funcion mensaje json para historial
+    private function historyBalance($balances)
     {
         return response()->json([
-            'ok' => false,
-            'message' => 'No hay abono en la cuenta'
+            'ok' => true,
+            'balances' => $balances
         ]);
     }
 }
