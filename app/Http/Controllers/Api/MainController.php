@@ -11,6 +11,7 @@ use App\SharedBalance;
 use App\Station;
 use App\UserHistoryDeposit;
 use Illuminate\Support\Facades\Auth;
+use App\Eucomb\User as EucombUser;
 
 class MainController extends Controller
 {
@@ -112,7 +113,13 @@ class MainController extends Controller
                     'contact' => $contact,
                 ]);
             } else {
-                return $this->errorMessage('Usuario no registrado en la aplicacion');
+                $user = EucombUser::where('image', $request->membership)->first();
+                if ($user != null) {
+                    $data = array('name' => $user->name . " " . $user->last_name, 'membership' => $user->image, 'message' => 'Descarga la aplicación');
+                    return $this->dataContact($data);
+                } else {
+                    return $this->errorMessage('Usuario no registrado');
+                }
             }
         } else {
             return $this->errorMessage('Membresia del cliente');
@@ -324,6 +331,14 @@ class MainController extends Controller
         return response()->json([
             'ok' => true,
             'balances' => $balances
+        ]);
+    }
+    // Funcion para devolver un contacto existente en Ticket y en Eucomb
+    private function dataContact($contact)
+    {
+        return response()->json([
+            'ok' => true,
+            'contact' => $contact
         ]);
     }
 }

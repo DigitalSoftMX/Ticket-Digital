@@ -4,13 +4,13 @@ namespace App\Eucomb;
 
 use Illuminate\Database\Eloquent\Model;
 
-class User extends Model
+class Role extends Model
 {
     /* Accediendo a la base de datos de Eucomb */
     protected $connection = 'eucomb';
-    // Relacion con los tipos de rol del usuario
-    public function roles()
+    // Relacion con los usuarios
+    public function users()
     {
-        return $this->belongsToMany(Role::class);
+        return $this->belongsToMany(User::class);
     }
 }

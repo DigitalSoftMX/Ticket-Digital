@@ -28,7 +28,7 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     // Obtiene la lista de los pagos recibidos
     Route::get('balance/getlistreceived', 'Api\MainController@listReceivedPayments');
     // Ruta para usar saldo enviado por otro usuario
-    Route::get('balance/getlistreceived/use','Api\MainController@useSharedBalance');
+    Route::get('balance/getlistreceived/use', 'Api\MainController@useSharedBalance');
     // Ruta oara buscar un contacto
     Route::get('balance/contact', 'Api\MainController@lookingForContact');
     // Obtener lista de contactos, agregar un contacto a la lista, enviar saldo a un contacto agregado o no
@@ -36,5 +36,5 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     Route::get('balance/contact/getlist', 'Api\MainController@getContact');
     Route::post('balance/contact/sendbalance', 'Api\MainController@sendBalance');
     // Rutas para obtener historiales
-    Route::get('balance/history','Api\MainController@history');
+    Route::get('balance/history', 'Api\MainController@history');
 });
