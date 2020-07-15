@@ -114,7 +114,7 @@ class MainController extends Controller
                 ]);
             } else {
                 $user = EucombUser::where('image', $request->membership)->first();
-                if ($user != null) {
+                if ($user != null && $user->roles[0]->name == 'usuario') {
                     $data = array('name' => $user->name . " " . $user->last_name, 'membership' => $user->image, 'message' => 'Descarga la aplicación');
                     return $this->dataContact($data);
                 } else {

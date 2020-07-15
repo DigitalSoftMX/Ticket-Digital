@@ -21,41 +21,31 @@ class AuthController extends Controller
         // Pregunta si el usuario existe en la BD de Ticket Digital
         $userTicket = User::where('email', $request->email)->first();
         if ($userTicket == null) {
-            /* Pregunta si el usuario existe en la BD de Eucomb */
+            // Pregunta si el usuario existe en la BD de Eucomb
             $userEucomb = EucombUser::where('email', $request->email)->first();
             if ($userEucomb != null) {
-                if ($userEucomb->roles[0]->name == 'usuario' || $userEucomb->roles[0]->name == 'despachador') {
-                    /* Copiando los datos del usuario de BD Eucomb a BD Ticket Digital */
+                if ($userEucomb->roles[0]->name == 'usuario') {
+                    // Copiando los datos del usuario de BD Eucomb a BD Ticket Digital
                     $user = $this->registerUser($userEucomb);
-                    /* Obteniendo los apellidos de los usuarios */
-                    $surnames = str_word_count($userEucomb->last_name, 1);
-                    $countSurnames = count($surnames);
-                    switch ($countSurnames) {
+                    // Obteniendo los apellidos de los usuarios
+                    $surnames = str_word_count(utf8_decode($userEucomb->last_name), 1);
+                    switch (count($surnames)) {
                         case 1:
-                            $user->first_surname = $surnames[0];
+                            $user->first_surname = utf8_encode($surnames[0]);
                             break;
                         case 2:
-                            $user->first_surname = $surnames[0];
-                            $user->second_surname = $surnames[1];
+                            $user->first_surname = utf8_encode($surnames[0]);
+                            $user->second_surname = utf8_encode($surnames[1]);
                             break;
                         default:
-                            /* Falta solucion para los que tienes mas de dos apellidos */
                             $user->first_surname = "";
                             $user->second_surname = "";
                             break;
                     }
                     $user->save();
-                    $role = Role::where('name', $userEucomb->roles[0]->name)->first();
-                    if ($role->name == 'usuario') {
-                        $this->registerClient($userEucomb, $user->id);
-                        $user->roles()->attach($role);
-                        // Enviar id del usuario que se registra
-                        return $this->getResponse($request, $user);
-                    } else {
-                        $dispatcher = new Dispatcher();
-                        $dispatcher->user_id = $user->id;
-                        $dispatcher->station_id = 1;
-                    }
+                    $this->registerClient($userEucomb, $user->id);
+                    $user->roles()->attach(Role::where('name', $userEucomb->roles[0]->name)->first());
+                    return $this->getResponse($request, $user);
                 } else {
                     return $this->errorMessage('Usuario no autorizado');
                 }
@@ -63,40 +53,35 @@ class AuthController extends Controller
                 return $this->errorMessage('El usuario no existe');
             }
         } else {
-            return $this->getResponse($request, $userTicket);
+            if ($userTicket->roles[0]->name == 'usuario' || $userTicket->roles[0]->name == 'despachador') {
+                return $this->getResponse($request, $userTicket);
+            } else {
+                return $this->errorMessage('Usuario no autorizado');
+            }
         }
     }
-
-    /* Metodo para registrar a un usuario nuevo */
+    // Metodo para registrar a un usuario nuevo
     public function register(Request $request)
     {
-        if (!(EucombUser::where("email", $request->email)->exists())) {
-            $role = Role::where('name', 'usuario')->first();
-            $user = new User();
-            try {
-                $user->name = $request->name;
-                $user->first_surname = $request->first_surname;
-                $user->second_surname = $request->second_surname;
-                /* $user->username = $request->username; */
-                $user->password = Hash::make($request->password);
-                $user->sex = $request->sex;
-                $user->phone = $request->phone;
-                $user->email = $request->email;
-                $user->active = '1';
-                // $user->birthdate = $request->birthdate;
-                $user->remember_token = '';
-                $user->email_verified_at = now();
-                $user->created_at = now();
-                $user->updated_at = now();
-                $user->save();
-                $user->roles()->attach($role);
-                // Enviar el id del usuario recien registrado
-                return $this->getResponse($request, $user);
-            } catch (Exception $e) {
-                return $this->errorMessage('El usuario ya existe');
+        if (!(EucombUser::where("email", $request->email)->exists()) && !(User::where('email', $request->email)->exists())) {
+            $user = $this->registerUser($request);
+            $user->first_surname = $request->first_surname;
+            $user->second_surname = $request->second_surname;
+            $user->password = Hash::make($request->password);
+            $user->save();
+            // Membresia aleatoria no repetible en las dos BD's
+            while (true) {
+                $membership = rand(10000000, 99999999);
+                $request->username = 'G-' . $membership;
+                if (!(Client::where('membership', $request->username)->exists()) && !(EucombUser::where('username', $membership)->exists())) {
+                    break;
+                }
             }
+            $this->registerClient($request, $user->id);
+            $user->roles()->attach(Role::where('name', 'usuario')->first());
+            return $this->getResponse($request, $user);
         } else {
-            return $this->errorResponse();
+            return $this->errorMessage('El usuario ya existe');
         }
     }
     // Registrando a un usuario
@@ -104,13 +89,11 @@ class AuthController extends Controller
     {
         $user = new User();
         $user->name = $data->name;
-        /* $user->username = $request->username; */
         $user->password = $data->password;
         $user->sex = $data->sex;
         $user->phone = $data->phone;
         $user->email = $data->email;
         $user->active = '1';
-        $user->remember_token = $data->remember_token;
         $user->email_verified_at = now();
         $user->created_at = now();
         $user->updated_at = now();
@@ -121,19 +104,18 @@ class AuthController extends Controller
     {
         $client = new Client();
         $client->user_id = $id;
-        $client->membership = $data->image;
+        $client->membership = $data->username;
         $client->current_balance = 0;
         $client->shared_balance = 0;
         $client->points = 0;
         // Verificar la imagen qr del cliente
-        $client->image_qr = $data->image;
+        $client->image_qr = $data->username;
         $client->birthdate = $data->birthdate;
         $client->created_at = now();
         $client->updated_at = now();
         $client->save();
     }
-
-    /* Metodo para cerrar sesion */
+    // Metodo para cerrar sesion
     public function logout(Request $request)
     {
         try {
@@ -146,8 +128,7 @@ class AuthController extends Controller
             return $this->errorMessage('Token invalido');
         }
     }
-
-    /* Metodo para iniciar sesion, delvuelve el token */
+    // Metodo para iniciar sesion, delvuelve el token
     private function getResponse($request, $user)
     {
         $creds = $request->only('email', 'password');
@@ -167,14 +148,6 @@ class AuthController extends Controller
         return response()->json([
             'ok' => false,
             'message' => $message
-        ]);
-    }
-
-    /* Metodo Error response */
-    private function errorResponse()
-    {
-        return response()->json([
-            'ok' => false
         ]);
     }
 }
