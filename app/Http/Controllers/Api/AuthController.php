@@ -28,16 +28,14 @@ class AuthController extends Controller
                     // Copiando los datos del usuario de BD Eucomb a BD Ticket Digital
                     $user = $this->registerUser($userEucomb);
                     // Obteniendo los apellidos de los usuarios
-                    $surnames = str_word_count(utf8_decode($userEucomb->last_name), 1);
-                    // var_dump($surnames);
-                    // dd();
+                    $surnames = explode(" ", $userEucomb->last_name);
                     switch (count($surnames)) {
                         case 1:
-                            $user->first_surname = utf8_encode($surnames[0]);
+                            $user->first_surname = $surnames[0];
                             break;
                         case 2:
-                            $user->first_surname = utf8_encode($surnames[0]);
-                            $user->second_surname = utf8_encode($surnames[1]);
+                            $user->first_surname = $surnames[0];
+                            $user->second_surname = $surnames[1];
                             break;
                         default:
                             $user->first_surname = "";
