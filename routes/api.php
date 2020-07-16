@@ -21,7 +21,7 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     // Ruta para ver los abonos realizador por el usuario
     Route::get('payments', 'Api\MainController@getPersonalPayments');
     // Ruta para realizar un abono a la cuenta del cliente
-    Route::get('balance', 'Api\MainController@mainBalance');
+    Route::get('balance', 'Api\MainController@getListStations');
     Route::post('balance/pay', 'Api\MainController@addBalance');
     // Ruta para usar saldo del abono personal del usuario
     Route::get('balance/use', 'Api\MainController@useBalance');
@@ -33,7 +33,7 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     Route::get('balance/contact', 'Api\MainController@lookingForContact');
     // Obtener lista de contactos, agregar un contacto a la lista, enviar saldo a un contacto agregado o no
     Route::post('balance/contact/add', 'Api\MainController@addContact');
-    Route::get('balance/contact/getlist', 'Api\MainController@getContact');
+    Route::get('balance/contact/getlist', 'Api\MainController@getListContacts');
     Route::post('balance/contact/sendbalance', 'Api\MainController@sendBalance');
     // Rutas para obtener historiales
     Route::get('balance/history', 'Api\MainController@history');

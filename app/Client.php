@@ -9,7 +9,8 @@ class Client extends Model
     /* Accediendo a la base de datos por default del proyecto */
     protected $connection = 'mysql';
 
-    public function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
 
@@ -23,8 +24,4 @@ class Client extends Model
     {
         return $this->belongsTo(Contact::class);
     }
-
-    protected $hidden = [
-        'created_at', 'updated_at',
-    ];
 }

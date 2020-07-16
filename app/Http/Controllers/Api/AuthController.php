@@ -29,6 +29,8 @@ class AuthController extends Controller
                     $user = $this->registerUser($userEucomb);
                     // Obteniendo los apellidos de los usuarios
                     $surnames = str_word_count(utf8_decode($userEucomb->last_name), 1);
+                    // var_dump($surnames);
+                    // dd();
                     switch (count($surnames)) {
                         case 1:
                             $user->first_surname = utf8_encode($surnames[0]);
@@ -94,7 +96,6 @@ class AuthController extends Controller
         $user->phone = $data->phone;
         $user->email = $data->email;
         $user->active = '1';
-        $user->email_verified_at = now();
         $user->created_at = now();
         $user->updated_at = now();
         return $user;
