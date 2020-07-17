@@ -368,22 +368,31 @@ class MainController extends Controller
                         foreach ($historyBalances as $historyBalance) {
                             $balance = json_decode($historyBalance->action);
                             $station = Station::find($balance->station_id);
-                            $action = array('balance' => $balance->balance, 'station' => $station->name, 'date' => $historyBalance->created_at);
+                            $action = array(
+                                'balance' => $balance->balance,
+                                'station' => $station->name,
+                                'date' => $historyBalance->created_at->format('Y-m-d')
+                            );
                             array_push($balances, $action);
                         }
-                        return $this->successMessage('balances', $balances);
                         break;
                     case 'share':
                         foreach ($historyBalances as $historyBalance) {
                             $balance = json_decode($historyBalance->action);
                             $station = Station::find($balance->station_id);
                             $receiver = Client::find($balance->receiver_id);
-                            $action = array('station' => $station->name, 'balance' => $balance->balance, 'membership' => $receiver->membership, 'name' => $receiver->user->name, 'date' => $historyBalance->created_at);
+                            $action = array(
+                                'station' => $station->name,
+                                'balance' => $balance->balance,
+                                'membership' => $receiver->membership,
+                                'name' => $receiver->user->name,
+                                'date' => $historyBalance->created_at->format('Y-m-d')
+                            );
                             array_push($balances, $action);
                         }
-                        return $this->successMessage('balances', $balances);
                         break;
                 }
+                return $this->successMessage('balances', $balances);
             } else {
                 return $this->errorMessage('No se ha realizado abonos a su cuenta');
             }
