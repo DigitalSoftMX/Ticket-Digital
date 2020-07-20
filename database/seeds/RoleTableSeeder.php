@@ -13,9 +13,9 @@ class RoleTableSeeder extends Seeder
      */
     public function run()
     {
-        /* Accediendo a las estaciones de Eucomb en su base de datos lealtadd_eucomb*/
+        // Accediendo a las estaciones de Eucomb en su base de datos lealtadd_eucomb
         $EucombRoles = EucombRole::all();
-        /* Asignando los roles de Eucomb a la base de datos Ticket Digital */
+        // Asignando los roles de Eucomb a la base de datos Ticket Digital
         foreach ($EucombRoles as $EucombRol) {
             $role = new Role();
             $role->name = $EucombRol->name;

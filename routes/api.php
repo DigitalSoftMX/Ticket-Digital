@@ -38,3 +38,8 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     // Rutas para obtener historiales
     Route::get('balance/history', 'Api\MainController@history');
 });
+// Rutal para el usuario con rol despachador
+Route::group(['middleware' => ['jwtAuth']], function () {
+    // Rutas del main, princial, dashboard o home
+    Route::get('maindispatcher', 'Api\DispatcherController@main');
+});

@@ -10,24 +10,25 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
-    /* Accediendo a la base de datos por default del proyecto */
+    // Accediendo a la base de datos por default del proyecto
     protected $connection = 'mysql';
 
     use Notifiable;
-
-    /* Relacion a muchos para el rol del usuario */
+    // Relacion a muchos para el rol del usuario
     public function roles()
     {
         return $this->belongsToMany('App\Role');
     }
-
-    /* Relacion usuario cliente */
+    // Relacion usuario cliente
     public function client()
     {
         return $this->hasOne(Client::class);
     }
-
-    /* funcion que pregunta si el rol esta autorizado */
+    // Relacion usuario despachador
+    public function dispatcher(){
+        return $this->hasOne(Dispatcher::class);
+    }
+    // funcion que pregunta si el rol esta autorizado
     public function authorizeRoles($roles)
     {
         if ($this->hasAnyRole($roles)) {

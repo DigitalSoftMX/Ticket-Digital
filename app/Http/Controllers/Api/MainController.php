@@ -19,36 +19,28 @@ class MainController extends Controller
     public function main()
     {
         $user = Auth::user();
-        switch ($user->roles[0]->name) {
-            case 'usuario':
-                $type = 'client';
-                $dataUser = array(
+        if (Auth::user()->roles[0]->name == 'usuario') {
+            $data = array(
+                'id' => $user->id,
+                'name' => $user->name,
+                'first_surname' => $user->first_surname,
+                'second_surname' => $user->second_surname,
+                'email' => $user->email,
+                'sex' => $user->sex,
+                'phone' => $user->phone,
+                'client' => array(
                     'membership' => $user->client->membership,
                     'current_balance' => $user->client->current_balance,
                     'shared_balance' => $user->client->shared_balance,
                     'points' => $user->client->points,
                     'image_qr' => $user->client->image_qr,
                     'birthdate' => $user->client->birthdate
-                );
-                break;
-            case 'despachador':
-                $type = 'dispatcher';
-                // Falta obtner la informacion del despachador
-                break;
-            default:
-                return $this->errorMessage('Usuario no autorizado');
+                )
+            );
+            return $this->successMessage('user', $data);
+        } else {
+            return $this->errorMessage('Usuario no autorizado');
         }
-        $data = array(
-            'id' => $user->id,
-            'name' => $user->name,
-            'first_surname' => $user->first_surname,
-            'second_surname' => $user->second_surname,
-            'email' => $user->email,
-            'sex' => $user->sex,
-            'phone' => $user->phone,
-            $type => $dataUser
-        );
-        return $this->successMessage('user', $data);
     }
     // Funcion principal para la ventana de abonos
     public function getListStations()
@@ -241,6 +233,7 @@ class MainController extends Controller
                             $receivedBalance->save();
                             // Guardando historial de transaccion
                             $this->saveHistoryBalance($receivedBalance, 'share', $request->balance);
+                            $this->saveHistoryBalance($receivedBalance, 'received', $request->balance);
                         } else {
                             $sharedBalance = new SharedBalance();
                             $sharedBalance->transmitter_id = Auth::user()->client->id;
@@ -251,6 +244,7 @@ class MainController extends Controller
                             $sharedBalance->save();
                             // Guardando historial de transaccion
                             $this->saveHistoryBalance($sharedBalance, 'share', 0);
+                            $this->saveHistoryBalance($sharedBalance, 'received', 0);
                         }
                         $payment->balance -= $request->balance;
                         $payment->save();
@@ -371,7 +365,7 @@ class MainController extends Controller
                             $action = array(
                                 'balance' => $balance->balance,
                                 'station' => $station->name,
-                                'date' => $historyBalance->created_at->format('Y-m-d')
+                                'date' => $historyBalance->created_at->format('Y/m/d')
                             );
                             array_push($balances, $action);
                         }
@@ -385,8 +379,23 @@ class MainController extends Controller
                                 'station' => $station->name,
                                 'balance' => $balance->balance,
                                 'membership' => $receiver->membership,
-                                'name' => $receiver->user->name,
-                                'date' => $historyBalance->created_at->format('Y-m-d')
+                                'name' => $receiver->user->name . ' ' . $receiver->user->first_surname . ' ' . $receiver->user->second_surname,
+                                'date' => $historyBalance->created_at->format('Y/m/d')
+                            );
+                            array_push($balances, $action);
+                        }
+                        break;
+                    case 'received':
+                        foreach ($historyBalances as $historyBalance) {
+                            $balance = json_decode($historyBalance->action);
+                            $station = Station::find($balance->station_id);
+                            $transmitter = Client::find($balance->transmitter_id);
+                            $action = array(
+                                'station' => $station->name,
+                                'balance' => $balance->balance,
+                                'membership' => $transmitter->membership,
+                                'name' => $transmitter->user->name . ' ' . $transmitter->user->first_surname . ' ' . $transmitter->user->second_surname,
+                                'date' => $historyBalance->created_at->format('Y/m/d')
                             );
                             array_push($balances, $action);
                         }
@@ -413,6 +422,9 @@ class MainController extends Controller
                 break;
             case 'share':
                 $historyBalance->client_id = $history->transmitter_id;
+                break;
+            case 'received':
+                $historyBalance->client_id = $history->receiver_id;
                 break;
         }
         $historyBalance->action = $history;

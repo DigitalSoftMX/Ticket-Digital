@@ -15,6 +15,7 @@ class CreateDispatchersTable extends Migration
     {
         Schema::connection('mysql')->create('dispatchers', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->string('dispatcher_id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger("station_id");
             $table->timestamps();
