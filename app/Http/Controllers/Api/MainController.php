@@ -354,7 +354,19 @@ class MainController extends Controller
     public function history(Request $request)
     {
         if (Auth::user()->roles[0]->name == 'usuario') {
-            $historyBalances = History::where([['client_id', Auth::user()->client->id], ['type', $request->type]])->get();
+            if ($request->start == "" && $request->end == "") {
+                $historyBalances = History::where([['client_id', Auth::user()->client->id], ['type', $request->type]])->get();
+            } elseif ($request->start == "") {
+                $historyBalances = History::where([['client_id', Auth::user()->client->id], ['type', $request->type]])->whereDate('created_at', '<=', $request->end)->get();
+            } elseif ($request->end == "") {
+                $historyBalances = History::where([['client_id', Auth::user()->client->id], ['type', $request->type]])->whereDate('created_at', '>=', $request->start)->get();
+            } else {
+                if ($request->start > $request->end) {
+                    return $this->errorMessage('Error de consulta por fecha');
+                } else {
+                    $historyBalances = History::where([['client_id', Auth::user()->client->id], ['type', $request->type]])->whereDate('created_at', '>=', $request->start)->whereDate('created_at', '<=', $request->end)->get();
+                }
+            }
             if (count($historyBalances) > 0) {
                 $balances = array();
                 switch ($request->type) {
@@ -371,34 +383,10 @@ class MainController extends Controller
                         }
                         break;
                     case 'share':
-                        foreach ($historyBalances as $historyBalance) {
-                            $balance = json_decode($historyBalance->action);
-                            $station = Station::find($balance->station_id);
-                            $receiver = Client::find($balance->receiver_id);
-                            $action = array(
-                                'station' => $station->name,
-                                'balance' => $balance->balance,
-                                'membership' => $receiver->membership,
-                                'name' => $receiver->user->name . ' ' . $receiver->user->first_surname . ' ' . $receiver->user->second_surname,
-                                'date' => $historyBalance->created_at->format('Y/m/d')
-                            );
-                            array_push($balances, $action);
-                        }
+                        $balances = $this->getSharedBalanceHistory($historyBalances, 'receiver_id');
                         break;
                     case 'received':
-                        foreach ($historyBalances as $historyBalance) {
-                            $balance = json_decode($historyBalance->action);
-                            $station = Station::find($balance->station_id);
-                            $transmitter = Client::find($balance->transmitter_id);
-                            $action = array(
-                                'station' => $station->name,
-                                'balance' => $balance->balance,
-                                'membership' => $transmitter->membership,
-                                'name' => $transmitter->user->name . ' ' . $transmitter->user->first_surname . ' ' . $transmitter->user->second_surname,
-                                'date' => $historyBalance->created_at->format('Y/m/d')
-                            );
-                            array_push($balances, $action);
-                        }
+                        $balances = $this->getSharedBalanceHistory($historyBalances, 'transmitter_id');
                         break;
                 }
                 return $this->successMessage('balances', $balances);
@@ -446,5 +434,24 @@ class MainController extends Controller
             'ok' => true,
             $name => $data
         ]);
+    }
+    // Obteniendo el historial enviodo o recibido
+    private function getSharedBalanceHistory($historyBalances, $person)
+    {
+        $balances = array();
+        foreach ($historyBalances as $historyBalance) {
+            $balance = json_decode($historyBalance->action);
+            $station = Station::find($balance->station_id);
+            $data = Client::find($balance->$person);
+            $action = array(
+                'station' => $station->name,
+                'balance' => $balance->balance,
+                'membership' => $data->membership,
+                'name' => $data->user->name . ' ' . $data->user->first_surname . ' ' . $data->user->second_surname,
+                'date' => $historyBalance->created_at->format('Y/m/d')
+            );
+            array_push($balances, $action);
+        }
+        return $balances;
     }
 }
