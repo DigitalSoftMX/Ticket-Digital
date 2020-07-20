@@ -16,7 +16,7 @@ class CreateUserHistoryDepositsTable extends Migration
         Schema::connection('mysql')->create('user_history_deposits', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('client_id');
-            $table->integer('balance');
+            $table->float('balance');
             $table->unsignedBigInteger('station_id');
             $table->integer('status');
             $table->timestamps();

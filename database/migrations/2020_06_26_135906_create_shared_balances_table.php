@@ -18,7 +18,7 @@ class CreateSharedBalancesTable extends Migration
             $table->bigIncrements('id');
             $table->unsignedBigInteger('transmitter_id');
             $table->unsignedBigInteger('receiver_id');
-            $table->integer('balance');
+            $table->float('balance');
             $table->unsignedBigInteger('station_id');
             $table->integer('status');
             $table->timestamps();

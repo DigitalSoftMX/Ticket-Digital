@@ -33,6 +33,7 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     Route::get('balance/contact', 'Api\MainController@lookingForContact');
     // Obtener lista de contactos, agregar un contacto a la lista, enviar saldo a un contacto agregado o no
     Route::post('balance/contact/add', 'Api\MainController@addContact');
+    Route::post('balance/contact/delete','Api\MainController@deleteContact');
     Route::get('balance/contact/getlist', 'Api\MainController@getListContacts');
     Route::post('balance/contact/sendbalance', 'Api\MainController@sendBalance');
     // Rutas para obtener historiales
@@ -42,4 +43,6 @@ Route::group(['middleware' => ['jwtAuth']], function () {
 Route::group(['middleware' => ['jwtAuth']], function () {
     // Rutas del main, princial, dashboard o home
     Route::get('maindispatcher', 'Api\DispatcherController@main');
+    // Ruta temporal para hacer un cobro para el cliente
+    Route::post('makepayment', 'Api\DispatcherController@makePayment');
 });

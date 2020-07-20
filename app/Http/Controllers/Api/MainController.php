@@ -32,6 +32,7 @@ class MainController extends Controller
                     'membership' => $user->client->membership,
                     'current_balance' => $user->client->current_balance,
                     'shared_balance' => $user->client->shared_balance,
+                    'total_shared_balance' => count(SharedBalance::where('receiver_id', $user->client->id)->get()),
                     'points' => $user->client->points,
                     'image_qr' => $user->client->image_qr,
                     'birthdate' => $user->client->birthdate
@@ -196,7 +197,7 @@ class MainController extends Controller
             return $this->errorMessage('Usuario no autorizado');
         }
     }
-    // Funcion para agregar un contacto a un usuario
+    // Funcion para agregar un contacto a un contacto
     public function addContact(Request $request)
     {
         if (Auth::user()->roles[0]->name == 'usuario') {
@@ -212,6 +213,17 @@ class MainController extends Controller
             } else {
                 return $this->errorMessage('El usuario ya ha sido agregado anteriormente');
             }
+        } else {
+            return $this->errorMessage('Usuario no autorizado');
+        }
+    }
+    // Funcion para eliminar a un contacto
+    public function deleteContact(Request $request)
+    {
+        if (Auth::user()->roles[0]->name == 'usuario') {
+            $contact = Contact::where([['transmitter_id', Auth::user()->client->id], ['receiver_id', $request->id_contact]])->first();
+            $contact->delete();
+            return $this->successMessage('message', 'Contacto eliminado correctamente');
         } else {
             return $this->errorMessage('Usuario no autorizado');
         }
