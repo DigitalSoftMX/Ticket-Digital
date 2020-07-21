@@ -7,7 +7,6 @@ use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
-use App\User;
 use App\UserHistoryDeposit;
 use Illuminate\Support\Facades\Auth;
 
@@ -48,6 +47,7 @@ class DispatcherController extends Controller
                             $payment->save();
                             // Falta guardar historial de pago
                             $client->current_balance -= $request->price;
+                            $client->points += intval($request->liters);
                             $client->save();
                             return $this->successMessage('payment', 'Cobro realizado correctamente');
                         } else {
@@ -66,6 +66,8 @@ class DispatcherController extends Controller
                             // Falta guardar historial de pago
                             $client->shared_balance -= $request->price;
                             $client->save();
+                            $transmitter->points += intval($request->liters);
+                            $transmitter->save();
                             return $this->successMessage('payment', 'Cobro realizado correctamente');
                         } else {
                             return $this->errorMessage('No hay saldo suficiente');

@@ -206,10 +206,7 @@ class MainController extends Controller
                 $contact->transmitter_id = Auth::user()->client->id;
                 $contact->receiver_id = $request->id_contact;
                 $contact->save();
-                return response()->json([
-                    'ok' => true,
-                    'message' => 'Contacto agregado correctamente'
-                ]);
+                return $this->successMessage('message','Contacto agregado correctamente');
             } else {
                 return $this->errorMessage('El usuario ya ha sido agregado anteriormente');
             }
