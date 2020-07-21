@@ -110,20 +110,26 @@ class MainController extends Controller
     {
         if (Auth::user()->roles[0]->name == 'usuario') {
             $payments = UserHistoryDeposit::where('client_id', Auth::user()->client->id)->get();
-            if (count($payments) != 0) {
+            if (count($payments) > 0) {
                 $deposits = array();
                 foreach ($payments as $payment) {
-                    array_push($deposits, array(
-                        'id' => $payment->id,
-                        'balance' => $payment->balance,
-                        'status' => $payment->status,
-                        'station' => array(
-                            'name' => $payment->station->name,
-                            'number_station' => $payment->station->number_station
-                        )
-                    ));
+                    if ($payment->balance > 0) {
+                        array_push($deposits, array(
+                            'id' => $payment->id,
+                            'balance' => $payment->balance,
+                            'status' => $payment->status,
+                            'station' => array(
+                                'name' => $payment->station->name,
+                                'number_station' => $payment->station->number_station
+                            )
+                        ));
+                    }
                 }
-                return $this->successMessage('payments', $deposits);
+                if (count($deposits) > 0) {
+                    return $this->successMessage('payments', $deposits);
+                } else {
+                    return $this->errorMessage('No hay abonos realizados');
+                }
             } else {
                 return $this->errorMessage('No hay abonos realizados');
             }
@@ -206,7 +212,7 @@ class MainController extends Controller
                 $contact->transmitter_id = Auth::user()->client->id;
                 $contact->receiver_id = $request->id_contact;
                 $contact->save();
-                return $this->successMessage('message','Contacto agregado correctamente');
+                return $this->successMessage('message', 'Contacto agregado correctamente');
             } else {
                 return $this->errorMessage('El usuario ya ha sido agregado anteriormente');
             }
@@ -283,28 +289,34 @@ class MainController extends Controller
     {
         if (Auth::user()->roles[0]->name == 'usuario') {
             $balances = SharedBalance::where('receiver_id', Auth::user()->client->id)->get();
-            if (count($balances) != 0) {
+            if (count($balances) > 0) {
                 $receivedBalances = array();
                 foreach ($balances as $balance) {
-                    $data = array(
-                        'id' => $balance->id,
-                        'balance' => $balance->balance,
-                        'station' => array(
-                            'name' => $balance->station->name,
-                            'number_station' => $balance->station->number_station,
-                        ),
-                        'transmitter' => array(
-                            'membership' => $balance->transmitter->membership,
-                            'user' => array(
-                                'name' => $balance->transmitter->user->name,
-                                'first_surname' => $balance->transmitter->user->first_surname,
-                                'second_surname' => $balance->transmitter->user->second_surname,
+                    if ($balance->balance > 0) {
+                        $data = array(
+                            'id' => $balance->id,
+                            'balance' => $balance->balance,
+                            'station' => array(
+                                'name' => $balance->station->name,
+                                'number_station' => $balance->station->number_station,
+                            ),
+                            'transmitter' => array(
+                                'membership' => $balance->transmitter->membership,
+                                'user' => array(
+                                    'name' => $balance->transmitter->user->name,
+                                    'first_surname' => $balance->transmitter->user->first_surname,
+                                    'second_surname' => $balance->transmitter->user->second_surname,
+                                )
                             )
-                        )
-                    );
-                    array_push($receivedBalances, $data);
+                        );
+                        array_push($receivedBalances, $data);
+                    }
                 }
-                return $this->successMessage('payments', $receivedBalances);
+                if (count($receivedBalances) > 0) {
+                    return $this->successMessage('payments', $receivedBalances);
+                } else {
+                    return $this->errorMessage('No hay abonos realizados');
+                }
             } else {
                 return $this->errorMessage('No hay abonos realizados');
             }
