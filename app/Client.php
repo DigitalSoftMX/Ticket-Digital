@@ -24,4 +24,9 @@ class Client extends Model
     {
         return $this->belongsTo(Contact::class);
     }
+    // Relacion con el tipo de vehiculo
+    public function car()
+    {
+        return $this->hasOne(DataCar::class);
+    }
 }

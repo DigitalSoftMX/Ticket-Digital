@@ -24,8 +24,7 @@ class HomeController extends Controller
     public function index(Request $request)
     {
         /* Roles autorizados para el dashboard */
-        $request->user()->authorizeRoles(['admin_master','admin_eucomb','admin_estacion','usuario']); 
-        return view('dashboard'); 
+        $request->user()->authorizeRoles(['admin_master', 'admin_eucomb', 'admin_estacion', 'usuario']);
+        return view('dashboard');
     }
-    
 }

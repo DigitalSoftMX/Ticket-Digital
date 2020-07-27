@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Client;
 use App\Contact;
+use App\DataCar;
 use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -19,6 +20,11 @@ class MainController extends Controller
     public function main()
     {
         $user = Auth::user();
+        // $car = $user->client->car;
+        /* if (($car = $user->client->car) == "") {
+            $car->number_plate = null;
+            $car->type_car = null;
+        } */
         if (Auth::user()->roles[0]->name == 'usuario') {
             $data = array(
                 'id' => $user->id,
@@ -32,10 +38,14 @@ class MainController extends Controller
                     'membership' => $user->client->membership,
                     'current_balance' => $user->client->current_balance,
                     'shared_balance' => $user->client->shared_balance,
-                    'total_shared_balance' => count(SharedBalance::where('receiver_id', $user->client->id)->get()),
+                    'total_shared_balance' => count(SharedBalance::where([['receiver_id', $user->client->id], ['balance', '>', 0]])->get()),
                     'points' => $user->client->points,
                     'image_qr' => $user->client->image_qr,
                     'birthdate' => $user->client->birthdate
+                ),
+                'car' => array(
+                    'number_plate' => "",
+                    'type_car' => ""
                 )
             );
             return $this->successMessage('user', $data);
@@ -109,27 +119,21 @@ class MainController extends Controller
     public function getPersonalPayments()
     {
         if (Auth::user()->roles[0]->name == 'usuario') {
-            $payments = UserHistoryDeposit::where('client_id', Auth::user()->client->id)->get();
+            $payments = UserHistoryDeposit::where([['client_id', Auth::user()->client->id], ['balance', '>', 0]])->get();
             if (count($payments) > 0) {
                 $deposits = array();
                 foreach ($payments as $payment) {
-                    if ($payment->balance > 0) {
-                        array_push($deposits, array(
-                            'id' => $payment->id,
-                            'balance' => $payment->balance,
-                            'status' => $payment->status,
-                            'station' => array(
-                                'name' => $payment->station->name,
-                                'number_station' => $payment->station->number_station
-                            )
-                        ));
-                    }
+                    array_push($deposits, array(
+                        'id' => $payment->id,
+                        'balance' => $payment->balance,
+                        'status' => $payment->status,
+                        'station' => array(
+                            'name' => $payment->station->name,
+                            'number_station' => $payment->station->number_station
+                        )
+                    ));
                 }
-                if (count($deposits) > 0) {
-                    return $this->successMessage('payments', $deposits);
-                } else {
-                    return $this->errorMessage('No hay abonos realizados');
-                }
+                return $this->successMessage('payments', $deposits);
             } else {
                 return $this->errorMessage('No hay abonos realizados');
             }
@@ -141,37 +145,32 @@ class MainController extends Controller
     public function lookingForContact(Request $request)
     {
         if (Auth::user()->roles[0]->name == 'usuario') {
-            if (Auth::user()->client->membership != $request->membership) {
-                $contact = Client::where('membership', $request->membership)->first();
-                if ($contact != null) {
-                    $user = array(
-                        'id' => $contact->id,
-                        'membership' => $contact->membership,
-                        'user' => array(
-                            'name' => $contact->user->name,
-                            'first_surname' => $contact->user->first_surname,
-                            'second_surname' => $contact->user->second_surname
-                        )
-                    );
-                    return $this->successMessage('contact', $user);
-                } else {
-                    $user = EucombUser::where('username', $request->membership)->first();
-                    if ($user != null && $user->roles[0]->name == 'usuario') {
-                        $data = array(
-                            'name' => $user->name . " " . $user->last_name,
-                            'membership' => $user->username,
-                            'message' => 'Descarga la aplicación'
-                        );
-                        return $this->successMessage('contact', $data);
-                    } else {
-                        return $this->errorMessage('Usuario no registrado');
-                    }
-                }
+            $contact = Client::where([['membership', $request->membership], ['membership', '!=', Auth::user()->client->membership]])->first();
+            if ($contact != null) {
+                $user = array(
+                    'id' => $contact->id,
+                    'membership' => $contact->membership,
+                    'user' => array(
+                        'name' => $contact->user->name,
+                        'first_surname' => $contact->user->first_surname,
+                        'second_surname' => $contact->user->second_surname
+                    )
+                );
+                return $this->successMessage('contact', $user);
             } else {
-                return $this->errorMessage('Membresia del cliente');
+                $user = EucombUser::where([['username', $request->membership], ['username', '!=', Auth::user()->client->membership]])->first();
+                if ($user != null && $user->roles[0]->name == 'usuario') {
+                    $data = array(
+                        'name' => $user->name . " " . $user->last_name,
+                        'membership' => $user->username,
+                        'message' => 'Descarga la aplicación'
+                    );
+                    return $this->successMessage('contact', $data);
+                }
             }
+            return $this->errorMessage('Usuario no registrado');
         } else {
-            return $this->errorMessage('Usuario no autorizado');
+            return $this->errorMessage('Membresía de usuario no disponible');
         }
     }
     // Funcion para obtener los contactos de un usuario
@@ -179,7 +178,7 @@ class MainController extends Controller
     {
         if (Auth::user()->roles[0]->name == 'usuario') {
             $contacts = Contact::where('transmitter_id', Auth::user()->client->id)->get();
-            if (count($contacts) != 0) {
+            if (count($contacts) > 0) {
                 $listContacts = array();
                 foreach ($contacts as $contact) {
                     $data = array(
@@ -288,35 +287,29 @@ class MainController extends Controller
     public function listReceivedPayments()
     {
         if (Auth::user()->roles[0]->name == 'usuario') {
-            $balances = SharedBalance::where('receiver_id', Auth::user()->client->id)->get();
+            $balances = SharedBalance::where([['receiver_id', Auth::user()->client->id], ['balance', '>', 0]])->get();
             if (count($balances) > 0) {
                 $receivedBalances = array();
                 foreach ($balances as $balance) {
-                    if ($balance->balance > 0) {
-                        $data = array(
-                            'id' => $balance->id,
-                            'balance' => $balance->balance,
-                            'station' => array(
-                                'name' => $balance->station->name,
-                                'number_station' => $balance->station->number_station,
-                            ),
-                            'transmitter' => array(
-                                'membership' => $balance->transmitter->membership,
-                                'user' => array(
-                                    'name' => $balance->transmitter->user->name,
-                                    'first_surname' => $balance->transmitter->user->first_surname,
-                                    'second_surname' => $balance->transmitter->user->second_surname,
-                                )
+                    $data = array(
+                        'id' => $balance->id,
+                        'balance' => $balance->balance,
+                        'station' => array(
+                            'name' => $balance->station->name,
+                            'number_station' => $balance->station->number_station,
+                        ),
+                        'transmitter' => array(
+                            'membership' => $balance->transmitter->membership,
+                            'user' => array(
+                                'name' => $balance->transmitter->user->name,
+                                'first_surname' => $balance->transmitter->user->first_surname,
+                                'second_surname' => $balance->transmitter->user->second_surname,
                             )
-                        );
-                        array_push($receivedBalances, $data);
-                    }
+                        )
+                    );
+                    array_push($receivedBalances, $data);
                 }
-                if (count($receivedBalances) > 0) {
-                    return $this->successMessage('payments', $receivedBalances);
-                } else {
-                    return $this->errorMessage('No hay abonos realizados');
-                }
+                return $this->successMessage('payments', $receivedBalances);
             } else {
                 return $this->errorMessage('No hay abonos realizados');
             }

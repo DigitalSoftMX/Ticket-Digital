@@ -25,7 +25,8 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasOne(Client::class);
     }
     // Relacion usuario despachador
-    public function dispatcher(){
+    public function dispatcher()
+    {
         return $this->hasOne(Dispatcher::class);
     }
     // funcion que pregunta si el rol esta autorizado
@@ -99,6 +100,6 @@ class User extends Authenticatable implements JWTSubject
 
     public function getJWTCustomClaims()
     {
-        return [];
+        return ['role' => $this->roles[0]->name];
     }
 }

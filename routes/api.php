@@ -15,7 +15,7 @@ Route::post('login', 'Api\AuthController@login');
 Route::post('register', 'Api\AuthController@register');
 Route::get('logout', 'Api\AuthController@logout');
 
-Route::group(['middleware' => ['jwtAuth']], function () {
+Route::group(['middleware' => 'jwtAuth'], function () {
     // Rutas del main, princial, dashboard o home
     Route::get('main', 'Api\MainController@main');
     // Ruta para ver los abonos realizador por el usuario
@@ -33,16 +33,20 @@ Route::group(['middleware' => ['jwtAuth']], function () {
     Route::get('balance/contact', 'Api\MainController@lookingForContact');
     // Obtener lista de contactos, agregar un contacto a la lista, enviar saldo a un contacto agregado o no
     Route::post('balance/contact/add', 'Api\MainController@addContact');
-    Route::post('balance/contact/delete','Api\MainController@deleteContact');
+    Route::post('balance/contact/delete', 'Api\MainController@deleteContact');
     Route::get('balance/contact/getlist', 'Api\MainController@getListContacts');
     Route::post('balance/contact/sendbalance', 'Api\MainController@sendBalance');
     // Rutas para obtener historiales
     Route::get('balance/history', 'Api\MainController@history');
 });
 // Rutal para el usuario con rol despachador
-Route::group(['middleware' => ['jwtAuth']], function () {
+Route::group(['middleware' => 'jwtAuth'], function () {
     // Rutas del main, princial, dashboard o home
     Route::get('maindispatcher', 'Api\DispatcherController@main');
     // Ruta temporal para hacer un cobro para el cliente
     Route::post('makepayment', 'Api\DispatcherController@makePayment');
+    // Ruta para ver la informacion del despachador
+    Route::get('profile', 'Api\UserController@index');
+    // Ruta para editar la inforamcion del despachador
+    Route::post('profile/update', 'Api\UserController@update');
 });

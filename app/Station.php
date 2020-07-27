@@ -12,4 +12,9 @@ class Station extends Model
      *
      * @var array
      */
+    // Relacion con los horarios de la estacion
+    public function schedules()
+    {
+        return $this->belongsTo(Schedule::class);
+    }
 }

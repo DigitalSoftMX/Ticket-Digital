@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests\UserRequest;
 use Illuminate\Support\Facades\Hash;
 
-class UserController extends Controller 
+class UserController extends Controller
 {
     /**
      * Display a listing of the users
@@ -19,8 +19,8 @@ class UserController extends Controller
     public function index(User $model, Request $request)
     {
         /* Consultando a los usuarios de la base de datos y enviando a la vista user.index */
-        $request->user()->authorizeRoles(['admin_master','admin_eucomb','admin_estacion','usuario']);
-        return view('users.index', ['users' => $model::all()]);  
+        $request->user()->authorizeRoles(['admin_master', 'admin_eucomb', 'admin_estacion', 'usuario']);
+        return view('users.index', ['users' => $model::all()]);
     }
 
     /**
@@ -30,7 +30,7 @@ class UserController extends Controller
      */
     public function create(Request $request, Role $roles)
     {
-        $request->user()->authorizeRoles(['admin_master']);   
+        $request->user()->authorizeRoles(['admin_master']);
         $roles = Role::all();
         return view('users.create', compact('roles'));
     }
@@ -48,7 +48,7 @@ class UserController extends Controller
         $model->create($request->merge(['password' => Hash::make($request->get('password'))])->all());
         $ultimo_registro = $model::get()->last();
         $user = $model::find($ultimo_registro->id);
-        for($i=0; $i<count($request->razon_social); $i++){
+        for ($i = 0; $i < count($request->razon_social); $i++) {
             $user->estacions()->attach($request->razon_social[$i]);
         }
         $user->roles()->attach($request->rol);
@@ -66,7 +66,7 @@ class UserController extends Controller
     {
         $request->user()->authorizeRoles(['admin_master']);
         $roles = Role::all();
-        return view('users.edit', compact('user','roles'));
+        return view('users.edit', compact('user', 'roles'));
     }
 
     /**
@@ -89,11 +89,11 @@ class UserController extends Controller
         $hasPassword = $request->get('password');
         $user->update(
             $request->merge(['password' => Hash::make($request->get('password'))])
-                ->except([$hasPassword ? '' : 'password']
-        ));
+                ->except([$hasPassword ? '' : 'password'])
+        );
 
-        $user->roles()->updateExistingPivot($rol_actual,['role_id'=>$request->rol]);
-        
+        $user->roles()->updateExistingPivot($rol_actual, ['role_id' => $request->rol]);
+
         return redirect()->route('user.index')->withStatus(__('Usuario actualizado con éxito.'));
     }
 
@@ -103,7 +103,7 @@ class UserController extends Controller
      * @param  \App\User  $user
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function destroy(User $user,Request $request)
+    public function destroy(User $user, Request $request)
     {
         $request->user()->authorizeRoles(['admin_master']);
 

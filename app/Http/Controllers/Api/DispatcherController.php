@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Client;
+use App\DispatcherHistoryPayment;
 use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Schedule;
 use App\SharedBalance;
 use App\UserHistoryDeposit;
 use Illuminate\Support\Facades\Auth;
@@ -17,15 +19,29 @@ class DispatcherController extends Controller
     {
         if (Auth::user()->roles[0]->name == 'despachador') {
             $user = Auth::user();
+            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
+            $totalPayment = 0;
+            foreach ($payments as $payment) {
+                $totalPayment += $payment->payment;
+            }
+            $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
             $data = array(
                 'id' => $user->id,
                 'name' => $user->name,
                 'first_surname' => $user->first_surname,
                 'second_surname' => $user->second_surname,
-                'email' => $user->email,
-                'sex' => $user->sex,
-                'phone' => $user->phone,
                 'dispatcher_id' => $user->dispatcher->dispatcher_id,
+                'station' => array(
+                    'id' => $user->dispatcher->station->id,
+                    'name' => $user->dispatcher->station->name,
+                    'number_station' => $user->dispatcher->station->number_station
+                ),
+                'schedule' => array(
+                    'id' => $schedule->id,
+                    'name' => $schedule->name
+                ),
+                'number_payments' => count($payments),
+                'total_payments' => $totalPayment
             );
             return $this->successMessage('user', $data);
         } else {
