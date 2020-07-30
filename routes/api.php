@@ -49,6 +49,8 @@ Route::group(['middleware' => 'jwtAuth'], function () {
     Route::post('makepayment', 'Api\DispatcherController@makePayment');
     // Ruta para obtener los cobros totales actuales
     Route::get('getpaymentsnow','Api\DispatcherController@getPaymentsNow');
+    // Ruta para obtener la lista de cobros por fecha
+    Route::get('getlistpayments','Api\DispatcherController@getListPayments');
 });
 // Rutas para ver y editar perfiles de cliente y despachador
 Route::group(['middleware' => 'jwtAuth'], function () {

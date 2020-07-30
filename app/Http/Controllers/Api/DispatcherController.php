@@ -66,7 +66,7 @@ class DispatcherController extends Controller
     // Funcion para realizar el cobro hacia un cliente
     public function makePayment(Request $request)
     {
-        if (Auth::user()->roles[0]->name == 'despachador') {;
+        if (Auth::user()->roles[0]->name == 'despachador') {
             if (($dispatcher = Auth::user()->dispatcher)->station_id == $request->id_station) {
                 $client = Client::where('membership', $request->membership)->first();
                 if ($request->tr_membership == "") {
@@ -122,7 +122,52 @@ class DispatcherController extends Controller
     // Funcion para obtener los cobros del dia
     public function getPaymentsNow()
     {
-        return 'hola';
+        if (Auth::user()->roles[0]->name == 'despachador') {
+            if (count($payments = DispatcherHistoryPayment::where([['dispatcher_id', Auth::user()->dispatcher->id], ['station_id', Auth::user()->dispatcher->station_id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) > 0) {
+                $dataPayment = array();
+                foreach ($payments as $payment) {
+                    $data = array(
+                        'id' => $payment->id,
+                        'payment' => $payment->payment,
+                        'gasoline' => $payment->gasoline->name,
+                        'liters' => $payment->liters,
+                        'date' => $payment->created_at->format('Y/m/d'),
+                        'hour' => $payment->created_at->format('H:i:s')
+                    );
+                    array_push($dataPayment, $data);
+                }
+                return $this->successMessage('made_payments', $dataPayment);
+            } else {
+                return $this->errorMessage('No hay cobros realizados');
+            }
+        } else {
+            return $this->errorMessage('Usuario no autorizado');
+        }
+    }
+    // Funcion para devolver la lista de cobros por fecha
+    public function getListPayments(Request $request)
+    {
+        if (Auth::user()->roles[0]->name == 'despachador') {
+            if (count($payments = DispatcherHistoryPayment::where([['dispatcher_id', Auth::user()->dispatcher->id], ['station_id', Auth::user()->dispatcher->station_id]])->whereDate('created_at', $request->date)->get()) > 0) {
+                $dataPayment = array();
+                foreach ($payments as $payment) {
+                    $data = array(
+                        'id' => $payment->id,
+                        'payment' => $payment->payment,
+                        'gasoline' => $payment->gasoline->name,
+                        'liters' => $payment->liters,
+                        'date' => $payment->created_at->format('Y/m/d'),
+                        'hour' => $payment->created_at->format('H:i:s')
+                    );
+                    array_push($dataPayment, $data);
+                }
+                return $this->successMessage('made_payments', $dataPayment);
+            } else {
+                return $this->errorMessage('No hay cobros realizados');
+            }
+        } else {
+            return $this->errorMessage('Usuario no autorizado');
+        }
     }
     // Funcion mensajes de error
     private function errorMessage($message)
