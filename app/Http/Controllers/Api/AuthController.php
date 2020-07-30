@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Client;
-use App\Dispatcher;
+use App\DataCar;
 use App\Eucomb\User as EucombUser;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -19,11 +19,9 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         // Pregunta si el usuario existe en la BD de Ticket Digital
-        $userTicket = User::where('email', $request->email)->first();
-        if ($userTicket == null) {
+        if (($userTicket = User::where('email', $request->email)->first()) == null) {
             // Pregunta si el usuario existe en la BD de Eucomb
-            $userEucomb = EucombUser::where('email', $request->email)->first();
-            if ($userEucomb != null) {
+            if (($userEucomb = EucombUser::where('email', $request->email)->first()) != null) {
                 if ($userEucomb->roles[0]->name == 'usuario') {
                     // Copiando los datos del usuario de BD Eucomb a BD Ticket Digital
                     $user = $this->registerUser($userEucomb);
@@ -79,6 +77,13 @@ class AuthController extends Controller
             }
             $this->registerClient($request, $user->id);
             $user->roles()->attach(Role::where('name', 'usuario')->first());
+            if ($request->number_plate != "" || $request->type_car != "") {
+                $dataCar = new DataCar();
+                $dataCar->client_id = $user->client->id;
+                $dataCar->number_plate = $request->number_plate;
+                $dataCar->type_car = $request->type_car;
+                $dataCar->save();
+            }
             return $this->getResponse($request, $user);
         } else {
             return $this->errorMessage('El usuario ya existe');
@@ -93,9 +98,8 @@ class AuthController extends Controller
         $user->sex = $data->sex;
         $user->phone = $data->phone;
         $user->email = $data->email;
+        $user->address = $data->address;
         $user->active = '1';
-        $user->created_at = now();
-        $user->updated_at = now();
         return $user;
     }
     // Registrando a un usuario tipo cliente
@@ -110,8 +114,6 @@ class AuthController extends Controller
         // Verificar la imagen qr del cliente
         $client->image_qr = $data->username;
         $client->birthdate = $data->birthdate;
-        $client->created_at = now();
-        $client->updated_at = now();
         $client->save();
     }
     // Metodo para cerrar sesion
@@ -119,10 +121,7 @@ class AuthController extends Controller
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($request->token));
-            return response()->json([
-                'ok' => true,
-                'message' => 'Logout success'
-            ]);
+            return $this->successMessage('message','Cierre de sesion correcto');
         } catch (Exception $e) {
             return $this->errorMessage('Token invalido');
         }
@@ -136,9 +135,14 @@ class AuthController extends Controller
         }
         $user->remember_token = $token;
         $user->save();
+        return $this->successMessage('token',$token);
+    }
+    // Funcion mensaje correcto
+    private function successMessage($name, $data)
+    {
         return response()->json([
             'ok' => true,
-            'token' => $token
+            $name => $data
         ]);
     }
     // Metodo mensaje de error

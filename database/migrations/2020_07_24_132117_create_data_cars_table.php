@@ -16,8 +16,8 @@ class CreateDataCarsTable extends Migration
         Schema::connection('mysql')->create('data_cars', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('client_id');
-            $table->string('number_plate');
-            $table->string('type_car');
+            $table->string('number_plate')->nullable();
+            $table->string('type_car')->nullable();
             $table->timestamps();
 
             $table->foreign('client_id')->references('id')->on('clients')

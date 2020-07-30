@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Client;
 use App\Contact;
-use App\DataCar;
 use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -19,21 +18,18 @@ class MainController extends Controller
     // funcion para obtener informacion del usuario hacia la pagina princial
     public function main()
     {
-        $user = Auth::user();
-        // $car = $user->client->car;
-        /* if (($car = $user->client->car) == "") {
-            $car->number_plate = null;
-            $car->type_car = null;
-        } */
-        if (Auth::user()->roles[0]->name == 'usuario') {
+        if (($user = Auth::user())->roles[0]->name == 'usuario') {
+            if (($car = $user->client->car) != "") {
+                $dataCar = array('number_plate' => $car->number_plate, 'type_car' => $car->type_car);
+            } else {
+                $dataCar = array('number_plate' => '', 'type_car' => '');
+            }
             $data = array(
                 'id' => $user->id,
                 'name' => $user->name,
                 'first_surname' => $user->first_surname,
                 'second_surname' => $user->second_surname,
                 'email' => $user->email,
-                'sex' => $user->sex,
-                'phone' => $user->phone,
                 'client' => array(
                     'membership' => $user->client->membership,
                     'current_balance' => $user->client->current_balance,
@@ -41,12 +37,8 @@ class MainController extends Controller
                     'total_shared_balance' => count(SharedBalance::where([['receiver_id', $user->client->id], ['balance', '>', 0]])->get()),
                     'points' => $user->client->points,
                     'image_qr' => $user->client->image_qr,
-                    'birthdate' => $user->client->birthdate
                 ),
-                'car' => array(
-                    'number_plate' => "",
-                    'type_car' => ""
-                )
+                'data_car' => $dataCar
             );
             return $this->successMessage('user', $data);
         } else {

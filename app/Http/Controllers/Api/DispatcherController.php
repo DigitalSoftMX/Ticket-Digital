@@ -19,7 +19,7 @@ class DispatcherController extends Controller
     {
         if (Auth::user()->roles[0]->name == 'despachador') {
             $user = Auth::user();
-            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
+            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
             $totalPayment = 0;
             foreach ($payments as $payment) {
                 $totalPayment += $payment->payment;
@@ -92,6 +92,15 @@ class DispatcherController extends Controller
                         return $this->errorMessage('No hay abonos realizados');
                     }
                 }
+                // Registro de pagos para el despachador
+                $registerPayment = new DispatcherHistoryPayment();
+                $registerPayment->dispatcher_id = $dispatcher->id;
+                $registerPayment->gasoline_id = $request->id_gasoline;
+                $registerPayment->liters = $request->liters;
+                $registerPayment->payment = $request->price;
+                $registerPayment->schedule_id = (Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', Auth::user()->dispatcher->station_id)->first())->id;
+                $registerPayment->station_id = $dispatcher->station_id;
+                $registerPayment->save();
             } else {
                 return $this->errorMessage('Estacion incorrecta');
             }

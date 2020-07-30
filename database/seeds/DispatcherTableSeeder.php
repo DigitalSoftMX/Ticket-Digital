@@ -12,7 +12,7 @@ class DispatcherTableSeeder extends Seeder
      */
     public function run()
     {
-        for ($i = 1; $i < 8; $i++) {
+        for ($i = 1; $i < 9; $i++) {
             $dispatcher = new Dispatcher();
             while (true) {
                 $dispatcher_id = rand(10000000, 99999999);

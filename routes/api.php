@@ -45,8 +45,11 @@ Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('maindispatcher', 'Api\DispatcherController@main');
     // Ruta temporal para hacer un cobro para el cliente
     Route::post('makepayment', 'Api\DispatcherController@makePayment');
-    // Ruta para ver la informacion del despachador
+});
+// Rutas para ver y editar perfiles de cliente y despachador
+Route::group(['middleware' => 'jwtAuth'], function () {
+    // Ruta para ver la informacion del despachador y cliente
     Route::get('profile', 'Api\UserController@index');
-    // Ruta para editar la inforamcion del despachador
+    // Ruta para editar la inforamcion del despachador y cliente
     Route::post('profile/update', 'Api\UserController@update');
 });
