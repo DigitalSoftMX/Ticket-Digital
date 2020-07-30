@@ -43,8 +43,12 @@ Route::group(['middleware' => 'jwtAuth'], function () {
 Route::group(['middleware' => 'jwtAuth'], function () {
     // Rutas del main, princial, dashboard o home
     Route::get('maindispatcher', 'Api\DispatcherController@main');
+    // Ruta para obtener los tipos de gasolina
+    Route::get('gasolinelist','Api\DispatcherController@gasolineList');
     // Ruta temporal para hacer un cobro para el cliente
     Route::post('makepayment', 'Api\DispatcherController@makePayment');
+    // Ruta para obtener los cobros totales actuales
+    Route::get('getpaymentsnow','Api\DispatcherController@getPaymentsNow');
 });
 // Rutas para ver y editar perfiles de cliente y despachador
 Route::group(['middleware' => 'jwtAuth'], function () {

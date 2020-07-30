@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Client;
 use App\DispatcherHistoryPayment;
+use App\Gasoline;
 use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -48,16 +49,28 @@ class DispatcherController extends Controller
             return $this->errorMessage('Usuario no autorizado');
         }
     }
+    // Metodo para obtner la lista de gasolina
+    public function gasolineList()
+    {
+        if (Auth::user()->roles[0]->name == 'despachador') {
+            $data = array();
+            foreach (Gasoline::all() as $gasoline) {
+                $dataGasoline = array('id' => $gasoline->id, 'name' => $gasoline->name);
+                array_push($data, $dataGasoline);
+            }
+            return $this->successMessage('type_gasoline', $data);
+        } else {
+            return $this->errorMessage('Usuario no autorizado');
+        }
+    }
     // Funcion para realizar el cobro hacia un cliente
     public function makePayment(Request $request)
     {
-        if (Auth::user()->roles[0]->name == 'despachador') {
-            $dispatcher = Auth::user()->dispatcher;
-            if ($dispatcher->station_id == $request->id_station) {
+        if (Auth::user()->roles[0]->name == 'despachador') {;
+            if (($dispatcher = Auth::user()->dispatcher)->station_id == $request->id_station) {
                 $client = Client::where('membership', $request->membership)->first();
                 if ($request->tr_membership == "") {
-                    $payment = UserHistoryDeposit::where([['client_id', $client->id], ['station_id', $request->id_station]])->first();
-                    if ($payment != null) {
+                    if (($payment = UserHistoryDeposit::where([['client_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
                         if ($request->price <= $payment->balance) {
                             $payment->balance -= $request->price;
                             $payment->save();
@@ -65,17 +78,15 @@ class DispatcherController extends Controller
                             $client->current_balance -= $request->price;
                             $client->points += intval($request->liters);
                             $client->save();
-                            return $this->successMessage('payment', 'Cobro realizado correctamente');
                         } else {
                             return $this->errorMessage('No hay saldo suficiente');
                         }
                     } else {
-                        return $this->errorMessage('No hay abonos realizados');
+                        return $this->errorMessage('No hay abonos realizados en la cuenta');
                     }
                 } else {
                     $transmitter = Client::where('membership', $request->tr_membership)->first();
-                    $payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $client->id], ['station_id', $request->id_station]])->first();
-                    if ($payment != null) {
+                    if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
                         if ($request->price <= $payment->balance) {
                             $payment->balance -= $request->price;
                             $payment->save();
@@ -84,7 +95,6 @@ class DispatcherController extends Controller
                             $client->save();
                             $transmitter->points += intval($request->liters);
                             $transmitter->save();
-                            return $this->successMessage('payment', 'Cobro realizado correctamente');
                         } else {
                             return $this->errorMessage('No hay saldo suficiente');
                         }
@@ -92,7 +102,7 @@ class DispatcherController extends Controller
                         return $this->errorMessage('No hay abonos realizados');
                     }
                 }
-                // Registro de pagos para el despachador
+                // Registro de pagos para historial del despachador
                 $registerPayment = new DispatcherHistoryPayment();
                 $registerPayment->dispatcher_id = $dispatcher->id;
                 $registerPayment->gasoline_id = $request->id_gasoline;
@@ -101,12 +111,18 @@ class DispatcherController extends Controller
                 $registerPayment->schedule_id = (Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', Auth::user()->dispatcher->station_id)->first())->id;
                 $registerPayment->station_id = $dispatcher->station_id;
                 $registerPayment->save();
+                return $this->successMessage('payment', 'Cobro realizado correctamente');
             } else {
                 return $this->errorMessage('Estacion incorrecta');
             }
         } else {
             return $this->errorMessage('Usuario no autorizado');
         }
+    }
+    // Funcion para obtener los cobros del dia
+    public function getPaymentsNow()
+    {
+        return 'hola';
     }
     // Funcion mensajes de error
     private function errorMessage($message)
