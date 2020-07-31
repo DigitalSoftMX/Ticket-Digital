@@ -74,7 +74,6 @@ class DispatcherController extends Controller
                         if ($request->price <= $payment->balance) {
                             $payment->balance -= $request->price;
                             $payment->save();
-                            // Falta guardar historial de pago
                             $client->current_balance -= $request->price;
                             $client->points += intval($request->liters);
                             $client->save();
@@ -90,7 +89,6 @@ class DispatcherController extends Controller
                         if ($request->price <= $payment->balance) {
                             $payment->balance -= $request->price;
                             $payment->save();
-                            // Falta guardar historial de pago
                             $client->shared_balance -= $request->price;
                             $client->save();
                             $transmitter->points += intval($request->liters);
@@ -110,6 +108,7 @@ class DispatcherController extends Controller
                 $registerPayment->payment = $request->price;
                 $registerPayment->schedule_id = (Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', Auth::user()->dispatcher->station_id)->first())->id;
                 $registerPayment->station_id = $dispatcher->station_id;
+                $registerPayment->client_id = $client->id;
                 $registerPayment->save();
                 return $this->successMessage('payment', 'Cobro realizado correctamente');
             } else {
@@ -138,8 +137,7 @@ class DispatcherController extends Controller
     public function getPaymentsNow()
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            $query = [['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id]];
-            return $this->getPayments($query, now()->format('Y-m-d'));
+            return $this->getPayments(null, $user, now()->format('Y-m-d'));
         } else {
             return $this->errorMessage('Usuario no autorizado');
         }
@@ -148,15 +146,18 @@ class DispatcherController extends Controller
     public function getListPayments(Request $request)
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            $query = [['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['schedule_id', $request->id_schedule]];
-            return $this->getPayments($query, $request->date);
+            return $this->getPayments(['schedule_id', $request->id_schedule], $user, $request->date);
         } else {
             return $this->errorMessage('Usuario no autorizado');
         }
     }
     // Funcion para listar los cobros del depachador
-    private function getPayments($query, $date)
+    private function getPayments($array, $user, $date)
     {
+        $query = [['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id]];
+        if ($array != null) {
+            $query[2] = $array;
+        }
         if (count($payments = DispatcherHistoryPayment::where($query)->whereDate('created_at', $date)->get()) > 0) {
             $dataPayment = array();
             foreach ($payments as $payment) {
@@ -190,17 +191,5 @@ class DispatcherController extends Controller
             'ok' => true,
             $name => $data
         ]);
-    }
-    // Funcion para guardar historial de abonos a la cuenta del cliente
-    private function saveHistoryBalanceClient($history, $balance)
-    {
-        $historyBalance = new History();
-        if ($balance != 0) {
-            $history->balance = $balance;
-        }
-        $historyBalance->client_id = $history->client_id;
-        $historyBalance->action = $history;
-        $historyBalance->type = 'payment';
-        $historyBalance->save();
     }
 }

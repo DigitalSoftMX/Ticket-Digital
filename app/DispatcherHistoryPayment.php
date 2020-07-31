@@ -13,4 +13,9 @@ class DispatcherHistoryPayment extends Model
     {
         return $this->belongsTo(Gasoline::class);
     }
+    // Enlace con la estacion
+    public function station()
+    {
+        return $this->belongsTo(Station::class);
+    }
 }

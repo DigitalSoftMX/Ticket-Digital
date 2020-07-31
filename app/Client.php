@@ -8,12 +8,11 @@ class Client extends Model
 {
     /* Accediendo a la base de datos por default del proyecto */
     protected $connection = 'mysql';
-
+    // Relacion con el usuario
     public function user()
     {
         return $this->belongsTo(User::class);
     }
-
     // Relacion para los depositos realizados por el cliente
     public function historyDeposits()
     {
@@ -28,5 +27,10 @@ class Client extends Model
     public function car()
     {
         return $this->hasOne(DataCar::class);
+    }
+    // Relacion con los pagos que ha realizado
+    public function payments()
+    {
+        return $this->belongsTo(DispatcherHistoryPayment::class);
     }
 }

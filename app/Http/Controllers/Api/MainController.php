@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Client;
 use App\Contact;
+use App\DispatcherHistoryPayment;
 use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -383,7 +384,8 @@ class MainController extends Controller
                             $action = array(
                                 'balance' => $balance->balance,
                                 'station' => $station->name,
-                                'date' => $historyBalance->created_at->format('Y/m/d')
+                                'date' => $historyBalance->created_at->format('Y/m/d'),
+                                'hour' => $historyBalance->created_at->format('H:i:s')
                             );
                             array_push($balances, $action);
                         }
@@ -397,6 +399,38 @@ class MainController extends Controller
                 }
                 return $this->successMessage('balances', $balances);
             } else {
+                if ($request->type == 'payment') {
+                    if ($request->start == "" && $request->end == "") {
+                        $historyBalances = DispatcherHistoryPayment::where([['client_id', Auth::user()->client->id]])->get();
+                    } elseif ($request->start == "") {
+                        $historyBalances = DispatcherHistoryPayment::where([['client_id', Auth::user()->client->id]])->whereDate('created_at', '<=', $request->end)->get();
+                    } elseif ($request->end == "") {
+                        $historyBalances = DispatcherHistoryPayment::where([['client_id', Auth::user()->client->id]])->whereDate('created_at', '>=', $request->start)->get();
+                    } else {
+                        if ($request->start > $request->end) {
+                            return $this->errorMessage('Error de consulta por fecha');
+                        } else {
+                            $historyBalances = DispatcherHistoryPayment::where([['client_id', Auth::user()->client->id]])->whereDate('created_at', '>=', $request->start)->whereDate('created_at', '<=', $request->end)->get();
+                        }
+                    }
+                    if (count($historyBalances) > 0) {
+                        $payments = array();
+                        foreach ($historyBalances as $historyBalance) {
+                            $data = array(
+                                'balance' => $historyBalance->payment,
+                                'station' => $historyBalance->station->name,
+                                'liters' => $historyBalance->liters,
+                                'date' => $historyBalance->created_at->format('Y/m/d'),
+                                'hour' => $historyBalance->created_at->format('H:i:s'),
+                                'gasoline' => $historyBalance->gasoline->name
+                            );
+                            array_push($payments, $data);
+                        }
+                        return $this->successMessage('payments', $payments);
+                    } else {
+                        return $this->errorMessage('No se ha realizado pagos en la cuenta');
+                    }
+                }
                 return $this->errorMessage('No se ha realizado abonos a su cuenta');
             }
         } else {
