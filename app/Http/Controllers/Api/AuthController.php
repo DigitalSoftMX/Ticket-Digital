@@ -10,7 +10,6 @@ use App\Http\Controllers\Controller;
 use App\Role;
 use App\User;
 use Exception;
-use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -18,45 +17,38 @@ class AuthController extends Controller
     // Metodo para iniciar sesion en Ticket Digital
     public function login(Request $request)
     {
-        // Pregunta si el usuario existe en la BD de Ticket Digital
+        // Pregunta si el usuario existe en la BD de Ticket Digital o bien en Eucomb
         if (($userTicket = User::where('email', $request->email)->first()) == null) {
-            // Pregunta si el usuario existe en la BD de Eucomb
             if (($userEucomb = EucombUser::where('email', $request->email)->first()) != null) {
-                if ($userEucomb->roles[0]->name == 'usuario') {
-                    // Copiando los datos del usuario de BD Eucomb a BD Ticket Digital
-                    $user = $this->registerUser($userEucomb);
-                    // Obteniendo los apellidos de los usuarios
-                    $surnames = explode(" ", $userEucomb->last_name);
-                    switch (count($surnames)) {
-                        case 1:
-                            $user->first_surname = $surnames[0];
-                            break;
-                        case 2:
-                            $user->first_surname = $surnames[0];
-                            $user->second_surname = $surnames[1];
-                            break;
-                        default:
-                            $user->first_surname = "";
-                            $user->second_surname = "";
-                            break;
+                if (($role = $userEucomb->roles[0]->name) == 'usuario') {
+                    try {
+                        $user = $this->registerUser($userEucomb);
+                        // Obteniendo los apellidos del usuario
+                        switch (count($surnames = explode(" ", $userEucomb->last_name))) {
+                            case 1:
+                                $user->first_surname = $surnames[0];
+                                break;
+                            case 2:
+                                $user->first_surname = $surnames[0];
+                                $user->second_surname = $surnames[1];
+                                break;
+                        }
+                        $user->save();
+                    } catch (Exception $e) {
+                        return $this->errorMessage('Su correo esta repetido con otro usuario en Eucomb, intente cambiarlo e iniciar sesion nuevamente');
                     }
-                    $user->save();
                     $this->registerClient($userEucomb, $user->id);
-                    $user->roles()->attach(Role::where('name', $userEucomb->roles[0]->name)->first());
-                    return $this->getResponse($request, $user);
-                } else {
-                    return $this->errorMessage('Usuario no autorizado');
+                    $user->roles()->attach(Role::where('name', $role)->first());
+                    return $this->getToken($request, $user);
                 }
-            } else {
-                return $this->errorMessage('El usuario no existe');
-            }
-        } else {
-            if ($userTicket->roles[0]->name == 'usuario' || $userTicket->roles[0]->name == 'despachador') {
-                return $this->getResponse($request, $userTicket);
-            } else {
                 return $this->errorMessage('Usuario no autorizado');
             }
+            return $this->errorMessage('El usuario no existe');
         }
+        if ($userTicket->roles[0]->name == 'usuario' || $userTicket->roles[0]->name == 'despachador') {
+            return $this->getToken($request, $userTicket);
+        }
+        return $this->errorMessage('Usuario no autorizado');
     }
     // Metodo para registrar a un usuario nuevo
     public function register(Request $request)
@@ -65,7 +57,7 @@ class AuthController extends Controller
             $user = $this->registerUser($request);
             $user->first_surname = $request->first_surname;
             $user->second_surname = $request->second_surname;
-            $user->password = Hash::make($request->password);
+            $user->password = bcrypt($request->password);
             $user->save();
             // Membresia aleatoria no repetible en las dos BD's
             while (true) {
@@ -84,10 +76,9 @@ class AuthController extends Controller
                 $dataCar->type_car = $request->type_car;
                 $dataCar->save();
             }
-            return $this->getResponse($request, $user);
-        } else {
-            return $this->errorMessage('El usuario ya existe');
+            return $this->getToken($request, $user);
         }
+        return $this->errorMessage('El usuario ya existe');
     }
     // Registrando a un usuario
     private function registerUser($data)
@@ -121,13 +112,13 @@ class AuthController extends Controller
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($request->token));
-            return $this->successMessage('message','Cierre de sesion correcto');
+            return $this->successMessage('message', 'Cierre de sesion correcto');
         } catch (Exception $e) {
             return $this->errorMessage('Token invalido');
         }
     }
     // Metodo para iniciar sesion, delvuelve el token
-    private function getResponse($request, $user)
+    private function getToken($request, $user)
     {
         $creds = $request->only('email', 'password');
         if (!$token = JWTAuth::attempt($creds)) {
@@ -135,7 +126,7 @@ class AuthController extends Controller
         }
         $user->remember_token = $token;
         $user->save();
-        return $this->successMessage('token',$token);
+        return $this->successMessage('token', $token);
     }
     // Funcion mensaje correcto
     private function successMessage($name, $data)

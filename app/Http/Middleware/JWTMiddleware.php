@@ -17,10 +17,6 @@ class JWTMiddleware
      */
     public function handle($request, Closure $next)
     {
-        /* $token = Auth::parseToken();
-        return $token->getPayload()->get('role'); 
-        Como saber el rol del usuario a traves de su token
-        */
         try {
             $token = JWTAuth::getToken();
             // Valida que el token sea igual al remember token proporcionado por el login
