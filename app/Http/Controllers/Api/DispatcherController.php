@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Schedule;
 use App\SharedBalance;
+use App\Station;
 use App\UserHistoryDeposit;
 use Illuminate\Support\Facades\Auth;
 
@@ -54,21 +55,21 @@ class DispatcherController extends Controller
         return $this->errorResponse('Usuario no autorizado');
     }
     // Funcion para realizar el cobro hacia un cliente
-    public function makePayment(Request $request)
+    public function makeNotification(Request $request)
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             if (($dispatcher = $user->dispatcher)->station_id == $request->id_station) {
                 if (($client = Client::where('membership', $request->membership)->first()) != null) {
                     if ($request->tr_membership == "") {
                         if (($payment = UserHistoryDeposit::where([['client_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
-                            if ($request->price <= $payment->balance) {
-                                $payment->balance -= $request->price;
+                            if ($request->price > $payment->balance) {
+                                return $this->errorResponse('No hay saldo suficiente');
+                                // Operacion para el cliente
+                                /* $payment->balance -= $request->price;
                                 $payment->save();
                                 $client->current_balance -= $request->price;
                                 $client->points += intval($request->liters);
-                                $client->save();
-                            } else {
-                                return $this->errorResponse('No hay saldo suficiente');
+                                $client->save(); */
                             }
                         } else {
                             return $this->errorResponse('No hay abonos realizados en la cuenta');
@@ -76,22 +77,60 @@ class DispatcherController extends Controller
                     } else {
                         $transmitter = Client::where('membership', $request->tr_membership)->first();
                         if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
-                            if ($request->price <= $payment->balance) {
-                                $payment->balance -= $request->price;
+                            if ($request->price > $payment->balance) {
+                                return $this->errorResponse('No hay saldo suficiente');
+                                // Operacion para el cliente
+                                /* $payment->balance -= $request->price;
                                 $payment->save();
                                 $client->shared_balance -= $request->price;
                                 $client->save();
                                 $transmitter->points += intval($request->liters);
-                                $transmitter->save();
-                            } else {
-                                return $this->errorResponse('No hay saldo suficiente');
+                                $transmitter->save(); */
                             }
                         } else {
                             return $this->errorResponse('No hay abonos realizados');
                         }
                     }
+                    $gasoline = Gasoline::find($request->id_gasoline);
+                    $fields = array(
+                        'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
+                        'data' => array(
+                            "price" => $request->price,
+                            "gasoline" => $gasoline->name,
+                            "liters" => $request->liters,
+                            "estacion" => $dispatcher->station->name,
+                            'ids_dispatcher' => $request->ids_dispatcher,
+                            'id_dispatcher' => $dispatcher->id,
+                            'id_gasoline' => $request->id_gasoline,
+                            'id_schedule' => (Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $dispatcher->station_id)->first())->id,
+                            'id_station' => $dispatcher->station_id,
+                            'tr_membership' => $request->tr_membership
+                        ), 'contents' => array(
+                            "en" => "English message from postman",
+                            "es" => "Realizaste una solicitud de pago."
+                        ),
+                        'headings' => array(
+                            "en" => "English title from postman",
+                            "es" => "Pago con QR"
+                        ),
+                        'include_player_ids' => array("$request->ids_client"),
+                    );
+                    $fields = json_encode($fields);
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8'));
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+                    curl_setopt($ch, CURLOPT_HEADER, FALSE);
+                    curl_setopt($ch, CURLOPT_POST, TRUE);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+                    $response = curl_exec($ch);
+                    curl_close($ch);
+                    return $this->successResponse('notification', \json_decode($response));
+
                     // Registro de pagos para historial del despachador
-                    $registerPayment = new DispatcherHistoryPayment();
+                    // Registro del cliente
+                    /* $registerPayment = new DispatcherHistoryPayment();
                     $registerPayment->dispatcher_id = $dispatcher->id;
                     $registerPayment->gasoline_id = $request->id_gasoline;
                     $registerPayment->liters = $request->liters;
@@ -100,7 +139,7 @@ class DispatcherController extends Controller
                     $registerPayment->station_id = $dispatcher->station_id;
                     $registerPayment->client_id = $client->id;
                     $registerPayment->save();
-                    return $this->successResponse('payment', 'Cobro realizado correctamente');
+                    return $this->successResponse('payment', 'Cobro realizado correctamente'); */
                 }
                 return $this->errorResponse('Membresía no disponible');
             }

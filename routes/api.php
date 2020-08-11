@@ -45,8 +45,9 @@ Route::group(['middleware' => 'jwtAuth'], function () {
 Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('maindispatcher', 'Api\DispatcherController@main');
     Route::get('gasolinelist', 'Api\DispatcherController@gasolineList');
-    Route::post('makepayment', 'Api\DispatcherController@makePayment');
+    Route::post('notification', 'Api\DispatcherController@makeNotification');
     Route::get('getpaymentsnow', 'Api\DispatcherController@getPaymentsNow');
     Route::get('getschedules', 'Api\DispatcherController@getListSchedules');
     Route::get('getlistpayments', 'Api\DispatcherController@getListPayments');
+    // Route::post('makepayment2', 'Api\DispatcherController@paymentNotification');
 });
