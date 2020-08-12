@@ -186,7 +186,7 @@ class BalanceController extends Controller
     public function makePayment(Request $request)
     {
         if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            if ($request->authorization) {
+            if ($request->authorization == "true") {
                 try {
                     if ($request->tr_membership == "") {
                         $payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first();
@@ -265,16 +265,12 @@ class BalanceController extends Controller
                 'success' => $success
             ), 'contents' => array(
                 "en" => "English message from postman",
-                // Mensaje de cobro exitoso o no
                 "es" => $message
             ),
             'headings' => array(
                 "en" => "English title from postman",
-                // mensaje de cobro exitoso o no
                 "es" => "Pago con QR"
             ),
-            // ids del cliente y del despachador
-            // 'include_player_ids' => array("$idsClient", "$idsDispatcher"),
             'include_player_ids' => $ids,
         );
         $fields = json_encode($fields);
