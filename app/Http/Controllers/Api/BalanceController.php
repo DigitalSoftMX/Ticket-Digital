@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Client;
+use App\DispatcherHistoryPayment;
 use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
 use App\UserHistoryDeposit;
+use Exception;
 use Illuminate\Support\Facades\Auth;
 
 class BalanceController extends Controller
@@ -180,6 +182,50 @@ class BalanceController extends Controller
         }
         return $this->errorMessage('Usuario no autorizado');
     }
+    // Funcion para realizar un pago autorizado por el cliente
+    public function makePayment(Request $request)
+    {
+        if (($user = Auth::user())->roles[0]->name == 'usuario') {
+            if ($request->authorization) {
+                try {
+                    if ($request->tr_membership == "") {
+                        $payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first();
+                        $payment->balance -= $request->price;
+                        $payment->save();
+                        $user->client->current_balance -= $request->price;
+                        // arreglar el redondeo y preguntar por el tipo de gasolina
+                        $user->client->points += intval($request->liters);
+                        $user->client->save();
+                    } else {
+                        $transmitter = Client::where('membership', $request->tr_membership)->first();
+                        $payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first();
+                        $payment->balance -= $request->price;
+                        $payment->save();
+                        $user->client->shared_balance -= $request->price;
+                        $user->client->save();
+                        // arreglar el redondeo y preguntar por el tipo de gasolina
+                        $transmitter->points += intval($request->liters);
+                        $transmitter->save();
+                    }
+                    // Registro de pagos para historial del pago
+                    $registerPayment = new DispatcherHistoryPayment();
+                    $registerPayment->dispatcher_id = $request->id_dispatcher;
+                    $registerPayment->gasoline_id = $request->id_gasoline;
+                    $registerPayment->liters = $request->liters;
+                    $registerPayment->payment = $request->price;
+                    $registerPayment->schedule_id = $request->id_schedule;
+                    $registerPayment->station_id = $request->id_station;
+                    $registerPayment->client_id = $user->client->id;
+                    $registerPayment->save();
+                } catch (Exception $e) {
+                    return $this->errorResponse('Error al realizar el cobro');
+                }
+                return $this->makeNotification($request->ids_dispatcher, $request->ids_client);
+            }
+            return $this->makeNotification($request->ids_dispatcher, null);
+        }
+        return $this->errorResponse('Usuario no autorizado');
+    }
     // Funcion para guardar historial de abonos a la cuenta del cliente
     private function saveHistoryBalance($history, $type, $balance)
     {
@@ -201,6 +247,48 @@ class BalanceController extends Controller
         $historyBalance->action = $history;
         $historyBalance->type = $type;
         $historyBalance->save();
+    }
+    // Funcion para enviar una notificacion
+    private function makeNotification($idsDispatcher, $idsClient)
+    {
+        $ids = array("$idsDispatcher");
+        $success = false;
+        $message = 'Cobro cancelado';
+        if ($idsClient != null) {
+            $ids = array("$idsDispatcher", "$idsClient");
+            $success = true;
+            $message = 'Cobro realizado con exito';
+        }
+        $fields = array(
+            'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
+            'data' => array(
+                'success' => $success
+            ), 'contents' => array(
+                "en" => "English message from postman",
+                // Mensaje de cobro exitoso o no
+                "es" => $message
+            ),
+            'headings' => array(
+                "en" => "English title from postman",
+                // mensaje de cobro exitoso o no
+                "es" => "Pago con QR"
+            ),
+            // ids del cliente y del despachador
+            // 'include_player_ids' => array("$idsClient", "$idsDispatcher"),
+            'include_player_ids' => $ids,
+        );
+        $fields = json_encode($fields);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8'));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($ch, CURLOPT_HEADER, FALSE);
+        curl_setopt($ch, CURLOPT_POST, TRUE);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        return $this->successResponse('notification', \json_decode($response));
     }
     // Funcion mensaje correcto
     private function successResponse($name, $data)

@@ -64,12 +64,6 @@ class DispatcherController extends Controller
                         if (($payment = UserHistoryDeposit::where([['client_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
                             if ($request->price > $payment->balance) {
                                 return $this->errorResponse('No hay saldo suficiente');
-                                // Operacion para el cliente
-                                /* $payment->balance -= $request->price;
-                                $payment->save();
-                                $client->current_balance -= $request->price;
-                                $client->points += intval($request->liters);
-                                $client->save(); */
                             }
                         } else {
                             return $this->errorResponse('No hay abonos realizados en la cuenta');
@@ -79,13 +73,6 @@ class DispatcherController extends Controller
                         if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
                             if ($request->price > $payment->balance) {
                                 return $this->errorResponse('No hay saldo suficiente');
-                                // Operacion para el cliente
-                                /* $payment->balance -= $request->price;
-                                $payment->save();
-                                $client->shared_balance -= $request->price;
-                                $client->save();
-                                $transmitter->points += intval($request->liters);
-                                $transmitter->save(); */
                             }
                         } else {
                             return $this->errorResponse('No hay abonos realizados');
@@ -127,19 +114,6 @@ class DispatcherController extends Controller
                     $response = curl_exec($ch);
                     curl_close($ch);
                     return $this->successResponse('notification', \json_decode($response));
-
-                    // Registro de pagos para historial del despachador
-                    // Registro del cliente
-                    /* $registerPayment = new DispatcherHistoryPayment();
-                    $registerPayment->dispatcher_id = $dispatcher->id;
-                    $registerPayment->gasoline_id = $request->id_gasoline;
-                    $registerPayment->liters = $request->liters;
-                    $registerPayment->payment = $request->price;
-                    $registerPayment->schedule_id = (Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', Auth::user()->dispatcher->station_id)->first())->id;
-                    $registerPayment->station_id = $dispatcher->station_id;
-                    $registerPayment->client_id = $client->id;
-                    $registerPayment->save();
-                    return $this->successResponse('payment', 'Cobro realizado correctamente'); */
                 }
                 return $this->errorResponse('Membresía no disponible');
             }
