@@ -194,7 +194,7 @@ class BalanceController extends Controller
                         $payment->save();
                         $user->client->current_balance -= $request->price;
                         // arreglar el redondeo y preguntar por el tipo de gasolina
-                        $user->client->points += intval($request->liters);
+                        $user->client->points += $this->roundHalfDown($request->liters);
                         $user->client->save();
                     } else {
                         $transmitter = Client::where('membership', $request->tr_membership)->first();
@@ -204,7 +204,7 @@ class BalanceController extends Controller
                         $user->client->shared_balance -= $request->price;
                         $user->client->save();
                         // arreglar el redondeo y preguntar por el tipo de gasolina
-                        $transmitter->points += intval($request->liters);
+                        $transmitter->points += $this->roundHalfDown($request->liters);
                         $transmitter->save();
                     }
                     // Registro de pagos para historial del pago
@@ -285,6 +285,14 @@ class BalanceController extends Controller
         $response = curl_exec($ch);
         curl_close($ch);
         return $this->successResponse('notification', \json_decode($response));
+    }
+    // Funcion redonde de la mitad hacia abajo
+    private function roundHalfDown($val)
+    {
+        $liters = explode(".", $val);
+        $newVal = $liters[0] . '.' . $liters[1][0];
+        $newVal = round($newVal, 0, PHP_ROUND_HALF_DOWN);
+        return $newVal;
     }
     // Funcion mensaje correcto
     private function successResponse($name, $data)
