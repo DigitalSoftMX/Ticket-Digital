@@ -11,7 +11,9 @@ use App\Schedule;
 use App\SharedBalance;
 use App\Station;
 use App\UserHistoryDeposit;
+use Exception;
 use Illuminate\Support\Facades\Auth;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class DispatcherController extends Controller
 {
@@ -39,7 +41,7 @@ class DispatcherController extends Controller
             $data['total_payments'] = $totalPayment;
             return $this->successResponse('user', $data);
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Metodo para obtner la lista de gasolina
     public function gasolineList()
@@ -52,7 +54,7 @@ class DispatcherController extends Controller
             }
             return $this->successResponse('type_gasoline', $data);
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para realizar el cobro hacia un cliente
     public function makeNotification(Request $request)
@@ -119,7 +121,7 @@ class DispatcherController extends Controller
             }
             return $this->errorResponse('Estacion incorrecta');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para obtener la lista de horarios de una estacion
     public function getListSchedules()
@@ -133,7 +135,7 @@ class DispatcherController extends Controller
             }
             return $this->successResponse('schedules', $dataSchedules);
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para obtener los cobros del dia
     public function getPaymentsNow()
@@ -141,7 +143,7 @@ class DispatcherController extends Controller
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             return $this->getPayments(null, $user, now()->format('Y-m-d'));
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para devolver la lista de cobros por fecha
     public function getListPayments(Request $request)
@@ -149,7 +151,7 @@ class DispatcherController extends Controller
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             return $this->getPayments(['schedule_id', $request->id_schedule], $user, $request->date);
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para listar los cobros del depachador
     private function getPayments($array, $user, $date)
@@ -173,7 +175,16 @@ class DispatcherController extends Controller
             }
             return $this->successResponse('made_payments', $dataPayment);
         }
-        return $this->errorResponse('No hay cobros realizados');
+    }
+    // Metodo para cerrar sesion
+    private function logout($token)
+    {
+        try {
+            JWTAuth::invalidate(JWTAuth::parseToken($token));
+            return $this->errorResponse('Token invalido');
+        } catch (Exception $e) {
+            return $this->errorResponse('Token invalido');
+        }
     }
     // Funcion mensajes de error
     private function errorResponse($message)

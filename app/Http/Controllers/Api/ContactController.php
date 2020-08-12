@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Eucomb\User as EucombUser;
+use Exception;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ContactController extends Controller
 {
@@ -29,7 +31,7 @@ class ContactController extends Controller
             }
             return $this->errorResponse('No tienes contactos agregados');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para obtener un contacto buscado por un usuario tipo cliente
     public function lookingForContact(Request $request)
@@ -55,7 +57,7 @@ class ContactController extends Controller
             }
             return $this->errorResponse('Membresía de usuario no disponible');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para agregar un contacto a un contacto
     public function addContact(Request $request)
@@ -70,7 +72,7 @@ class ContactController extends Controller
             }
             return $this->errorResponse('El usuario ya ha sido agregado anteriormente');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para eliminar a un contacto
     public function deleteContact(Request $request)
@@ -82,7 +84,17 @@ class ContactController extends Controller
             }
             return $this->errorResponse('El contacto no existe');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
+    }
+    // Metodo para cerrar sesion
+    private function logout($token)
+    {
+        try {
+            JWTAuth::invalidate(JWTAuth::parseToken($token));
+            return $this->errorResponse('Token invalido');
+        } catch (Exception $e) {
+            return $this->errorResponse('Token invalido');
+        }
     }
     // Funcion mensaje correcto
     private function successResponse($name, $data)

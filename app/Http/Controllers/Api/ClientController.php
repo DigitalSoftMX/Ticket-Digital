@@ -11,6 +11,7 @@ use App\SharedBalance;
 use App\Station;
 use Illuminate\Support\Facades\Auth;
 use Exception;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ClientController extends Controller
 {
@@ -37,7 +38,7 @@ class ClientController extends Controller
             $data['data_car'] = $dataCar;
             return $this->successResponse('user', $data);
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion principal para la ventana de abonos
     public function getListStations()
@@ -49,7 +50,7 @@ class ClientController extends Controller
             }
             return $this->successResponse('stations', $data);
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para devolver el historial de abonos a la cuenta del usuario
     public function history(Request $request)
@@ -100,7 +101,7 @@ class ClientController extends Controller
                 return $this->errorResponse('Error de consulta por fecha');
             }
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para devolver el arreglo de historiales
     private function getBalances($model, $start, $end, $user, $type)
@@ -140,6 +141,16 @@ class ClientController extends Controller
             array_push($payments, $payment);
         }
         return $payments;
+    }
+    // Metodo para cerrar sesion
+    private function logout($token)
+    {
+        try {
+            JWTAuth::invalidate(JWTAuth::parseToken($token));
+            return $this->errorResponse('Token invalido');
+        } catch (Exception $e) {
+            return $this->errorResponse('Token invalido');
+        }
     }
     // Funcion mensajes de error
     private function errorResponse($message)

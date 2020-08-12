@@ -11,6 +11,7 @@ use App\SharedBalance;
 use App\UserHistoryDeposit;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class BalanceController extends Controller
 {
@@ -32,7 +33,7 @@ class BalanceController extends Controller
             }
             return $this->errorResponse('No hay abonos realizados');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para realizar un abono a la cuenta de un usuario
     public function addBalance(Request $request)
@@ -71,7 +72,7 @@ class BalanceController extends Controller
             }
             return $this->errorResponse('La cantidad debe ser multiplo de $100');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para devolver la membresía del cliente y la estacion
     public function useBalance(Request $request)
@@ -90,7 +91,7 @@ class BalanceController extends Controller
             }
             return $this->errorResponse('No hay abono en la cuenta');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para enviar saldo a un contacto del usuario
     public function sendBalance(Request $request)
@@ -137,7 +138,7 @@ class BalanceController extends Controller
             }
             return $this->errorResponse('La cantidad debe ser multiplo de $100');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion que busca los abonos recibidos
     public function listReceivedPayments()
@@ -160,7 +161,7 @@ class BalanceController extends Controller
             }
             return $this->errorResponse('No hay abonos realizados');
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para devolver informacion de un saldo compartido
     public function useSharedBalance(Request $request)
@@ -180,7 +181,7 @@ class BalanceController extends Controller
             }
             return $this->errorResponse('No hay abono en la cuenta');
         }
-        return $this->errorMessage('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para realizar un pago autorizado por el cliente
     public function makePayment(Request $request)
@@ -226,7 +227,7 @@ class BalanceController extends Controller
             }
             return $this->makeNotification($request->ids_dispatcher, null);
         }
-        return $this->errorResponse('Usuario no autorizado');
+        return $this->logout(JWTAuth::getToken());
     }
     // Funcion para guardar historial de abonos a la cuenta del cliente
     private function saveHistoryBalance($history, $type, $balance)
@@ -295,6 +296,16 @@ class BalanceController extends Controller
         $newVal = $liters[0] . '.' . $liters[1][0];
         $newVal = round($newVal, 0, PHP_ROUND_HALF_DOWN);
         return $newVal;
+    }
+    // Metodo para cerrar sesion
+    private function logout($token)
+    {
+        try {
+            JWTAuth::invalidate(JWTAuth::parseToken($token));
+            return $this->errorResponse('Token invalido');
+        } catch (Exception $e) {
+            return $this->errorResponse('Token invalido');
+        }
     }
     // Funcion mensaje correcto
     private function successResponse($name, $data)

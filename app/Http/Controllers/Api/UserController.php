@@ -40,7 +40,7 @@ class UserController extends Controller
                 return $this->successMessage('user', $data);
                 break;
             default:
-                return $this->errorMessage('Usuario no autorizado');
+                return $this->logout(JWTAuth::getToken());
         }
     }
 
@@ -141,7 +141,7 @@ class UserController extends Controller
                 $dispatcher->save();
                 break;
             default:
-                return $this->errorMessage('Usuario no autorizado');
+                return $this->logout(JWTAuth::getToken());
         }
         return $this->successMessage('message', 'Datos actualizados correctamente');
     }
@@ -185,7 +185,7 @@ class UserController extends Controller
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($token));
-            return $this->successMessage('message','Cierre de sesion correcto');
+            return $this->successMessage('message', 'Cierre de sesion correcto');
         } catch (Exception $e) {
             return $this->errorMessage('Token invalido');
         }
