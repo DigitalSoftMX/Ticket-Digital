@@ -193,8 +193,9 @@ class BalanceController extends Controller
                         $payment->balance -= $request->price;
                         $payment->save();
                         $user->client->current_balance -= $request->price;
-                        // arreglar el redondeo y preguntar por el tipo de gasolina
-                        $user->client->points += $this->roundHalfDown($request->liters);
+                        if ($request->id_gasoline != 3) {
+                            $user->client->points += $this->roundHalfDown($request->liters);
+                        }
                         $user->client->save();
                     } else {
                         $transmitter = Client::where('membership', $request->tr_membership)->first();
@@ -203,8 +204,9 @@ class BalanceController extends Controller
                         $payment->save();
                         $user->client->shared_balance -= $request->price;
                         $user->client->save();
-                        // arreglar el redondeo y preguntar por el tipo de gasolina
-                        $transmitter->points += $this->roundHalfDown($request->liters);
+                        if ($request->id_gasoline != 3) {
+                            $transmitter->points += $this->roundHalfDown($request->liters);
+                        }
                         $transmitter->save();
                     }
                     // Registro de pagos para historial del pago
