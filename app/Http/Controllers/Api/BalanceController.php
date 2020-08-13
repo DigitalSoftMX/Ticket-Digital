@@ -210,7 +210,10 @@ class BalanceController extends Controller
                         }
                         $transmitter->save();
                     }
-                    // Registro de pagos para historial del pago
+                } catch (Exception $e) {
+                    return $this->errorResponse('Error al realizar el cobro');
+                }
+                try { // Registro de pagos para historial del pago
                     $registerPayment = new DispatcherHistoryPayment();
                     $registerPayment->dispatcher_id = $request->id_dispatcher;
                     $registerPayment->gasoline_id = $request->id_gasoline;
