@@ -7,6 +7,7 @@ use App\DispatcherHistoryPayment;
 use App\Gasoline;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\RegisterTime;
 use App\Schedule;
 use App\SharedBalance;
 use App\Station;
@@ -21,12 +22,12 @@ class DispatcherController extends Controller
     public function main()
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
+            $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
+            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['time_id', $schedule->id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
             $totalPayment = 0;
             foreach ($payments as $payment) {
                 $totalPayment += $payment->payment;
             }
-            $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
             $data['id'] = $user->id;
             $data['name'] = $user->name;
             $data['first_surname'] = $user->first_surname;
@@ -80,6 +81,7 @@ class DispatcherController extends Controller
                             return $this->errorResponse('No hay abonos realizados');
                         }
                     }
+                    $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
                     $gasoline = Gasoline::find($request->id_gasoline);
                     $fields = array(
                         'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
@@ -93,7 +95,8 @@ class DispatcherController extends Controller
                             'id_gasoline' => $request->id_gasoline,
                             'id_schedule' => (Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $dispatcher->station_id)->first())->id,
                             'id_station' => $dispatcher->station_id,
-                            'tr_membership' => $request->tr_membership
+                            'tr_membership' => $request->tr_membership,
+                            'id_time' => $time[count($time) - 1]
                         ), 'contents' => array(
                             "en" => "English message from postman",
                             "es" => "Realizaste una solicitud de pago."
@@ -157,12 +160,21 @@ class DispatcherController extends Controller
     public function startEndTime(Request $request)
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
+            $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
             switch ($request->time) {
                 case 'true':
-                    return $this->successResponse('message', 'Iniciar turno registrado');
+                    $time = new RegisterTime();
+                    $time->dispatcher_id = $user->dispatcher->id;
+                    $time->station_id = $user->dispatcher->station->id;
+                    $time->schedule_id = $schedule->id;
+                    $time->save();
+                    return $this->successResponse('message', 'Inicio de turno registrado');
                     break;
                 case 'false':
-                    return $this->successResponse('message', 'Finalizar turno registrado');
+                    $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
+                    $time[count($time) - 1]->updated_at = now();
+                    $time[count($time) - 1]->save();
+                    return $this->successResponse('message', 'Fin de turno registrado');
                     break;
                 default:
                     return $this->errorResponse('Registro no valido');
