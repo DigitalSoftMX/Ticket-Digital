@@ -23,7 +23,8 @@ class DispatcherController extends Controller
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
-            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['time_id', $schedule->id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
+            $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
+            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['time_id', $time[count($time) - 1]->id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
             $totalPayment = 0;
             foreach ($payments as $payment) {
                 $totalPayment += $payment->payment;
@@ -96,7 +97,7 @@ class DispatcherController extends Controller
                             'id_schedule' => (Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $dispatcher->station_id)->first())->id,
                             'id_station' => $dispatcher->station_id,
                             'tr_membership' => $request->tr_membership,
-                            'id_time' => $time[count($time) - 1]
+                            'id_time' => $time[count($time) - 1]->id
                         ), 'contents' => array(
                             "en" => "English message from postman",
                             "es" => "Realizaste una solicitud de pago."
