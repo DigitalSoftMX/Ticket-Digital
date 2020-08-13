@@ -211,7 +211,7 @@ class BalanceController extends Controller
                         $transmitter->save();
                     }
                 } catch (Exception $e) {
-                    return $this->errorResponse('Error al realizar el cobro');
+                    return $this->errorResponse('Saldo insuficiente');
                 }
                 try { // Registro de pagos para historial del pago
                     $registerPayment = new DispatcherHistoryPayment();
@@ -225,7 +225,7 @@ class BalanceController extends Controller
                     $registerPayment->time_id = $request->id_time;
                     $registerPayment->save();
                 } catch (Exception $e) {
-                    return $this->errorResponse('Error al realizar el cobro');
+                    return $this->errorResponse('Error al registrar el cobro');
                 }
                 return $this->makeNotification($request->ids_dispatcher, $request->ids_client);
             }
