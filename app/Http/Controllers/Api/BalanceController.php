@@ -219,6 +219,7 @@ class BalanceController extends Controller
                     $registerPayment->schedule_id = $request->id_schedule;
                     $registerPayment->station_id = $request->id_station;
                     $registerPayment->client_id = $user->client->id;
+                    $registerPayment->time_id = 1;
                     $registerPayment->save();
                 } catch (Exception $e) {
                     return $this->errorResponse('Error al realizar el cobro');

@@ -153,6 +153,23 @@ class DispatcherController extends Controller
         }
         return $this->logout(JWTAuth::getToken());
     }
+    // Registro de inicio de turno y termino de turno
+    public function startEndTime(Request $request)
+    {
+        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+            switch ($request->time) {
+                case 'true':
+                    return $this->successResponse('message', 'Iniciar turno registrado');
+                    break;
+                case 'false':
+                    return $this->successResponse('message', 'Finalizar turno registrado');
+                    break;
+                default:
+                    return $this->errorResponse('Registro no valido');
+            }
+        }
+        return $this->logout(JWTAuth::getToken());
+    }
     // Funcion para listar los cobros del depachador
     private function getPayments($array, $user, $date)
     {

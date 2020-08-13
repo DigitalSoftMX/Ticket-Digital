@@ -22,6 +22,7 @@ class CreateDispatcherHistoryPaymentsTable extends Migration
             $table->unsignedBigInteger('schedule_id');
             $table->unsignedBigInteger('station_id');
             $table->unsignedBigInteger('client_id');
+            $table->unsignedBigInteger('time_id');
             $table->timestamps();
 
             $table->foreign('dispatcher_id')->references('id')->on('dispatchers')
@@ -41,6 +42,10 @@ class CreateDispatcherHistoryPaymentsTable extends Migration
                 ->onUpdate('cascade');
 
             $table->foreign('client_id')->references('id')->on('clients')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+
+            $table->foreign('time_id')->references('id')->on('register_times')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
         });

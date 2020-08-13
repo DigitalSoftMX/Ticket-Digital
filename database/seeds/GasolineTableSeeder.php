@@ -21,7 +21,7 @@ class GasolineTableSeeder extends Seeder
         $gasoline->save();
 
         $gasoline = new Gasoline();
-        $gasoline->name = 'Díesel';
+        $gasoline->name = 'Diésel';
         $gasoline->save();
     }
 }

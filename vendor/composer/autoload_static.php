@@ -628,6 +628,7 @@ class ComposerStaticInit1bf4e49872f10ef256c53cbb8d729866
         'App\\Providers\\BroadcastServiceProvider' => __DIR__ . '/../..' . '/app/Providers/BroadcastServiceProvider.php',
         'App\\Providers\\EventServiceProvider' => __DIR__ . '/../..' . '/app/Providers/EventServiceProvider.php',
         'App\\Providers\\RouteServiceProvider' => __DIR__ . '/../..' . '/app/Providers/RouteServiceProvider.php',
+        'App\\RegisterTime' => __DIR__ . '/../..' . '/app/RegisterTime.php',
         'App\\Role' => __DIR__ . '/../..' . '/app/Role.php',
         'App\\Rules\\CurrentPasswordCheckRule' => __DIR__ . '/../..' . '/app/Rules/CurrentPasswordCheckRule.php',
         'App\\Schedule' => __DIR__ . '/../..' . '/app/Schedule.php',
