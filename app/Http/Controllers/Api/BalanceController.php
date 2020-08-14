@@ -297,8 +297,12 @@ class BalanceController extends Controller
     private function roundHalfDown($val)
     {
         $liters = explode(".", $val);
-        $newVal = $liters[0] . '.' . $liters[1][0];
-        $newVal = round($newVal, 0, PHP_ROUND_HALF_DOWN);
+        if (count($liters) > 1) {
+            $newVal = $liters[0] . '.' . $liters[1][0];
+            $newVal = round($newVal, 0, PHP_ROUND_HALF_DOWN);
+        } else {
+            $newVal = intval($val);
+        }
         return $newVal;
     }
     // Metodo para cerrar sesion
