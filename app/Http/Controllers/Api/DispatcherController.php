@@ -23,8 +23,8 @@ class DispatcherController extends Controller
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
-            $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
-            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['time_id', $time[count($time) - 1]->id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
+            // $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
+            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['schedule_id', $schedule->id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
             $totalPayment = 0;
             foreach ($payments as $payment) {
                 $totalPayment += $payment->payment;
@@ -161,15 +161,17 @@ class DispatcherController extends Controller
     public function startEndTime(Request $request)
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
             switch ($request->time) {
                 case 'true':
-                    $time = new RegisterTime();
-                    $time->dispatcher_id = $user->dispatcher->id;
-                    $time->station_id = $user->dispatcher->station->id;
-                    $time->schedule_id = $schedule->id;
-                    $time->save();
-                    return $this->successResponse('message', 'Inicio de turno registrado');
+                    if (($schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first()) != null) {
+                        $time = new RegisterTime();
+                        $time->dispatcher_id = $user->dispatcher->id;
+                        $time->station_id = $user->dispatcher->station->id;
+                        $time->schedule_id = $schedule->id;
+                        $time->save();
+                        return $this->successResponse('message', 'Inicio de turno registrado');
+                    }
+                    return $this->errorResponse('Turno no disponible');
                     break;
                 case 'false':
                     $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
