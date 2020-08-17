@@ -249,6 +249,7 @@ class BalanceController extends Controller
         $historyBalance->type = $type;
         $historyBalance->save();
     }
+    // Funcion para registrar los pagos
     private function registerPayment($request, $id)
     {
         $registerPayment = new DispatcherHistoryPayment();

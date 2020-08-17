@@ -178,13 +178,10 @@ class DispatcherController extends Controller
     public function getPaymentsNow()
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            try {
-                $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
+            if (count($time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get()) > 0) {
                 return $this->getPayments(['time_id', $time[count($time) - 1]->id], $user, now()->format('Y-m-d'));
-            } catch (Exception $e) {
-                $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
-                return $this->getPayments(['schedule_id', $schedule->id], $user, now()->format('Y-m-d'));
             }
+            return $this->errorResponse('Aun no hay registro de cobros');
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -202,6 +199,9 @@ class DispatcherController extends Controller
         $query = [['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], $array];
         if (count($payments = DispatcherHistoryPayment::where($query)->whereDate('created_at', $date)->get()) > 0) {
             $dataPayment = array();
+            $magna = 0;
+            $premium = 0;
+            $diesel = 0;
             foreach ($payments as $payment) {
                 $data = array(
                     'id' => $payment->id,
@@ -212,8 +212,21 @@ class DispatcherController extends Controller
                     'hour' => $payment->created_at->format('H:i:s')
                 );
                 array_push($dataPayment, $data);
+                switch ($payment->gasoline->name) {
+                    case 'Magna':
+                        $magna += $payment->liters;
+                        break;
+                    case 'Premium':
+                        $premium += $payment->liters;
+                        break;
+                    case 'Diésel':
+                        $diesel += $payment->liters;
+                        break;
+                }
             }
-            return $this->successResponse('made_payments', $dataPayment);
+            $info['liters_product'] = array('Magna' => $magna, 'Premium' => $premium, 'Diésel' => $diesel);
+            $info['payment'] = $dataPayment;
+            return $this->successResponse('payments', $info);
         } else {
             return $this->errorResponse('Aun no hay registro de cobros');
         }
