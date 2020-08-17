@@ -23,11 +23,15 @@ class DispatcherController extends Controller
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
-            // $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
-            $payments = DispatcherHistoryPayment::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['schedule_id', $schedule->id]])->whereDate('created_at', now()->format('Y-m-d'))->get();
-            $totalPayment = 0;
-            foreach ($payments as $payment) {
-                $totalPayment += $payment->payment;
+            if (count($time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get()) > 0) {
+                $payments = DispatcherHistoryPayment::whereDate('created_at', now()->format('Y-m-d'))->where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['time_id', $time[count($time) - 1]->id]])->get();
+                $totalPayment = 0;
+                foreach ($payments as $payment) {
+                    $totalPayment += $payment->payment;
+                }
+            } else {
+                $payments = array();
+                $totalPayment = 0;
             }
             $data['id'] = $user->id;
             $data['name'] = $user->name;
@@ -42,6 +46,35 @@ class DispatcherController extends Controller
             $data['number_payments'] = count($payments);
             $data['total_payments'] = $totalPayment;
             return $this->successResponse('user', $data);
+        }
+        return $this->logout(JWTAuth::getToken());
+    }
+    // Registro de inicio de turno y termino de turno
+    public function startEndTime(Request $request)
+    {
+        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+            switch ($request->time) {
+                case 'true':
+                    if (($schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first()) != null) {
+                        $time = new RegisterTime();
+                        $time->dispatcher_id = $user->dispatcher->id;
+                        $time->station_id = $user->dispatcher->station->id;
+                        $time->schedule_id = $schedule->id;
+                        $time->save();
+                        return $this->successResponse('message', 'Inicio de turno registrado');
+                    }
+                    return $this->errorResponse('Turno no disponible');
+                case 'false':
+                    try {
+                        $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
+                        $time[count($time) - 1]->updated_at = now();
+                        $time[count($time) - 1]->save();
+                        return $this->successResponse('message', 'Fin de turno registrado');
+                    } catch (Exception $e) {
+                        return $this->errorResponse('Turno no registrado');
+                    }
+            }
+            return $this->errorResponse('Registro no valido');
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -67,7 +100,7 @@ class DispatcherController extends Controller
                     if ($request->tr_membership == "") {
                         if (($payment = UserHistoryDeposit::where([['client_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
                             if ($request->price > $payment->balance) {
-                                return $this->errorResponse('No hay saldo suficiente');
+                                return $this->errorResponse('Saldo insuficiente');
                             }
                         } else {
                             return $this->errorResponse('No hay abonos realizados en la cuenta');
@@ -76,7 +109,7 @@ class DispatcherController extends Controller
                         $transmitter = Client::where('membership', $request->tr_membership)->first();
                         if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
                             if ($request->price > $payment->balance) {
-                                return $this->errorResponse('No hay saldo suficiente');
+                                return $this->errorResponse('Saldo insuficiente');
                             }
                         } else {
                             return $this->errorResponse('No hay abonos realizados');
@@ -145,7 +178,13 @@ class DispatcherController extends Controller
     public function getPaymentsNow()
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            return $this->getPayments(null, $user, now()->format('Y-m-d'));
+            try {
+                $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
+                return $this->getPayments(['time_id', $time[count($time) - 1]->id], $user, now()->format('Y-m-d'));
+            } catch (Exception $e) {
+                $schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first();
+                return $this->getPayments(['schedule_id', $schedule->id], $user, now()->format('Y-m-d'));
+            }
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -157,41 +196,10 @@ class DispatcherController extends Controller
         }
         return $this->logout(JWTAuth::getToken());
     }
-    // Registro de inicio de turno y termino de turno
-    public function startEndTime(Request $request)
-    {
-        if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            switch ($request->time) {
-                case 'true':
-                    if (($schedule = Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $user->dispatcher->station->id)->first()) != null) {
-                        $time = new RegisterTime();
-                        $time->dispatcher_id = $user->dispatcher->id;
-                        $time->station_id = $user->dispatcher->station->id;
-                        $time->schedule_id = $schedule->id;
-                        $time->save();
-                        return $this->successResponse('message', 'Inicio de turno registrado');
-                    }
-                    return $this->errorResponse('Turno no disponible');
-                    break;
-                case 'false':
-                    $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
-                    $time[count($time) - 1]->updated_at = now();
-                    $time[count($time) - 1]->save();
-                    return $this->successResponse('message', 'Fin de turno registrado');
-                    break;
-                default:
-                    return $this->errorResponse('Registro no valido');
-            }
-        }
-        return $this->logout(JWTAuth::getToken());
-    }
     // Funcion para listar los cobros del depachador
     private function getPayments($array, $user, $date)
     {
-        $query = [['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id]];
-        if ($array != null) {
-            $query[2] = $array;
-        }
+        $query = [['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], $array];
         if (count($payments = DispatcherHistoryPayment::where($query)->whereDate('created_at', $date)->get()) > 0) {
             $dataPayment = array();
             foreach ($payments as $payment) {
@@ -206,6 +214,8 @@ class DispatcherController extends Controller
                 array_push($dataPayment, $data);
             }
             return $this->successResponse('made_payments', $dataPayment);
+        } else {
+            return $this->errorResponse('Aun no hay registro de cobros');
         }
     }
     // Metodo para cerrar sesion

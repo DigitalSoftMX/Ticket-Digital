@@ -190,44 +190,38 @@ class BalanceController extends Controller
             if ($request->authorization == "true") {
                 try {
                     if ($request->tr_membership == "") {
-                        $payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first();
-                        $payment->balance -= $request->price;
-                        $payment->save();
-                        $user->client->current_balance -= $request->price;
-                        if ($request->id_gasoline != 3) {
-                            $user->client->points += $this->roundHalfDown($request->liters);
+                        if (($payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {
+                            $this->registerPayment($request, $user->client->id);
+                            $payment->balance -= $request->price;
+                            $payment->save();
+                            $user->client->current_balance -= $request->price;
+                            if ($request->id_gasoline != 3) {
+                                $user->client->points += $this->roundHalfDown($request->liters);
+                            }
+                            $user->client->save();
+                        } else {
+                            return $this->errorResponse('Saldo insuficiente');
                         }
-                        $user->client->save();
                     } else {
                         $transmitter = Client::where('membership', $request->tr_membership)->first();
-                        $payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first();
-                        $payment->balance -= $request->price;
-                        $payment->save();
-                        $user->client->shared_balance -= $request->price;
-                        $user->client->save();
-                        if ($request->id_gasoline != 3) {
-                            $transmitter->points += $this->roundHalfDown($request->liters);
+                        if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {
+                            $this->registerPayment($request, $user->client->id);
+                            $payment->balance -= $request->price;
+                            $payment->save();
+                            $user->client->shared_balance -= $request->price;
+                            $user->client->save();
+                            if ($request->id_gasoline != 3) {
+                                $transmitter->points += $this->roundHalfDown($request->liters);
+                            }
+                            $transmitter->save();
+                        } else {
+                            return $this->errorResponse('Saldo insuficiente');
                         }
-                        $transmitter->save();
                     }
-                } catch (Exception $e) {
-                    return $this->errorResponse('Saldo insuficiente');
-                }
-                try { // Registro de pagos para historial del pago
-                    $registerPayment = new DispatcherHistoryPayment();
-                    $registerPayment->dispatcher_id = $request->id_dispatcher;
-                    $registerPayment->gasoline_id = $request->id_gasoline;
-                    $registerPayment->liters = $request->liters;
-                    $registerPayment->payment = $request->price;
-                    $registerPayment->schedule_id = $request->id_schedule;
-                    $registerPayment->station_id = $request->id_station;
-                    $registerPayment->client_id = $user->client->id;
-                    $registerPayment->time_id = $request->id_time;
-                    $registerPayment->save();
+                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client);
                 } catch (Exception $e) {
                     return $this->errorResponse('Error al registrar el cobro');
                 }
-                return $this->makeNotification($request->ids_dispatcher, $request->ids_client);
             }
             return $this->makeNotification($request->ids_dispatcher, null);
         }
@@ -254,6 +248,19 @@ class BalanceController extends Controller
         $historyBalance->action = $history;
         $historyBalance->type = $type;
         $historyBalance->save();
+    }
+    private function registerPayment($request, $id)
+    {
+        $registerPayment = new DispatcherHistoryPayment();
+        $registerPayment->dispatcher_id = $request->id_dispatcher;
+        $registerPayment->gasoline_id = $request->id_gasoline;
+        $registerPayment->liters = $request->liters;
+        $registerPayment->payment = $request->price;
+        $registerPayment->schedule_id = $request->id_schedule;
+        $registerPayment->station_id = $request->id_station;
+        $registerPayment->client_id = $id;
+        $registerPayment->time_id = $request->id_time;
+        $registerPayment->save();
     }
     // Funcion para enviar una notificacion
     private function makeNotification($idsDispatcher, $idsClient)
