@@ -10,7 +10,6 @@ use App\Http\Controllers\Controller;
 use App\RegisterTime;
 use App\Schedule;
 use App\SharedBalance;
-use App\Station;
 use App\UserHistoryDeposit;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -98,61 +97,52 @@ class DispatcherController extends Controller
             if (($dispatcher = $user->dispatcher)->station_id == $request->id_station) {
                 if (($client = Client::where('membership', $request->membership)->first()) != null) {
                     if ($request->tr_membership == "") {
-                        if (($payment = UserHistoryDeposit::where([['client_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
-                            if ($request->price > $payment->balance) {
-                                return $this->errorResponse('Saldo insuficiente');
-                            }
-                        } else {
-                            return $this->errorResponse('No hay abonos realizados en la cuenta');
-                        }
+                        $payment = UserHistoryDeposit::where([['client_id', $client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first();
                     } else {
                         $transmitter = Client::where('membership', $request->tr_membership)->first();
-                        if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $client->id], ['station_id', $request->id_station]])->first()) != null) {
-                            if ($request->price > $payment->balance) {
-                                return $this->errorResponse('Saldo insuficiente');
-                            }
-                        } else {
-                            return $this->errorResponse('No hay abonos realizados');
-                        }
+                        $payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first();
                     }
-                    $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
-                    $gasoline = Gasoline::find($request->id_gasoline);
-                    $fields = array(
-                        'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
-                        'data' => array(
-                            "price" => $request->price,
-                            "gasoline" => $gasoline->name,
-                            "liters" => $request->liters,
-                            "estacion" => $dispatcher->station->name,
-                            'ids_dispatcher' => $request->ids_dispatcher,
-                            'id_dispatcher' => $dispatcher->id,
-                            'id_gasoline' => $request->id_gasoline,
-                            'id_schedule' => (Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $dispatcher->station_id)->first())->id,
-                            'id_station' => $dispatcher->station_id,
-                            'tr_membership' => $request->tr_membership,
-                            'id_time' => $time[count($time) - 1]->id
-                        ), 'contents' => array(
-                            "en" => "English message from postman",
-                            "es" => "Realizaste una solicitud de pago."
-                        ),
-                        'headings' => array(
-                            "en" => "English title from postman",
-                            "es" => "Pago con QR"
-                        ),
-                        'include_player_ids' => array("$request->ids_client"),
-                    );
-                    $fields = json_encode($fields);
-                    $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8'));
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                    curl_setopt($ch, CURLOPT_HEADER, FALSE);
-                    curl_setopt($ch, CURLOPT_POST, TRUE);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-                    $response = curl_exec($ch);
-                    curl_close($ch);
-                    return $this->successResponse('notification', \json_decode($response));
+                    if ($payment != null) {
+                        $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
+                        $gasoline = Gasoline::find($request->id_gasoline);
+                        $fields = array(
+                            'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
+                            'data' => array(
+                                "price" => $request->price,
+                                "gasoline" => $gasoline->name,
+                                "liters" => $request->liters,
+                                "estacion" => $dispatcher->station->name,
+                                'ids_dispatcher' => $request->ids_dispatcher,
+                                'id_dispatcher' => $dispatcher->id,
+                                'id_gasoline' => $request->id_gasoline,
+                                'id_schedule' => (Schedule::whereTime('start', '<=', now()->format('H:m'))->whereTime('end', '>=', now()->format('H:m'))->where('station_id', $dispatcher->station_id)->first())->id,
+                                'id_station' => $dispatcher->station_id,
+                                'tr_membership' => $request->tr_membership,
+                                'id_time' => $time[count($time) - 1]->id
+                            ), 'contents' => array(
+                                "en" => "English message from postman",
+                                "es" => "Realizaste una solicitud de pago."
+                            ),
+                            'headings' => array(
+                                "en" => "English title from postman",
+                                "es" => "Pago con QR"
+                            ),
+                            'include_player_ids' => array("$request->ids_client"),
+                        );
+                        $fields = json_encode($fields);
+                        $ch = curl_init();
+                        curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
+                        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8'));
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+                        curl_setopt($ch, CURLOPT_HEADER, FALSE);
+                        curl_setopt($ch, CURLOPT_POST, TRUE);
+                        curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+                        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+                        $response = curl_exec($ch);
+                        curl_close($ch);
+                        return $this->successResponse('notification', \json_decode($response));
+                    }
+                    return $this->errorResponse('No hay abonos realizados');
                 }
                 return $this->errorResponse('Membresía no disponible');
             }
@@ -179,7 +169,7 @@ class DispatcherController extends Controller
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             if (count($time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get()) > 0) {
-                return $this->getPayments(['time_id', $time[count($time) - 1]->id], $user, now()->format('Y-m-d'));
+                return $this->getPayments(['time_id', $time[count($time) - 1]->id], $user->dispatcher, now()->format('Y-m-d'));
             }
             return $this->errorResponse('Aun no hay registro de cobros');
         }
@@ -189,15 +179,14 @@ class DispatcherController extends Controller
     public function getListPayments(Request $request)
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            return $this->getPayments(['schedule_id', $request->id_schedule], $user, $request->date);
+            return $this->getPayments(['schedule_id', $request->id_schedule], $user->dispatcher, $request->date);
         }
         return $this->logout(JWTAuth::getToken());
     }
     // Funcion para listar los cobros del depachador
-    private function getPayments($array, $user, $date)
+    private function getPayments($array, $dispatcher, $date)
     {
-        $query = [['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], $array];
-        if (count($payments = DispatcherHistoryPayment::where($query)->whereDate('created_at', $date)->get()) > 0) {
+        if (count($payments = DispatcherHistoryPayment::where([['dispatcher_id', $dispatcher->id], ['station_id', $dispatcher->station_id], $array])->whereDate('created_at', $date)->get()) > 0) {
             $dataPayment = array();
             $magna = 0;
             $premium = 0;
@@ -227,9 +216,8 @@ class DispatcherController extends Controller
             $info['liters_product'] = array('Magna' => $magna, 'Premium' => $premium, 'Diésel' => $diesel);
             $info['payment'] = $dataPayment;
             return $this->successResponse('payments', $info);
-        } else {
-            return $this->errorResponse('Aun no hay registro de cobros');
         }
+        return $this->errorResponse('Aun no hay registro de cobros');
     }
     // Metodo para cerrar sesion
     private function logout($token)
@@ -244,17 +232,11 @@ class DispatcherController extends Controller
     // Funcion mensajes de error
     private function errorResponse($message)
     {
-        return response()->json([
-            'ok' => false,
-            'message' => $message
-        ]);
+        return response()->json(['ok' => false, 'message' => $message]);
     }
     // Funcion mensaje correcto
     private function successResponse($name, $data)
     {
-        return response()->json([
-            'ok' => true,
-            $name => $data
-        ]);
+        return response()->json(['ok' => true, $name => $data]);
     }
 }

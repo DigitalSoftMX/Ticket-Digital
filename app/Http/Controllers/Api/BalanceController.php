@@ -191,9 +191,7 @@ class BalanceController extends Controller
                 try {
                     if ($request->tr_membership == "") {
                         if (($payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {
-                            $this->registerPayment($request, $user->client->id);
-                            $payment->balance -= $request->price;
-                            $payment->save();
+                            $this->registerPayment($request, $user->client->id, $payment);
                             $user->client->current_balance -= $request->price;
                             if ($request->id_gasoline != 3) {
                                 $user->client->points += $this->roundHalfDown($request->liters);
@@ -205,9 +203,7 @@ class BalanceController extends Controller
                     } else {
                         $transmitter = Client::where('membership', $request->tr_membership)->first();
                         if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {
-                            $this->registerPayment($request, $user->client->id);
-                            $payment->balance -= $request->price;
-                            $payment->save();
+                            $this->registerPayment($request, $user->client->id, $payment);
                             $user->client->shared_balance -= $request->price;
                             $user->client->save();
                             if ($request->id_gasoline != 3) {
@@ -250,7 +246,7 @@ class BalanceController extends Controller
         $historyBalance->save();
     }
     // Funcion para registrar los pagos
-    private function registerPayment($request, $id)
+    private function registerPayment($request, $id, $payment)
     {
         $registerPayment = new DispatcherHistoryPayment();
         $registerPayment->dispatcher_id = $request->id_dispatcher;
@@ -262,6 +258,8 @@ class BalanceController extends Controller
         $registerPayment->client_id = $id;
         $registerPayment->time_id = $request->id_time;
         $registerPayment->save();
+        $payment->balance -= $request->price;
+        $payment->save();
     }
     // Funcion para enviar una notificacion
     private function makeNotification($idsDispatcher, $idsClient)
