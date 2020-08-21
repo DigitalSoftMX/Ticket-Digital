@@ -12,8 +12,8 @@ class ScheduleTableSeeder extends Seeder
      */
     public function run()
     {
-        $scheduleStart = array('00:01', '06:01', '14:01', '22:01');
-        $scheduleEnd = array('06:00', '14:00', '22:00', '00:00');
+        $scheduleStart = array('00:00', '06:00', '14:00', '22:00');
+        $scheduleEnd = array('05:59', '13:59', '21:59', '23:59');
         for ($i = 1; $i < 9; $i++) {
             for ($j = 1; $j < 5; $j++) {
                 if ($i == 1 || $i == 3 || $i == 5 || $i == 6 || $i == 8) {
@@ -29,25 +29,25 @@ class ScheduleTableSeeder extends Seeder
         }
         // Estacion ETE
         // Turno 2
-        $this->saveSchedule(2, $scheduleStart[1], '15:00', 2);
+        $this->saveSchedule(2, $scheduleStart[1], '14:59', 2);
         // Turno 3
-        $this->saveSchedule(3, '15:01', $scheduleEnd[3], 2);
+        $this->saveSchedule(3, '15:00', $scheduleEnd[3], 2);
         //Estacion ELE
         // Turno 1
-        $this->saveSchedule(1, $scheduleStart[1], '07:00', 4);
+        $this->saveSchedule(1, $scheduleStart[1], '06:59', 4);
         // Turno 2
-        $this->saveSchedule(2, '07:01', '15:00', 4);
+        $this->saveSchedule(2, '07:00', '14:59', 4);
         // Turno 3
-        $this->saveSchedule(3, '15:01', '23:00', 4);
+        $this->saveSchedule(3, '15:00', '22:59', 4);
         // Turno 4
-        $this->saveSchedule(4, '23:01', $scheduleEnd[3], 4);
+        $this->saveSchedule(4, '23:00', $scheduleEnd[3], 4);
         // Estacion CSE
         // Turno 1
-        $this->saveSchedule(1, $scheduleStart[1], '07:00', 7);
+        $this->saveSchedule(1, $scheduleStart[1], '06:59', 7);
         // Turno 2
-        $this->saveSchedule(2, '07:01', '15:00', 7);
+        $this->saveSchedule(2, '07:00', '14:59', 7);
         // Turno 3
-        $this->saveSchedule(3, '15:01', $scheduleEnd[2], 7);
+        $this->saveSchedule(3, '15:00', $scheduleEnd[2], 7);
     }
     // Funcion para registrar horarios por estacion
     private function saveSchedule($turno, $start, $end, $station)
