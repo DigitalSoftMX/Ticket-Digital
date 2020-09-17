@@ -18,8 +18,8 @@ class CreateDispatchersTable extends Migration
             $table->string('dispatcher_id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger("station_id");
-            $table->integer('no_island');
-            $table->integer('no_bomb');
+            $table->unsignedBigInteger('no_island');
+            $table->unsignedBigInteger('no_bomb');
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')
@@ -27,6 +27,14 @@ class CreateDispatchersTable extends Migration
                 ->onUpdate('cascade');
 
             $table->foreign('station_id')->references('id')->on('stations')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+
+            $table->foreign('no_island')->references('id')->on('islands')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+
+            $table->foreign('no_bomb')->references('id')->on('bombs')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
         });

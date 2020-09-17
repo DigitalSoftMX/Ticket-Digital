@@ -1,0 +1,37 @@
+<?php
+
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
+
+class CreateIslandsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::connection('mysql')->create('islands', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->integer('no_island');
+            $table->unsignedBigInteger('station_id');
+            $table->timestamps();
+
+            $table->foreign('station_id')->references('id')->on('stations')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::connection('mysql')->dropIfExists('islands');
+    }
+}
