@@ -106,7 +106,7 @@ class BalanceController extends Controller
                         $receiverUser->shared_balance += $request->balance;
                         $receiverUser->save();
                         $this->makeNotification($receiverUser->ids, null, 'Te han compartido saldo', 'Saldo compartido');
-                        return $this->successResponse('message', 'Abono realizado correctamente');
+                        return $this->successResponse('message', 'Saldo compartido correctamente');
                     }
                     return $this->errorResponse('El deposito es mayor al disponible');
                 }
@@ -166,7 +166,7 @@ class BalanceController extends Controller
             if ($request->authorization == "true") {
                 try {
                     if ($request->tr_membership == "") {
-                        if (($payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {
+                        if (($payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first()) != null) {
                             $this->registerPayment($request, $user->client->id, $payment);
                             $user->client->current_balance -= $request->price;
                             if ($request->id_gasoline != 3) {
@@ -180,14 +180,14 @@ class BalanceController extends Controller
                         }
                     } else {
                         $transmitter = Client::where('membership', $request->tr_membership)->first();
-                        if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {
+                        if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first()) != null) {
                             $this->registerPayment($request, $user->client->id, $payment);
                             $payment->save();
                             $user->client->shared_balance -= $request->price;
                             $user->client->save();
                             if ($request->id_gasoline != 3) {
                                 $transmitter->points += $this->roundHalfDown($request->liters);
-                                $points = UserHistoryDeposit::where([['client_id', $transmitter->id], ['station_id', $request->id_station]])->first();
+                                $points = UserHistoryDeposit::where([['client_id', $transmitter->id], ['station_id', $request->id_station], ['status', 4]])->first();
                                 $points->points += $this->roundHalfDown($request->liters);
                                 $points->save();
                             }
