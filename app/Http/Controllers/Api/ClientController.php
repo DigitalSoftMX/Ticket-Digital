@@ -67,6 +67,8 @@ class ClientController extends Controller
                                 $data['date'] = $balance->created_at->format('Y/m/d');
                                 $data['hour'] = $balance->created_at->format('H:i:s');
                                 $data['gasoline'] = $balance->gasoline->name;
+                                $data['no_island'] = $balance->no_island;
+                                $data['no_bomb'] = $balance->no_bomb;
                                 array_push($payments, $data);
                             }
                             return $this->successResponse('payments', $payments);
@@ -77,7 +79,7 @@ class ClientController extends Controller
                             foreach ($balances as $balance) {
                                 $data['balance'] = $balance->balance;
                                 $data['station'] = $balance->station->name;
-                                $data['status'] = $balance->status;
+                                $data['status'] = $balance->deposit->name;
                                 $data['date'] = $balance->created_at->format('Y/m/d');
                                 $data['hour'] = $balance->created_at->format('H:i:s');
                                 array_push($payments, $data);

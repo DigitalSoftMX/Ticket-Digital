@@ -17,6 +17,6 @@ class UserHistoryDeposit extends Model
     // Conexion con la estacion a la que pertenece el abono
     public function deposit()
     {
-        return $this->belongsTo(Status::class);
+        return $this->belongsTo(Status::class, 'status', 'id');
     }
 }
