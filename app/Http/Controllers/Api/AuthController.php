@@ -10,14 +10,14 @@ use App\Http\Controllers\Controller;
 use App\Role;
 use App\User;
 use Exception;
+use Illuminate\Support\Facades\Storage;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
-    // Metodo para iniciar sesion en Ticket Digital
+    // Metodo para inicar sesion
     public function login(Request $request)
     {
-        // Pregunta si el usuario existe en la BD de Ticket Digital o bien en Eucomb
         if (($userTicket = User::where('email', $request->email)->first()) == null) {
             if (($userEucomb = EucombUser::where('email', $request->email)->first()) != null) {
                 if (($role = $userEucomb->roles[0]->name) == 'usuario') {
@@ -39,6 +39,7 @@ class AuthController extends Controller
                     }
                     $this->registerClient($userEucomb, $user->id);
                     $user->roles()->attach(Role::where('name', $role)->first());
+                    Storage::disk('public')->deleteDirectory($user->client->membership);
                     return $this->getToken($request, $user);
                 }
                 return $this->errorMessage('Usuario no autorizado');
@@ -76,6 +77,7 @@ class AuthController extends Controller
                 $dataCar->type_car = $request->type_car;
                 $dataCar->save();
             }
+            Storage::disk('public')->deleteDirectory($user->client->membership);
             return $this->getToken($request, $user);
         }
         return $this->errorMessage('El usuario ya existe');
@@ -102,7 +104,6 @@ class AuthController extends Controller
         $client->current_balance = 0;
         $client->shared_balance = 0;
         $client->points = 0;
-        // Verificar la imagen qr del cliente
         $client->image_qr = $data->username;
         $client->birthdate = $data->birthdate;
         $client->save();
@@ -126,6 +127,10 @@ class AuthController extends Controller
         }
         $user->remember_token = $token;
         $user->save();
+        if ($user->roles[0]->name == 'usuario') {
+            $user->client->ids = $request->ids;
+            $user->client->update();
+        }
         return $this->successMessage('token', $token);
     }
     // Funcion mensaje correcto

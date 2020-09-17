@@ -96,11 +96,3 @@ Route::group(['middleware' => 'auth'], function () {
 	Route::put('profile', ['as' => 'profile.update', 'uses' => 'ProfileController@update']);
 	Route::put('profile/password', ['as' => 'profile.password', 'uses' => 'ProfileController@password']);
 });
-
-//Route::get('estaciones', ['as' => 'estaciones.index', 'uses' => 'EstacionController@index']);
-//Route::group(['middleware' => 'auth'], function () {
-	//Route::resource('user', 'UserController', ['except' => ['show']]);
-	//Route::get('estaciones', ['as' => 'estaciones.index', 'uses' => 'EstacionController@index']);
-	//Route::get('estaciones', ['as' => 'estaciones.edit', 'uses' => 'EstacionController@edit']);
-	//Route::put('estaciones', ['as' => 'estaciones.update', 'uses' => 'ProfileController@update']);
-//});

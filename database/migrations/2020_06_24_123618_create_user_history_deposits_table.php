@@ -17,8 +17,10 @@ class CreateUserHistoryDepositsTable extends Migration
             $table->bigIncrements('id');
             $table->unsignedBigInteger('client_id');
             $table->float('balance');
+            $table->integer('points');
+            $table->string('image_payment');
             $table->unsignedBigInteger('station_id');
-            $table->integer('status');
+            $table->unsignedBigInteger('status');
             $table->timestamps();
 
             $table->foreign('client_id')->references('id')->on('clients')
@@ -26,6 +28,10 @@ class CreateUserHistoryDepositsTable extends Migration
                 ->onUpdate('cascade');
 
             $table->foreign('station_id')->references('id')->on('stations')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+
+            $table->foreign('status')->references('id')->on('status')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
         });

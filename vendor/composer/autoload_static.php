@@ -570,6 +570,8 @@ class ComposerStaticInit1bf4e49872f10ef256c53cbb8d729866
     );
 
     public static $classMap = array (
+        'App\\Api\\AdminStation' => __DIR__ . '/../..' . '/app/Api/AdminStation.php',
+        'App\\Api\\Status' => __DIR__ . '/../..' . '/app/Api/Status.php',
         'App\\Client' => __DIR__ . '/../..' . '/app/Client.php',
         'App\\Console\\Kernel' => __DIR__ . '/../..' . '/app/Console/Kernel.php',
         'App\\Contact' => __DIR__ . '/../..' . '/app/Contact.php',
@@ -4105,6 +4107,7 @@ class ComposerStaticInit1bf4e49872f10ef256c53cbb8d729866
         'SebastianBergmann\\Version' => __DIR__ . '/..' . '/sebastian/version/src/Version.php',
         'SessionUpdateTimestampHandlerInterface' => __DIR__ . '/..' . '/symfony/polyfill-php70/Resources/stubs/SessionUpdateTimestampHandlerInterface.php',
         'StationTableSeeder' => __DIR__ . '/../..' . '/database/seeds/StationTableSeeder.php',
+        'StatusTableSeeder' => __DIR__ . '/../..' . '/database/seeds/StatusTableSeeder.php',
         'Stringable' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Stringable.php',
         'Symfony\\Component\\Console\\Application' => __DIR__ . '/..' . '/symfony/console/Application.php',
         'Symfony\\Component\\Console\\CommandLoader\\CommandLoaderInterface' => __DIR__ . '/..' . '/symfony/console/CommandLoader/CommandLoaderInterface.php',

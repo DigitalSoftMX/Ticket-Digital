@@ -23,6 +23,8 @@ class CreateDispatcherHistoryPaymentsTable extends Migration
             $table->unsignedBigInteger('station_id');
             $table->unsignedBigInteger('client_id');
             $table->unsignedBigInteger('time_id');
+            $table->integer('no_island');
+            $table->integer('no_bomb');
             $table->timestamps();
 
             $table->foreign('dispatcher_id')->references('id')->on('dispatchers')

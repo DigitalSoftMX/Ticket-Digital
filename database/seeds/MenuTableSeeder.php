@@ -17,9 +17,7 @@ class MenuTableSeeder extends Seeder
         $menu->desplegable = "0";
         $menu->ruta = "home";
         $menu->id_role = "1";
-        $menu->icono = "dashboard";
-        $menu->created_at = now();
-        $menu->updated_at = now();
+        $menu->icono = "icon-chart-pie-36";
         $menu->save();
         $menu->roles()->attach('1');
         $menu->roles()->attach('2');
@@ -31,9 +29,7 @@ class MenuTableSeeder extends Seeder
         $menu->desplegable = "0";
         $menu->ruta = "profile";
         $menu->id_role = "1";
-        $menu->icono = "account_circle";
-        $menu->created_at = now();
-        $menu->updated_at = now();
+        $menu->icono = "icon-single-02";
         $menu->save();
         $menu->roles()->attach('1');
         $menu->roles()->attach('2');
@@ -45,9 +41,7 @@ class MenuTableSeeder extends Seeder
         $menu->desplegable = "0";
         $menu->ruta = "user";
         $menu->id_role = "1";
-        $menu->icono = "perm_identity";
-        $menu->created_at = now();
-        $menu->updated_at = now();
+        $menu->icono = "icon-bullet-list-67";
         $menu->save();
         $menu->roles()->attach('1');
         $menu->roles()->attach('3');

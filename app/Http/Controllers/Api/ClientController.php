@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Client;
 use App\DispatcherHistoryPayment;
-use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
 use App\Station;
+use App\UserHistoryDeposit;
 use Illuminate\Support\Facades\Auth;
 use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -32,7 +31,7 @@ class ClientController extends Controller
             $data['client']['membership'] = $user->client->membership;
             $data['client']['current_balance'] = $user->client->current_balance;
             $data['client']['shared_balance'] = $user->client->shared_balance;
-            $data['client']['total_shared_balance'] = count(SharedBalance::where([['receiver_id', $user->client->id], ['balance', '>', 0]])->get());
+            $data['client']['total_shared_balance'] = count(SharedBalance::where([['receiver_id', $user->client->id], ['balance', '>', 0], ['status', 4]])->get());
             $data['client']['points'] = $user->client->points;
             $data['client']['image_qr'] = $user->client->image_qr;
             $data['data_car'] = $dataCar;
@@ -57,44 +56,44 @@ class ClientController extends Controller
     {
         if (($user = Auth::user())->roles[0]->name == 'usuario') {
             try {
-                if (($type = $request->type) == 'payment') {
-                    if (count($balances = $this->getBalances(new DispatcherHistoryPayment(), $request->start, $request->end, $user, null)) > 0) {
-                        $payments = array();
-                        foreach ($balances as $balance) {
-                            $data['balance'] = $balance->payment;
-                            $data['station'] = $balance->station->name;
-                            $data['liters'] = $balance->liters;
-                            $data['date'] = $balance->created_at->format('Y/m/d');
-                            $data['hour'] = $balance->created_at->format('H:i:s');
-                            $data['gasoline'] = $balance->gasoline->name;
-                            array_push($payments, $data);
+                switch ($request->type) {
+                    case 'payment':
+                        if (count($balances = $this->getBalances(new DispatcherHistoryPayment(), $request->start, $request->end, $user, null, null)) > 0) {
+                            $payments = array();
+                            foreach ($balances as $balance) {
+                                $data['balance'] = $balance->payment;
+                                $data['station'] = $balance->station->name;
+                                $data['liters'] = $balance->liters;
+                                $data['date'] = $balance->created_at->format('Y/m/d');
+                                $data['hour'] = $balance->created_at->format('H:i:s');
+                                $data['gasoline'] = $balance->gasoline->name;
+                                array_push($payments, $data);
+                            }
+                            return $this->successResponse('payments', $payments);
                         }
-                        return $this->successResponse('payments', $payments);
-                    }
-                } else {
-                    if (count($balances = $this->getBalances(new History(), $request->start, $request->end, $user, $type)) > 0) {
-                        $payments = array();
-                        switch ($type) {
-                            case 'balance':
-                                foreach ($balances as $balance) {
-                                    $payment = json_decode($balance->action);
-                                    $station = Station::find($payment->station_id);
-                                    $data['balance'] = $payment->balance;
-                                    $data['station'] = $station->name;
-                                    $data['date'] = $balance->created_at->format('Y/m/d');
-                                    $data['hour'] = $balance->created_at->format('H:i:s');
-                                    array_push($payments, $data);
-                                }
-                                break;
-                            case 'share':
-                                $payments = $this->getSharedBalances($balances, 'receiver_id');
-                                break;
-                            case 'received':
-                                $payments = $this->getSharedBalances($balances, 'transmitter_id');
-                                break;
+                    case 'balance':
+                        if (count($balances = $this->getBalances(new UserHistoryDeposit(), $request->start, $request->end, $user, 4, null)) > 0) {
+                            $payments = array();
+                            foreach ($balances as $balance) {
+                                $data['balance'] = $balance->balance;
+                                $data['station'] = $balance->station->name;
+                                $data['status'] = $balance->status;
+                                $data['date'] = $balance->created_at->format('Y/m/d');
+                                $data['hour'] = $balance->created_at->format('H:i:s');
+                                array_push($payments, $data);
+                            }
+                            return $this->successResponse('balances', $payments);
                         }
-                        return $this->successResponse('balances', $payments);
-                    }
+                    case 'share':
+                        if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'transmitter_id')) > 0) {
+                            $payments = $this->getSharedBalances($balances, 'receiver');
+                            return $this->successResponse('balances', $payments);
+                        }
+                    case 'received':
+                        if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'receiver_id')) > 0) {
+                            $payments = $this->getSharedBalances($balances, 'transmitter');
+                            return $this->successResponse('balances', $payments);
+                        }
                 }
                 return $this->errorResponse('Sin movimientos en la cuenta');
             } catch (Exception $e) {
@@ -104,11 +103,14 @@ class ClientController extends Controller
         return $this->logout(JWTAuth::getToken());
     }
     // Funcion para devolver el arreglo de historiales
-    private function getBalances($model, $start, $end, $user, $type)
+    private function getBalances($model, $start, $end, $user, $status, $type)
     {
         $query = [['client_id', $user->client->id]];
         if ($type != null) {
-            $query[1] = ['type', $type];
+            $query = [[$type, $user->client->id]];
+        }
+        if ($status != null) {
+            $query[1] = ['status', '!=', $status];
         }
         if ($start == "" && $end == "") {
             $balances = $model::where($query)->get();
@@ -130,13 +132,10 @@ class ClientController extends Controller
     {
         $payments = array();
         foreach ($balances as $balance) {
-            $action = json_decode($balance->action);
-            $station = Station::find($action->station_id);
-            $client = Client::find($action->$person);
-            $payment['station'] = $station->name;
-            $payment['balance'] = $action->balance;
-            $payment['membership'] = $client->membership;
-            $payment['name'] = $client->user->name . ' ' . $client->user->first_surname . ' ' . $client->user->second_surname;
+            $payment['station'] = $balance->station->name;
+            $payment['balance'] = $balance->balance;
+            $payment['membership'] = $balance->$person->membership;
+            $payment['name'] = $balance->$person->user->name . ' ' . $balance->$person->user->first_surname . ' ' . $balance->$person->user->second_surname;
             $payment['date'] = $balance->created_at->format('Y/m/d');
             array_push($payments, $payment);
         }

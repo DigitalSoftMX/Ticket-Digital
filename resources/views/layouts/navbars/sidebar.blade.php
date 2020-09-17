@@ -8,9 +8,6 @@
     </div>
     <div class="sidebar-wrapper">
         <div class="user">
-          <!--div class="photo">
-            <img src=""/>
-          </div-->
           <div class="user-info">
             <a class="username text-center" data-toggle="collapse" href="#collapseExample">
               <center>

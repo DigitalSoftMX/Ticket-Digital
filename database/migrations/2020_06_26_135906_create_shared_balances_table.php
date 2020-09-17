@@ -20,7 +20,7 @@ class CreateSharedBalancesTable extends Migration
             $table->unsignedBigInteger('receiver_id');
             $table->float('balance');
             $table->unsignedBigInteger('station_id');
-            $table->integer('status');
+            $table->unsignedBigInteger('status');
             $table->timestamps();
 
             $table->foreign('transmitter_id')->references('id')->on('clients')
@@ -32,6 +32,10 @@ class CreateSharedBalancesTable extends Migration
                 ->onUpdate('cascade');
 
             $table->foreign('station_id')->references('id')->on('stations')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+
+            $table->foreign('status')->references('id')->on('status')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
         });

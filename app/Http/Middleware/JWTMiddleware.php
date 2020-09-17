@@ -20,13 +20,16 @@ class JWTMiddleware
         try {
             $token = JWTAuth::getToken();
             // Valida que el token sea igual al remember token proporcionado por el login
-            if (JWTAuth::parseToken()->authenticate()->remember_token == $token) {
+            $user = JWTAuth::parseToken()->authenticate();
+            if ($user->remember_token == $token) {
+                if ($user->roles[0]->name == 'despachador' && $user->active == 0) {
+                    JWTAuth::invalidate(JWTAuth::parseToken($token));
+                    return $this->exceptionResponse('Usuario no autorizado');
+                }
                 return $next($request);
-            } else {
-                // Inhabilita el token si este no es valido
-                JWTAuth::invalidate(JWTAuth::parseToken($token));
-                return $this->exceptionResponse('Token invalido');
             }
+            JWTAuth::invalidate(JWTAuth::parseToken($token));
+            return $this->exceptionResponse('Usuario no autorizado');
         } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
             return $this->exceptionResponse('Token expirado');
         } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {

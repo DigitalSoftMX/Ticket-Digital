@@ -101,7 +101,7 @@ class DispatcherController extends Controller
                         $payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first();
                     }
                     if ($payment != null) {
-                        $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
+                        $time = RegisterTime::where([['dispatcher_id', $dispatcher->id], ['station_id', $dispatcher->station->id]])->get();
                         $gasoline = Gasoline::find($request->id_gasoline);
                         $fields = array(
                             'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
@@ -116,7 +116,9 @@ class DispatcherController extends Controller
                                 'id_schedule' => (Schedule::whereTime('start', '<=', now()->format('H:i'))->whereTime('end', '>=', now()->format('H:i'))->where('station_id', $dispatcher->station_id)->first())->id,
                                 'id_station' => $dispatcher->station_id,
                                 'tr_membership' => $request->tr_membership,
-                                'id_time' => $time[count($time) - 1]->id
+                                'id_time' => $time[count($time) - 1]->id,
+                                'no_island' => $dispatcher->island,
+                                'no_bomb' => $dispatcher->no_bomb
                             ), 'contents' => array(
                                 "en" => "English message from postman",
                                 "es" => "Realizaste una solicitud de pago."

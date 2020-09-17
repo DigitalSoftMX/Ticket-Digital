@@ -18,6 +18,8 @@ class CreateDispatchersTable extends Migration
             $table->string('dispatcher_id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger("station_id");
+            $table->integer('no_island');
+            $table->integer('no_bomb');
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')

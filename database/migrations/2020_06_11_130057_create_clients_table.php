@@ -22,6 +22,7 @@ class CreateClientsTable extends Migration
             $table->integer('points');
             $table->string('image_qr');
             $table->string('birthdate')->nullable();
+            $table->string('ids')->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')
