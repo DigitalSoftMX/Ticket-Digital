@@ -105,7 +105,7 @@ class BalanceController extends Controller
                         $receiverUser = Client::find($request->id_contact);
                         $receiverUser->shared_balance += $request->balance;
                         $receiverUser->save();
-                        $this->makeNotification($receiverUser->ids, null, 'Te han compartido saldo');
+                        $this->makeNotification($receiverUser->ids, null, 'Te han compartido saldo', 'Saldo compartido');
                         return $this->successResponse('message', 'Abono realizado correctamente');
                     }
                     return $this->errorResponse('El deposito es mayor al disponible');
@@ -196,12 +196,12 @@ class BalanceController extends Controller
                             return $this->errorResponse('Saldo insuficiente');
                         }
                     }
-                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client, 'Cobro realizado con exito');
+                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client, 'Cobro realizado con exito', 'Pago con QR');
                 } catch (Exception $e) {
                     return $this->errorResponse('Error al registrar el cobro');
                 }
             }
-            return $this->makeNotification($request->ids_dispatcher, null, 'Cobro cancelado');
+            return $this->makeNotification($request->ids_dispatcher, null, 'Cobro cancelado', 'Pago con QR');
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -256,11 +256,12 @@ class BalanceController extends Controller
         $payment->balance -= $request->price;
     }
     // Funcion para enviar una notificacion
-    private function makeNotification($idsDispatcher, $idsClient, $message)
+    private function makeNotification($idsDispatcher, $idsClient, $message, $notification)
     {
         $ids = array("$idsDispatcher");
         if ($idsClient != null) {
             $ids = array("$idsDispatcher", "$idsClient");
+            $notification = '';
         }
         $fields = array(
             'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
@@ -270,7 +271,7 @@ class BalanceController extends Controller
             ),
             'headings' => array(
                 "en" => "English title from postman",
-                "es" => "Pago con QR"
+                "es" => $notification
             ),
             'include_player_ids' => $ids,
         );
