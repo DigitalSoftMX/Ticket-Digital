@@ -117,7 +117,7 @@ class DispatcherController extends Controller
                                 'id_station' => $dispatcher->station_id,
                                 'tr_membership' => $request->tr_membership,
                                 'id_time' => $time[count($time) - 1]->id,
-                                'no_island' => $dispatcher->island,
+                                'no_island' => $dispatcher->no_island,
                                 'no_bomb' => $dispatcher->no_bomb
                             ), 'contents' => array(
                                 "en" => "English message from postman",

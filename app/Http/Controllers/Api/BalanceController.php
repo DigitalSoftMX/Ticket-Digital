@@ -105,6 +105,7 @@ class BalanceController extends Controller
                         $receiverUser = Client::find($request->id_contact);
                         $receiverUser->shared_balance += $request->balance;
                         $receiverUser->save();
+                        $this->makeNotification($receiverUser->ids, null, true, 'Te han compartido saldo');
                         return $this->successResponse('message', 'Abono realizado correctamente');
                     }
                     return $this->errorResponse('El deposito es mayor al disponible');
@@ -165,7 +166,7 @@ class BalanceController extends Controller
             if ($request->authorization == "true") {
                 try {
                     if ($request->tr_membership == "") {
-                        if (($payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {       
+                        if (($payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {
                             $this->registerPayment($request, $user->client->id, $payment);
                             $user->client->current_balance -= $request->price;
                             if ($request->id_gasoline != 3) {
@@ -195,12 +196,12 @@ class BalanceController extends Controller
                             return $this->errorResponse('Saldo insuficiente');
                         }
                     }
-                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client);
+                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client, true, 'Cobro realizado con exito');
                 } catch (Exception $e) {
                     return $this->errorResponse('Error al registrar el cobro');
                 }
             }
-            return $this->makeNotification($request->ids_dispatcher, null);
+            return $this->makeNotification($request->ids_dispatcher, null, false, 'Cobro cancelado');
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -255,15 +256,11 @@ class BalanceController extends Controller
         $payment->balance -= $request->price;
     }
     // Funcion para enviar una notificacion
-    private function makeNotification($idsDispatcher, $idsClient)
+    private function makeNotification($idsDispatcher, $idsClient, $success, $message)
     {
         $ids = array("$idsDispatcher");
-        $success = false;
-        $message = 'Cobro cancelado';
         if ($idsClient != null) {
             $ids = array("$idsDispatcher", "$idsClient");
-            $success = true;
-            $message = 'Cobro realizado con exito';
         }
         $fields = array(
             'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
