@@ -105,7 +105,7 @@ class BalanceController extends Controller
                         $receiverUser = Client::find($request->id_contact);
                         $receiverUser->shared_balance += $request->balance;
                         $receiverUser->save();
-                        $this->makeNotification($receiverUser->ids, null, true, 'Te han compartido saldo');
+                        $this->makeNotification($receiverUser->ids, null, 'Te han compartido saldo');
                         return $this->successResponse('message', 'Abono realizado correctamente');
                     }
                     return $this->errorResponse('El deposito es mayor al disponible');
@@ -196,12 +196,12 @@ class BalanceController extends Controller
                             return $this->errorResponse('Saldo insuficiente');
                         }
                     }
-                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client, true, 'Cobro realizado con exito');
+                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client, 'Cobro realizado con exito');
                 } catch (Exception $e) {
                     return $this->errorResponse('Error al registrar el cobro');
                 }
             }
-            return $this->makeNotification($request->ids_dispatcher, null, false, 'Cobro cancelado');
+            return $this->makeNotification($request->ids_dispatcher, null, 'Cobro cancelado');
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -256,7 +256,7 @@ class BalanceController extends Controller
         $payment->balance -= $request->price;
     }
     // Funcion para enviar una notificacion
-    private function makeNotification($idsDispatcher, $idsClient, $success, $message)
+    private function makeNotification($idsDispatcher, $idsClient, $message)
     {
         $ids = array("$idsDispatcher");
         if ($idsClient != null) {
@@ -264,9 +264,7 @@ class BalanceController extends Controller
         }
         $fields = array(
             'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
-            'data' => array(
-                'success' => $success
-            ), 'contents' => array(
+            'contents' => array(
                 "en" => "English message from postman",
                 "es" => $message
             ),
