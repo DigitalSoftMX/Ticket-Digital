@@ -13,21 +13,18 @@ class StationTableSeeder extends Seeder
      */
     public function run()
     {
-        /* Accediendo a las estaciones de Eucomb en su base de datos lealtadd_eucomb*/
-        $EucombStations=EucombStation::all();
-
-        /* Asignando las estaciones de Eucomb a la base de datos Ticket Digital */
-        foreach($EucombStations as $EucombStation){
+        // Accediendo a las estaciones de Eucomb en su base de datos lealtadd_eucomb
+        $EucombStations = EucombStation::all();
+        // Asignando las estaciones de Eucomb a la base de datos Ticket Digital
+        foreach ($EucombStations as $EucombStation) {
             $station = new Station();
             $station->name = $EucombStation->name;
             $station->address = $EucombStation->address;
-            $station->phone=$EucombStation->telefono;
-            $station->email=$EucombStation->correo;
-            $station->type_id=$EucombStation->id_type;
-            $station->comes_id=$EucombStation->id_comes;
-            $station->number_station=$EucombStation->number_station;
-            $station->created_at=now();
-            $station->updated_at=now();
+            $station->phone = $EucombStation->telefono;
+            $station->email = $EucombStation->correo;
+            $station->type_id = $EucombStation->id_type;
+            $station->comes_id = $EucombStation->id_comes;
+            $station->number_station = $EucombStation->number_station;
             $station->save();
         }
     }

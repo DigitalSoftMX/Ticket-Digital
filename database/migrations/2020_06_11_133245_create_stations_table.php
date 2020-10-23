@@ -19,8 +19,8 @@ class CreateStationsTable extends Migration
             $table->string('address');
             $table->string('phone');
             $table->string('email');
-            $table->integer('type_id');
-            $table->integer('comes_id');
+            $table->integer('type_id')->nullable();
+            $table->integer('comes_id')->nullable();
             $table->integer('number_station');
             $table->timestamps();
         });

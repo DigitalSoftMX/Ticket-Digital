@@ -2,9 +2,11 @@
 
 namespace App;
 
+use Exception;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 /* La clase implementa un Interface de JWTSubject */
 
@@ -29,7 +31,7 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasOne(Dispatcher::class);
     }
-    // funcion que pregunta si el rol esta autorizado
+    // funcion que pregunta si el rol esta autorizado para la web
     public function authorizeRoles($roles)
     {
         if ($this->hasAnyRole($roles)) {
@@ -70,7 +72,7 @@ class User extends Authenticatable implements JWTSubject
      * @var array
      */
     protected $fillable = [
-        'id', 'name', 'first_surname', 'second_surname', 'username', 'email', 'sex', 'phone', 'active', 'password',
+        'id', 'name', 'first_surname', 'second_surname', 'email', 'sex', 'phone', 'address',
     ];
 
     /**

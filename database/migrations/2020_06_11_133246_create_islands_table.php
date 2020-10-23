@@ -15,8 +15,9 @@ class CreateIslandsTable extends Migration
     {
         Schema::connection('mysql')->create('islands', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->integer('no_island');
             $table->unsignedBigInteger('station_id');
+            $table->integer('island');
+            $table->integer('bomb');
             $table->timestamps();
 
             $table->foreign('station_id')->references('id')->on('stations')

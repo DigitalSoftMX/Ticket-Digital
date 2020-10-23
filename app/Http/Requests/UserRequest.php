@@ -29,23 +29,14 @@ class UserRequest extends FormRequest
             'name' => [
                 'required', 'min:3'
             ],
-            'app_name' => [
-                'required', 'min:3'
-            ],
-            'apm_name' => [
-                'required', 'min:3'
-            ],
-            'phone' => [
-                'required', 'min:10'
-            ],
-            'username' => [
-                'required', 'min:3'
-            ],
-            'direccion' => [
-                'required', 'min:3'
-            ],
             'email' => [
                 'required', 'email', Rule::unique((new User)->getTable())->ignore($this->route()->user->id ?? null)
+            ],
+            'sex' => [
+                'required', 'min:1'
+            ],
+            'active' => [
+                'required', 'min:1'
             ],
             'password' => [
                 $this->route()->user ? 'nullable' : 'required', 'confirmed', 'min:6'

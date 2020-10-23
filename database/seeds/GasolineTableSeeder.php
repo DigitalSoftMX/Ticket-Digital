@@ -12,16 +12,11 @@ class GasolineTableSeeder extends Seeder
      */
     public function run()
     {
-        $gasoline = new Gasoline();
-        $gasoline->name = 'Magna';
-        $gasoline->save();
-
-        $gasoline = new Gasoline();
-        $gasoline->name = 'Premium';
-        $gasoline->save();
-
-        $gasoline = new Gasoline();
-        $gasoline->name = 'Diésel';
-        $gasoline->save();
+        $arrayGasoline = ['Margna', 'Premium', 'Diésel'];
+        foreach ($arrayGasoline as $g) {
+            $gasoline = new Gasoline();
+            $gasoline->name = $g;
+            $gasoline->save();
+        }
     }
 }

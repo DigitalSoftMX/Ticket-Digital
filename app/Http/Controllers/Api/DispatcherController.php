@@ -13,6 +13,7 @@ use App\SharedBalance;
 use App\UserHistoryDeposit;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use XBase\Table;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class DispatcherController extends Controller
@@ -88,6 +89,31 @@ class DispatcherController extends Controller
         }
         return $this->logout(JWTAuth::getToken());
     }
+    // Funcion para obtener los datos de una venta en Eucomb
+    public function dataSale(Request $request)
+    {
+        if (Auth::user()->roles[0]->name == 'despachador') {
+            /* accediendo a la lectura del archivo .dbf NOTA:este archivo es dinamico y necesitamos accesos a las estaciones
+            para su obtencion y lectura correcta*/
+            try {
+                $table = new Table('../storage/app/public/TRANS.DBF', null, 'cp1251');
+                $sales = array();
+                while ($record = $table->nextRecord()) {
+                    if ($record->get('bomba') == $request->bomb_id) {
+                        $sale['id_gasoline'] = $record->get('prod');
+                        $sale['liters'] = $record->get('cant');
+                        $sale['price'] = $record->get('importe');
+                        $sale['sale'] = $record->get('id_venta');
+                        array_push($sales, $sale);
+                    }
+                }
+                return $this->successResponse('sale', $sales[count($sales) - 1]);
+            } catch (Exception $e) {
+                return $this->errorResponse('Ha ocurrido un error al buscar el registro');
+            }
+        }
+        return $this->logout(JWTAuth::getToken());
+    }
     // Funcion para realizar el cobro hacia un cliente
     public function makeNotification(Request $request)
     {
@@ -118,7 +144,8 @@ class DispatcherController extends Controller
                                 'tr_membership' => $request->tr_membership,
                                 'id_time' => $time[count($time) - 1]->id,
                                 'no_island' => $dispatcher->no_island,
-                                'no_bomb' => $dispatcher->no_bomb
+                                'no_bomb' => $request->bomb_id,
+                                'sale' => $request->sale
                             ), 'contents' => array(
                                 "en" => "English message from postman",
                                 "es" => "Realizaste una solicitud de pago."

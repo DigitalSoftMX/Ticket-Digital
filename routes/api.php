@@ -51,4 +51,5 @@ Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('getschedules', 'Api\DispatcherController@getListSchedules');
     Route::get('getlistpayments', 'Api\DispatcherController@getListPayments');
     Route::post('time', 'Api\DispatcherController@startEndTime');
+    Route::get('datasale', 'Api\DispatcherController@dataSale');
 });

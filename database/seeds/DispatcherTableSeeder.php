@@ -23,8 +23,6 @@ class DispatcherTableSeeder extends Seeder
             }
             $dispatcher->user_id = $i + 1;
             $dispatcher->station_id = $i;
-            $dispatcher->no_island = 1;
-            $dispatcher->no_bomb = 1;
             $dispatcher->save();
         }
     }

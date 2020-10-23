@@ -921,6 +921,64 @@
         ]
     },
     {
+        "name": "hisamu/php-xbase",
+        "version": "1.3.0",
+        "version_normalized": "1.3.0.0",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/luads/php-xbase.git",
+            "reference": "ee09d62583920b32a9937b2d1911b69f076e5840"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/luads/php-xbase/zipball/ee09d62583920b32a9937b2d1911b69f076e5840",
+            "reference": "ee09d62583920b32a9937b2d1911b69f076e5840",
+            "shasum": ""
+        },
+        "require": {
+            "ext-iconv": "*",
+            "php": ">=7.1"
+        },
+        "require-dev": {
+            "php-coveralls/php-coveralls": "^2.2",
+            "phpunit/phpunit": "^7.0||^8.0||^9.0"
+        },
+        "time": "2020-09-30T18:54:16+00:00",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "1.3.x-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-4": {
+                "XBase\\": "src/XBase"
+            }
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "Luã de Souza",
+                "email": "lsouza@codeinc.com.br"
+            },
+            {
+                "name": "Erwin Kooi",
+                "email": "info@cyane.nl"
+            }
+        ],
+        "description": "A simple parser for *.dbf, *.fpt files using PHP",
+        "homepage": "https://github.com/luads/php-xbase",
+        "keywords": [
+            "dbase",
+            "dbf",
+            "foxpro"
+        ]
+    },
+    {
         "name": "jakub-onderka/php-console-color",
         "version": "v0.2",
         "version_normalized": "0.2.0.0",
@@ -3195,7 +3253,8 @@
         "homepage": "https://github.com/sebastianbergmann/php-token-stream/",
         "keywords": [
             "tokenizer"
-        ]
+        ],
+        "abandoned": true
     },
     {
         "name": "phpunit/phpunit",

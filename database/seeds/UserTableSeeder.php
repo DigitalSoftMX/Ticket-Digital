@@ -19,16 +19,16 @@ class UserTableSeeder extends Seeder
         $user->name = 'Invitado';
         $user->first_surname = 'qwerty';
         $user->second_surname = 'qwerty';
-        $user->password = bcrypt('1234567890Invitado*');
+        $user->email = 'admin@material.com';
         $user->sex = 'H';
         $user->phone = '';
         $user->address = 'Vía Lorem ipsum, 3B';
-        $user->email = 'admin@material.com';
         $user->active = '1';
+        $user->password = bcrypt('1234567890Invitado*');
         $user->save();
         $user->roles()->attach($role_admin);
 
-        $role_dispatcher = Role::where('name', 'despachador')->first();
+        /* $role_dispatcher = Role::where('name', 'despachador')->first();
         // Despachador ficticio para la estacion 1
         $user = new User();
         $user->name = 'Mariano';
@@ -132,6 +132,6 @@ class UserTableSeeder extends Seeder
         $user->active = 1;
         $user->password = bcrypt('despachador8');
         $user->save();
-        $user->roles()->attach($role_dispatcher);
+        $user->roles()->attach($role_dispatcher); */
     }
 }

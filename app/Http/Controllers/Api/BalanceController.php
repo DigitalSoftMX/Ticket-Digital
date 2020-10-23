@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Client;
 use App\DispatcherHistoryPayment;
-use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
@@ -216,33 +215,12 @@ class BalanceController extends Controller
         $sharedBalance->status = $status;
         $sharedBalance->save();
     }
-    // Funcion para guardar historial de abonos a la cuenta del cliente
-    private function saveHistoryBalance($history, $type, $balance)
-    {
-        $historyBalance = new History();
-        if ($balance != null) {
-            $history->balance = $balance;
-        }
-        switch ($type) {
-            case 'balance':
-                $historyBalance->client_id = $history->client_id;
-                break;
-            case 'share':
-                $historyBalance->client_id = $history->transmitter_id;
-                break;
-            case 'received':
-                $historyBalance->client_id = $history->receiver_id;
-                break;
-        }
-        $historyBalance->action = $history;
-        $historyBalance->type = $type;
-        $historyBalance->save();
-    }
     // Funcion para registrar los pagos
     private function registerPayment($request, $id, $payment)
     {
         $registerPayment = new DispatcherHistoryPayment();
         $registerPayment->dispatcher_id = $request->id_dispatcher;
+        $registerPayment->sale = $request->sale;
         $registerPayment->gasoline_id = $request->id_gasoline;
         $registerPayment->liters = $request->liters;
         $registerPayment->payment = $request->price;
