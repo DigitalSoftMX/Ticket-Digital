@@ -27,7 +27,7 @@ class CreateDepositsTable extends Migration
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
 
-            $table->foreign('station_id')->references('id')->on('stations')
+            $table->foreign('station_id')->references('id')->on('station')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
 

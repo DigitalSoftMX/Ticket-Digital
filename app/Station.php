@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Station extends Model
 {
     protected $connection = 'mysql';
+    /* Accediendo a la tabla station */
+    protected $table = 'station';
     /**
      * The attributes that should be hidden for arrays.
      *

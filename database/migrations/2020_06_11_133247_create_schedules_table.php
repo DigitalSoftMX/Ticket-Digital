@@ -21,7 +21,7 @@ class CreateSchedulesTable extends Migration
             $table->unsignedBigInteger('station_id');
             $table->timestamps();
 
-            $table->foreign('station_id')->references('id')->on('stations')
+            $table->foreign('station_id')->references('id')->on('station')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
         });

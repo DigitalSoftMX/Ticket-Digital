@@ -8,6 +8,7 @@ class Dispatcher extends Model
 {
     // Accediendo a la base de datos por default del proyecto
     protected $connection = 'mysql';
+    protected $fillable = ['id', 'user_id', 'station_id', 'created_at', 'updated_at'];
     // Relacion con la tabla de usuarios
     public function users()
     {

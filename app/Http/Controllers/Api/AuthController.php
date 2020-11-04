@@ -100,11 +100,9 @@ class AuthController extends Controller
     {
         $client = new Client();
         $client->user_id = $id;
-        $client->membership = $data->username;
         $client->current_balance = 0;
         $client->shared_balance = 0;
         $client->points = 0;
-        $client->image_qr = $data->username;
         $client->birthdate = $data->birthdate;
         $client->save();
     }

@@ -14,10 +14,11 @@ class DatabaseSeeder extends Seeder
         $this->call([RoleTableSeeder::class]);
         $this->call([UserTableSeeder::class]);
         $this->call([StatusTableSeeder::class]);
+        $this->call([CatTypeTableSeeder::class]);
         $this->call([StationTableSeeder::class]);
         $this->call([ScheduleTableSeeder::class]);
         $this->call([GasolineTableSeeder::class]);
-        // $this->call([DispatcherTableSeeder::class]);
         $this->call([MenuTableSeeder::class]);
+        $this->call([EucombTableSeeder::class]);
     }
 }

@@ -15,18 +15,17 @@ class CreateDispatchersTable extends Migration
     {
         Schema::connection('mysql')->create('dispatchers', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('dispatcher_id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('station_id');
-            $table->unsignedBigInteger('schedule_id');
-            $table->unsignedBigInteger('island_id');
+            $table->unsignedBigInteger('schedule_id')->nullable();
+            $table->unsignedBigInteger('island_id')->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
 
-            $table->foreign('station_id')->references('id')->on('stations')
+            $table->foreign('station_id')->references('id')->on('station')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
 

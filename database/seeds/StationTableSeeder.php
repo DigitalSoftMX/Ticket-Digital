@@ -13,18 +13,23 @@ class StationTableSeeder extends Seeder
      */
     public function run()
     {
-        // Accediendo a las estaciones de Eucomb en su base de datos lealtadd_eucomb
-        $EucombStations = EucombStation::all();
-        // Asignando las estaciones de Eucomb a la base de datos Ticket Digital
-        foreach ($EucombStations as $EucombStation) {
+        // Copiando de Eucomb a Ticket
+        foreach (EucombStation::all() as $eucombStation) {
             $station = new Station();
-            $station->name = $EucombStation->name;
-            $station->address = $EucombStation->address;
-            $station->phone = $EucombStation->telefono;
-            $station->email = $EucombStation->correo;
-            $station->type_id = $EucombStation->id_type;
-            $station->comes_id = $EucombStation->id_comes;
-            $station->number_station = $EucombStation->number_station;
+            $station->id = $eucombStation->id;
+            $station->name = $eucombStation->name;
+            $station->address = $eucombStation->address;
+            $station->phone = $eucombStation->telefono;
+            $station->email = $eucombStation->correo;
+            $station->total_timbres = $eucombStation->total_timbres;
+            $station->total_facturas = $eucombStation->total_facturas;
+            $station->id_empresa = $eucombStation->id_empresa;
+            $station->id_type = $eucombStation->id_type;
+            $station->number_station = $eucombStation->number_station;
+            $station->active = $eucombStation->activo;
+            $station->lealtad = true;
+            $station->created_at = $eucombStation->created_at;
+            $station->updated_at = $eucombStation->updated_at;
             $station->save();
         }
     }
