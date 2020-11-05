@@ -62,6 +62,7 @@ class UserTableSeeder extends Seeder
                     break;
                 }
             }
+            $data = [];
         }
         $role_admin = Role::where('name', 'admin_master')->first();
         $user = new User();

@@ -18,6 +18,15 @@ class AuthController extends Controller
     // Metodo para inicar sesion
     public function login(Request $request)
     {
+        /* $user = User::where('email', $request->email)->get();
+        switch (count($user)) {
+            case 0:
+                return $this->errorMessage('El correo no existe, intente con su número de membresía');
+            case 1:
+                return $user;
+                break;
+        }
+        dd(); */
         if (($userTicket = User::where('email', $request->email)->first()) == null) {
             if (($userEucomb = EucombUser::where('email', $request->email)->first()) != null) {
                 if (($role = $userEucomb->roles[0]->name) == 'usuario') {

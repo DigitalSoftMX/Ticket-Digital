@@ -121,6 +121,7 @@ class EucombTableSeeder extends Seeder
             $data['updated_at'] = $eucombDispatcher->updated_at;
             $dispatcherTicket = new AppDispatcher();
             $dispatcherTicket->create($data);
+            $data=[];
         }
         foreach (Factura::all() as $eucombFactura) {
             $factura = new ToCopyFactura();
