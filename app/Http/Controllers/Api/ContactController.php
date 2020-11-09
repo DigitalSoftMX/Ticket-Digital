@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Eucomb\User as EucombUser;
+use App\User;
 use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -37,22 +38,14 @@ class ContactController extends Controller
     public function lookingForContact(Request $request)
     {
         if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            if (($contact = Client::where([['membership', $request->membership], ['membership', '!=', $user->client->membership]])->first()) != null) {
-                $userTicket['id'] = $contact->id;
-                $userTicket['membership'] = $contact->membership;
-                $userTicket['user']['name'] = $contact->user->name;
-                $userTicket['user']['first_surname'] = $contact->user->first_surname;
-                $userTicket['user']['second_surname'] = $contact->user->second_surname;
-                return $this->successResponse('contact', $userTicket);
-            } else {
-                $userEucomb = EucombUser::where([['username', $request->membership], ['username', '!=', $user->client->membership]])->first();
-                if ($userEucomb != null && $userEucomb->roles[0]->name == 'usuario') {
-                    $data = array(
-                        'name' => $userEucomb->name . " " . $userEucomb->last_name,
-                        'membership' => $userEucomb->username,
-                        'message' => 'Descarga la aplicación'
-                    );
-                    return $this->successResponse('contact', $data);
+            if (($contact = User::where([['username', $request->membership], ['username', '!=', $user->username]])->first()) != null) {
+                if ($contact->roles[0]->id == 5) {
+                    $userTicket['id'] = $contact->client->id;
+                    $userTicket['membership'] = $contact->username;
+                    $userTicket['user']['name'] = $contact->name;
+                    $userTicket['user']['first_surname'] = $contact->first_surname;
+                    $userTicket['user']['second_surname'] = $contact->second_surname;
+                    return $this->successResponse('contact', $userTicket);
                 }
             }
             return $this->errorResponse('Membresía de usuario no disponible');
