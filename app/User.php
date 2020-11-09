@@ -2,11 +2,9 @@
 
 namespace App;
 
-use Exception;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
-use Tymon\JWTAuth\Facades\JWTAuth;
 
 /* La clase implementa un Interface de JWTSubject */
 
@@ -72,7 +70,7 @@ class User extends Authenticatable implements JWTSubject
      * @var array
      */
     protected $fillable = [
-        'id', 'name', 'username', 'first_surname', 'second_surname', 'email', 'sex', 'phone', 'address', 'active', 'password', 'remember_token', 'created_at', 'updated_at'
+        'name', 'username', 'first_surname', 'second_surname', 'email', 'sex', 'phone', 'address', 'active', 'password', 'remember_token'
     ];
 
     /**

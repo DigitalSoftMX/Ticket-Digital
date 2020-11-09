@@ -28,12 +28,12 @@ class ClientController extends Controller
             $data['first_surname'] = $user->first_surname;
             $data['second_surname'] = $user->second_surname;
             $data['email'] = $user->email;
-            $data['client']['membership'] = $user->client->membership;
+            $data['client']['membership'] = $user->username;
             $data['client']['current_balance'] = $user->client->current_balance;
             $data['client']['shared_balance'] = $user->client->shared_balance;
             $data['client']['total_shared_balance'] = count(SharedBalance::where([['receiver_id', $user->client->id], ['balance', '>', 0], ['status', 4]])->get());
             $data['client']['points'] = $user->client->points;
-            $data['client']['image_qr'] = $user->client->image_qr;
+            $data['client']['image_qr'] = $user->username;
             $data['data_car'] = $dataCar;
             return $this->successResponse('user', $data);
         }

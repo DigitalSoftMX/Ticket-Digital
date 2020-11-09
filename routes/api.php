@@ -10,10 +10,12 @@
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
 // Rutas del usuario, login, registro y cierre de sesion
-Route::post('login', 'Api\AuthController@login');
-Route::post('register', 'Api\AuthController@register');
-Route::get('logout', 'Api\AuthController@logout');
+Route::post('login', 'Api\AuthController@login'); //
+Route::post('register', 'Api\AuthController@register'); //
+Route::get('logout', 'Api\AuthController@logout'); //
+Route::post('/ip/{station_id}', 'Api\AuthController@uploadIPStation');//
 // Rutas para ver y editar perfiles de cliente y despachador
 Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('profile', 'Api\UserController@index');
@@ -21,8 +23,8 @@ Route::group(['middleware' => 'jwtAuth'], function () {
 });
 //Rutas para los usuarios tipo cliente
 Route::group(['middleware' => 'jwtAuth'], function () {
-    Route::get('main', 'Api\ClientController@main');
-    Route::get('balance', 'Api\ClientController@getListStations');
+    Route::get('main', 'Api\ClientController@main'); //
+    Route::get('balance', 'Api\ClientController@getListStations'); //
     Route::get('balance/history', 'Api\ClientController@history');
 });
 // Rutas para los abonos
@@ -44,8 +46,8 @@ Route::group(['middleware' => 'jwtAuth'], function () {
 });
 // Rutal para el usuario con rol despachador
 Route::group(['middleware' => 'jwtAuth'], function () {
-    Route::get('maindispatcher', 'Api\DispatcherController@main');
-    Route::get('gasolinelist', 'Api\DispatcherController@gasolineList');
+    Route::get('maindispatcher', 'Api\DispatcherController@main'); //
+    Route::get('gasolinelist', 'Api\DispatcherController@gasolineList'); //
     Route::post('notification', 'Api\DispatcherController@makeNotification');
     Route::get('getpaymentsnow', 'Api\DispatcherController@getPaymentsNow');
     Route::get('getschedules', 'Api\DispatcherController@getListSchedules');

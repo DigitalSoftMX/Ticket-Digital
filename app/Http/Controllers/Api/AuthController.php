@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Client;
 use App\DataCar;
-use App\Eucomb\User as EucombUser;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Validator;
 use App\Role;
+use App\Station;
 use App\User;
+use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -18,102 +22,72 @@ class AuthController extends Controller
     // Metodo para inicar sesion
     public function login(Request $request)
     {
-        /* $user = User::where('email', $request->email)->get();
-        switch (count($user)) {
+        switch (count($user = User::where('email', $request->email)->get())) {
             case 0:
-                return $this->errorMessage('El correo no existe, intente con su número de membresía');
+                return $this->errorMessage('El usuario no existe');
             case 1:
-                return $user;
-                break;
-        }
-        dd(); */
-        if (($userTicket = User::where('email', $request->email)->first()) == null) {
-            if (($userEucomb = EucombUser::where('email', $request->email)->first()) != null) {
-                if (($role = $userEucomb->roles[0]->name) == 'usuario') {
-                    try {
-                        $user = $this->registerUser($userEucomb);
-                        // Obteniendo los apellidos del usuario
-                        switch (count($surnames = explode(" ", $userEucomb->last_name))) {
-                            case 1:
-                                $user->first_surname = $surnames[0];
-                                break;
-                            case 2:
-                                $user->first_surname = $surnames[0];
-                                $user->second_surname = $surnames[1];
-                                break;
-                        }
-                        $user->save();
-                    } catch (Exception $e) {
-                        return $this->errorMessage('Su correo esta repetido con otro usuario en Eucomb, intente cambiarlo e iniciar sesion nuevamente');
-                    }
-                    $this->registerClient($userEucomb, $user->id);
-                    $user->roles()->attach(Role::where('name', $role)->first());
-                    Storage::disk('public')->deleteDirectory($user->client->membership);
-                    return $this->getToken($request, $user);
+                if ($user[0]->roles[0]->name == 'usuario' || $user[0]->roles[0]->name == 'despachador') {
+                    return $this->getToken($request, $user[0]);
                 }
                 return $this->errorMessage('Usuario no autorizado');
-            }
-            return $this->errorMessage('El usuario no existe');
+            default:
+                return $this->errorMessage('Debe cambiar su correo');
         }
-        if ($userTicket->roles[0]->name == 'usuario' || $userTicket->roles[0]->name == 'despachador') {
-            return $this->getToken($request, $userTicket);
-        }
-        return $this->errorMessage('Usuario no autorizado');
     }
     // Metodo para registrar a un usuario nuevo
     public function register(Request $request)
     {
-        if (!(EucombUser::where("email", $request->email)->exists()) && !(User::where('email', $request->email)->exists())) {
-            $user = $this->registerUser($request);
-            $user->first_surname = $request->first_surname;
-            $user->second_surname = $request->second_surname;
-            $user->password = bcrypt($request->password);
-            $user->save();
-            // Membresia aleatoria no repetible en las dos BD's
-            while (true) {
-                $membership = rand(10000000, 99999999);
-                $request->username = 'G-' . $membership;
-                if (!(Client::where('membership', $request->username)->exists()) && !(EucombUser::where('username', $membership)->exists())) {
-                    break;
-                }
-            }
-            $this->registerClient($request, $user->id);
-            $user->roles()->attach(Role::where('name', 'usuario')->first());
-            if ($request->number_plate != "" || $request->type_car != "") {
-                $dataCar = new DataCar();
-                $dataCar->client_id = $user->client->id;
-                $dataCar->number_plate = $request->number_plate;
-                $dataCar->type_car = $request->type_car;
-                $dataCar->save();
-            }
-            Storage::disk('public')->deleteDirectory($user->client->membership);
-            return $this->getToken($request, $user);
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string',
+            'first_surname' => 'required|string',
+            'email' => [
+                'required', 'email', Rule::unique((new User)->getTable())
+            ],
+            'sex' => 'required',
+            'password' => 'required|string|min:6',
+            'phone' => 'required|string|min:10|max:10',
+        ]);
+        if ($validator->fails()) {
+            return $this->errorMessage($validator->errors());
         }
-        return $this->errorMessage('El usuario ya existe');
-    }
-    // Registrando a un usuario
-    private function registerUser($data)
-    {
+        // Membresia aleatoria no repetible
+        $date = substr(Carbon::now()->format('Y'), 2);
+        while (true) {
+            $membership = rand(100000, 999999);
+            $membership = 'E-' . $date . $membership;
+            if (!(User::where('username', $membership)->exists())) {
+                break;
+            }
+        }
+        $password = $request->password;
+        $request->merge(['username' => $membership, 'active' => 1, 'password' => Hash::make($request->password)]);
         $user = new User();
-        $user->name = $data->name;
-        $user->password = $data->password;
-        $user->sex = $data->sex;
-        $user->phone = $data->phone;
-        $user->email = $data->email;
-        $user->address = $data->address;
-        $user->active = '1';
-        return $user;
-    }
-    // Registrando a un usuario tipo cliente
-    private function registerClient($data, $id)
-    {
+        $user = $user->create($request->all());
+        $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => 0, 'image' => $membership]);
         $client = new Client();
-        $client->user_id = $id;
-        $client->current_balance = 0;
-        $client->shared_balance = 0;
-        $client->points = 0;
-        $client->birthdate = $data->birthdate;
-        $client->save();
+        $client->create($request->all());
+        $user->roles()->attach(Role::where('name', 'usuario')->first());
+        if ($request->number_plate != "" || $request->type_car != "") {
+            $request->merge(['client_id' => $user->client->id]);
+            $car = new DataCar();
+            $car->create($request->only(['client_id', 'number_plate', 'type_car']));
+        }
+        Storage::disk('public')->deleteDirectory($user->username);
+        $request->merge(['password' => $password]);
+        return $this->getToken($request, $user);
+    }
+    // Metodo para iniciar sesion, delvuelve el token
+    private function getToken($request, $user)
+    {
+        $creds = $request->only('email', 'password');
+        if (!$token = JWTAuth::attempt($creds)) {
+            return $this->errorMessage('Datos incorrectos');
+        }
+        $user->update(['remember_token' => $token]);
+        if ($user->roles[0]->name == 'usuario') {
+            $user->client->update($request->only('ids'));
+        }
+        return $this->successMessage('token', $token);
     }
     // Metodo para cerrar sesion
     public function logout(Request $request)
@@ -125,20 +99,12 @@ class AuthController extends Controller
             return $this->errorMessage('Token invalido');
         }
     }
-    // Metodo para iniciar sesion, delvuelve el token
-    private function getToken($request, $user)
+    // Metodo para actualizar la ip de una estacion
+    public function uploadIPStation($station_id, Request $request)
     {
-        $creds = $request->only('email', 'password');
-        if (!$token = JWTAuth::attempt($creds)) {
-            return $this->errorMessage('Datos incorrectos');
-        }
-        $user->remember_token = $token;
-        $user->save();
-        if ($user->roles[0]->name == 'usuario') {
-            $user->client->ids = $request->ids;
-            $user->client->update();
-        }
-        return $this->successMessage('token', $token);
+        $station = Station::Where('number_station', $station_id)->first();
+        $station->update($request->only('ip'));
+        return "Direcció IP actualizado correctamente";
     }
     // Funcion mensaje correcto
     private function successMessage($name, $data)

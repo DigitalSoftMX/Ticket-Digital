@@ -48,7 +48,7 @@ class BalanceController extends Controller
                     $history->client_id = $user->client->id;
                     $history->balance = $request->deposit;
                     $history->points = 0;
-                    $history->image_payment = $request->file('image')->store($user->client->membership . '/' . $request->id_station, 'public');
+                    $history->image_payment = $request->file('image')->store($user->username . '/' . $request->id_station, 'public');
                     $history->station_id = $request->id_station;
                     $history->status = 1;
                     $history->save();
@@ -71,7 +71,7 @@ class BalanceController extends Controller
                 $station['number_station'] = $payment->station->number_station;
                 return response()->json([
                     'ok' => true,
-                    'membership' => $user->client->membership,
+                    'membership' => $user->username,
                     'station' => $station
                 ]);
             }

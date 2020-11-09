@@ -37,7 +37,7 @@ class DispatcherController extends Controller
             $data['name'] = $user->name;
             $data['first_surname'] = $user->first_surname;
             $data['second_surname'] = $user->second_surname;
-            $data['dispatcher_id'] = $user->dispatcher->dispatcher_id;
+            $data['dispatcher_id'] = $user->username;
             $data['station']['id'] = $user->dispatcher->station->id;
             $data['station']['name'] = $user->dispatcher->station->name;
             $data['station']['number_station'] = $user->dispatcher->station->number_station;
@@ -79,13 +79,19 @@ class DispatcherController extends Controller
     // Metodo para obtner la lista de gasolina
     public function gasolineList()
     {
-        if (Auth::user()->roles[0]->name == 'despachador') {
-            $data = array();
+        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+            $gasolines = array();
+            $islands = array();
             foreach (Gasoline::all() as $gasoline) {
-                $dataGasoline = array('id' => $gasoline->id, 'name' => $gasoline->name);
-                array_push($data, $dataGasoline);
+                array_push($gasolines, array('id' => $gasoline->id, 'name' => $gasoline->name));
             }
-            return $this->successResponse('type_gasoline', $data);
+            foreach ($user->dispatcher->station->islands as $island) {
+                array_push($islands, array('island' => $island->island, 'bomb' => $island->bomb));
+            }
+            $data['url'] = 'http://' . $user->dispatcher->station->ip . '/sales/public/record.php';
+            $data['islands'] = $islands;
+            $data['gasolines'] = $gasolines;
+            return $this->successResponse('data', $data);
         }
         return $this->logout(JWTAuth::getToken());
     }
