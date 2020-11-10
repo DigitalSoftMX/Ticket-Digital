@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\RegisterTime;
 use App\Schedule;
 use App\SharedBalance;
+use App\User;
 use App\UserHistoryDeposit;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -139,12 +140,12 @@ class DispatcherController extends Controller
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             if (($dispatcher = $user->dispatcher)->station_id == $request->id_station) {
-                if (($client = Client::where('membership', $request->membership)->first()) != null) {
+                if (($client = User::where('username', $request->membership)->first()) != null) {
                     if ($request->tr_membership == "") {
-                        $payment = UserHistoryDeposit::where([['client_id', $client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first();
+                        $payment = UserHistoryDeposit::where([['client_id', $client->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first();
                     } else {
-                        $transmitter = Client::where('membership', $request->tr_membership)->first();
-                        $payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first();
+                        $transmitter = User::where('username', $request->tr_membership)->first();
+                        $payment = SharedBalance::where([['transmitter_id', $transmitter->client->id], ['receiver_id', $client->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first();
                     }
                     if ($payment != null) {
                         $time = RegisterTime::where([['dispatcher_id', $dispatcher->id], ['station_id', $dispatcher->station->id]])->get();
