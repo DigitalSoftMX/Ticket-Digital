@@ -31,7 +31,7 @@ class AuthController extends Controller
                 }
                 return $this->errorMessage('Usuario no autorizado');
             default:
-                return $this->errorMessage('Debe cambiar su correo');
+                return $this->errorMessage('Debe cambiar su correo desde la aplicación Eucomb');
         }
     }
     // Metodo para registrar a un usuario nuevo

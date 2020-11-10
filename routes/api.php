@@ -15,7 +15,7 @@
 Route::post('login', 'Api\AuthController@login'); //
 Route::post('register', 'Api\AuthController@register'); //
 Route::get('logout', 'Api\AuthController@logout'); //
-Route::post('/ip/{station_id}', 'Api\AuthController@uploadIPStation');//
+Route::post('/ip/{station_id}', 'Api\AuthController@uploadIPStation'); //
 // Rutas para ver y editar perfiles de cliente y despachador
 Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('profile', 'Api\UserController@index');
@@ -54,4 +54,5 @@ Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('getlistpayments', 'Api\DispatcherController@getListPayments');
     Route::post('time', 'Api\DispatcherController@startEndTime');
     Route::get('datasale', 'Api\DispatcherController@dataSale');
+    Route::get('getsale', 'Api\DispatcherController@getSale');
 });

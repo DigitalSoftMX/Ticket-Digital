@@ -95,6 +95,19 @@ class DispatcherController extends Controller
         }
         return $this->logout(JWTAuth::getToken());
     }
+    // Obteniendo el valor de venta por bomba
+    public function getSale(Request $request)
+    {
+        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+            try {
+                $json = file_get_contents('http://' . $user->dispatcher->station->ip . '/sales/public/record.php?bomb_id=' . $request->bomb_id);
+                return \json_decode($json, true);
+            } catch (Exception $e) {
+                return $this->errorResponse('La ip o la bomba son incorrectos');
+            }
+        }
+        return $this->logout(JWTAuth::getToken());
+    }
     // Funcion para obtener los datos de una venta en Eucomb
     public function dataSale(Request $request)
     {
