@@ -100,9 +100,9 @@ class DispatcherController extends Controller
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             // try {
-                ini_set("allow_url_fopen", 1);
-                $json = file_get_contents('http://' . $user->dispatcher->station->ip . '/sales/public/record.php?bomb_id=' . $request->bomb_id);
-                return \json_decode($json, true);
+            ini_set("allow_url_fopen", 1);
+            $json = $this->curl_get_file_contents('http://' . $user->dispatcher->station->ip . '/sales/public/record.php?bomb_id=' . $request->bomb_id);
+            return \json_decode($json, true);
             /* } catch (Exception $e) {
                 return $this->errorResponse('La ip o la bomba son incorrectos');
             } */
@@ -275,6 +275,18 @@ class DispatcherController extends Controller
         } catch (Exception $e) {
             return $this->errorResponse('Token invalido');
         }
+    }
+    // consulta por uRL
+    function curl_get_file_contents($URL)
+    {
+        $c = curl_init();
+        curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($c, CURLOPT_URL, $URL);
+        $contents = curl_exec($c);
+        curl_close($c);
+
+        if ($contents) return $contents;
+        else return FALSE;
     }
     // Funcion mensajes de error
     private function errorResponse($message)
