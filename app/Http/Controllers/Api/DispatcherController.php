@@ -99,12 +99,12 @@ class DispatcherController extends Controller
     public function getSale(Request $request)
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            try {
+            // try {
                 $json = file_get_contents('http://' . $user->dispatcher->station->ip . '/sales/public/record.php?bomb_id=' . $request->bomb_id);
                 return \json_decode($json, true);
-            } catch (Exception $e) {
+            /* } catch (Exception $e) {
                 return $this->errorResponse('La ip o la bomba son incorrectos');
-            }
+            } */
         }
         return $this->logout(JWTAuth::getToken());
     }
