@@ -7,6 +7,7 @@ use App\DispatcherHistoryPayment;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
+use App\User;
 use App\UserHistoryDeposit;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -126,7 +127,7 @@ class BalanceController extends Controller
                     $data['balance'] = $balance->balance;
                     $data['station']['name'] = $balance->station->name;
                     $data['station']['number_station'] = $balance->station->number_station;
-                    $data['transmitter']['membership'] = $balance->transmitter->membership;
+                    $data['transmitter']['membership'] = $balance->transmitter->user->username;
                     $data['transmitter']['user']['name'] = $balance->transmitter->user->name;
                     $data['transmitter']['user']['first_surname'] = $balance->transmitter->user->first_surname;
                     $data['transmitter']['user']['second_surname'] = $balance->transmitter->user->second_surname;
@@ -149,8 +150,8 @@ class BalanceController extends Controller
                 $station['number_station'] = $payment->station->number_station;
                 return response()->json([
                     'ok' => true,
-                    'tr_membership' => $payment->transmitter->membership,
-                    'membership' => $payment->receiver->membership,
+                    'tr_membership' => $payment->transmitter->user->username,
+                    'membership' => $payment->receiver->user->username,
                     'station' => $station
                 ]);
             }
@@ -178,19 +179,19 @@ class BalanceController extends Controller
                             return $this->errorResponse('Saldo insuficiente');
                         }
                     } else {
-                        $transmitter = Client::where('membership', $request->tr_membership)->first();
-                        if (($payment = SharedBalance::where([['transmitter_id', $transmitter->id], ['receiver_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first()) != null) {
+                        $transmitter = User::where('username', $request->tr_membership)->first();
+                        if (($payment = SharedBalance::where([['transmitter_id', $transmitter->client->id], ['receiver_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first()) != null) {
                             $this->registerPayment($request, $user->client->id, $payment);
                             $payment->save();
                             $user->client->shared_balance -= $request->price;
                             $user->client->save();
                             if ($request->id_gasoline != 3) {
-                                $transmitter->points += $this->roundHalfDown($request->liters);
-                                $points = UserHistoryDeposit::where([['client_id', $transmitter->id], ['station_id', $request->id_station], ['status', 4]])->first();
+                                $transmitter->client->points += $this->roundHalfDown($request->liters);
+                                $points = UserHistoryDeposit::where([['client_id', $transmitter->client->id], ['station_id', $request->id_station], ['status', 4]])->first();
                                 $points->points += $this->roundHalfDown($request->liters);
                                 $points->save();
                             }
-                            $transmitter->save();
+                            $transmitter->client->save();
                         } else {
                             return $this->errorResponse('Saldo insuficiente');
                         }
