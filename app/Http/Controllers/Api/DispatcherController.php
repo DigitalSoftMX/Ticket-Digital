@@ -100,6 +100,7 @@ class DispatcherController extends Controller
     {
         if (($user = Auth::user())->roles[0]->name == 'despachador') {
             // try {
+                ini_set("allow_url_fopen", 1);
                 $json = file_get_contents('http://' . $user->dispatcher->station->ip . '/sales/public/record.php?bomb_id=' . $request->bomb_id);
                 return \json_decode($json, true);
             /* } catch (Exception $e) {
