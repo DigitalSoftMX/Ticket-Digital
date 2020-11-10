@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Web\Island;
 use Illuminate\Database\Eloquent\Model;
 
 class Dispatcher extends Model
@@ -13,6 +14,11 @@ class Dispatcher extends Model
     public function users()
     {
         return $this->belongsTo(User::class);
+    }
+    // relacion con las islas
+    public function island()
+    {
+        return $this->belongsTo(Island::class);
     }
     // Relacion con las estaciones 
     public function station()

@@ -164,7 +164,7 @@ class DispatcherController extends Controller
                                 'id_station' => $dispatcher->station_id,
                                 'tr_membership' => $request->tr_membership,
                                 'id_time' => $time[count($time) - 1]->id,
-                                'no_island' => $dispatcher->no_island,
+                                'no_island' => $dispatcher->island->island,
                                 'no_bomb' => $request->bomb_id,
                                 'sale' => $request->sale
                             ), 'contents' => array(
