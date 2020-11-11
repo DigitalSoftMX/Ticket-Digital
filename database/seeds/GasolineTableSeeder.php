@@ -12,7 +12,7 @@ class GasolineTableSeeder extends Seeder
      */
     public function run()
     {
-        $arrayGasoline = ['Margna', 'Premium', 'Diésel'];
+        $arrayGasoline = ['Magna', 'Premium', 'Diésel'];
         foreach ($arrayGasoline as $g) {
             $gasoline = new Gasoline();
             $gasoline->name = $g;

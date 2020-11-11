@@ -22,7 +22,7 @@ class ContactController extends Controller
                 $listContacts = array();
                 foreach ($contacts as $contact) {
                     $data['id'] = $contact->receiver->id;
-                    $data['receiver']['membership'] = $contact->receiver->membership;
+                    $data['receiver']['membership'] = $contact->receiver->user->username;
                     $data['receiver']['user']['name'] = $contact->receiver->user->name;
                     $data['receiver']['user']['first_surname'] = $contact->receiver->user->first_surname;
                     $data['receiver']['user']['second_surname'] = $contact->receiver->user->second_surname;
