@@ -24,14 +24,14 @@ class AuthController extends Controller
     {
         switch (count($user = User::where('email', $request->email)->get())) {
             case 0:
-                return $this->errorMessage('El usuario no existe');
+                return $this->errorResponse('El usuario no existe');
             case 1:
                 if ($user[0]->roles[0]->name == 'usuario' || $user[0]->roles[0]->name == 'despachador') {
                     return $this->getToken($request, $user[0]);
                 }
-                return $this->errorMessage('Usuario no autorizado');
+                return $this->errorResponse('Usuario no autorizado');
             default:
-                return $this->errorMessage('Debe cambiar su correo desde la aplicación Eucomb');
+                return $this->errorResponse('Debe cambiar su correo desde la aplicación Eucomb');
         }
     }
     // Metodo para registrar a un usuario nuevo
@@ -48,7 +48,7 @@ class AuthController extends Controller
             'phone' => 'required|string|min:10|max:10',
         ]);
         if ($validator->fails()) {
-            return $this->errorMessage($validator->errors());
+            return $this->errorResponse($validator->errors());
         }
         // Membresia aleatoria no repetible
         $date = substr(Carbon::now()->format('Y'), 2);
@@ -81,33 +81,33 @@ class AuthController extends Controller
     {
         $creds = $request->only('email', 'password');
         if (!$token = JWTAuth::attempt($creds)) {
-            return $this->errorMessage('Datos incorrectos');
+            return $this->errorResponse('Datos incorrectos');
         }
         $user->update(['remember_token' => $token]);
         if ($user->roles[0]->name == 'usuario') {
             $user->client->update($request->only('ids'));
         }
-        return $this->successMessage('token', $token);
+        return $this->successReponse('token', $token);
     }
     // Metodo para cerrar sesion
     public function logout(Request $request)
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($request->token));
-            return $this->successMessage('message', 'Cierre de sesion correcto');
+            return $this->successReponse('message', 'Cierre de sesion correcto');
         } catch (Exception $e) {
-            return $this->errorMessage('Token invalido');
+            return $this->errorResponse('Token invalido');
         }
     }
     // Metodo para actualizar la ip de una estacion
     public function uploadIPStation($station_id, Request $request)
     {
-        $station = Station::Where('number_station', $station_id)->first();
+        $station = Station::where('number_station', $station_id)->first();
         $station->update($request->only('ip'));
         return "Direcció IP actualizado correctamente";
     }
     // Funcion mensaje correcto
-    private function successMessage($name, $data)
+    private function successReponse($name, $data)
     {
         return response()->json([
             'ok' => true,
@@ -115,7 +115,7 @@ class AuthController extends Controller
         ]);
     }
     // Metodo mensaje de error
-    private function errorMessage($message)
+    private function errorResponse($message)
     {
         return response()->json([
             'ok' => false,

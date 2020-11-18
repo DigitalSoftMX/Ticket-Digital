@@ -136,7 +136,7 @@ class ClientController extends Controller
         foreach ($balances as $balance) {
             $payment['station'] = $balance->station->name;
             $payment['balance'] = $balance->balance;
-            $payment['membership'] = $balance->$person->membership;
+            $payment['membership'] = $balance->$person->user->username;
             $payment['name'] = $balance->$person->user->name . ' ' . $balance->$person->user->first_surname . ' ' . $balance->$person->user->second_surname;
             $payment['date'] = $balance->created_at->format('Y/m/d');
             array_push($payments, $payment);
