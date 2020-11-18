@@ -12,7 +12,7 @@
 */
 
 // Rutas del usuario, login, registro y cierre de sesion
-Route::post('login', 'Api\AuthController@login'); //
+Route::post('login', 'Api\AuthController@login'); //Ready
 Route::post('register', 'Api\AuthController@register'); //
 Route::get('logout', 'Api\AuthController@logout'); //
 Route::post('/ip/{station_id}', 'Api\AuthController@uploadIPStation'); //
