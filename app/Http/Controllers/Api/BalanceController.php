@@ -196,7 +196,7 @@ class BalanceController extends Controller
                             return $this->errorResponse('Saldo insuficiente');
                         }
                     }
-                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client, 'Cobro realizado con exito', 'Pago con QR');
+                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client, 'Cobro realizado con éxito', 'Pago con QR');
                 } catch (Exception $e) {
                     return $this->errorResponse('Error al registrar el cobro');
                 }
