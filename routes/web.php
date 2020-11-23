@@ -11,6 +11,8 @@
 |
 */
 
+Route::get('/precio_gasolina', 'Api\AuthController@price');
+
 Route::get('/', function () {
 	return view('auth.login');
 });

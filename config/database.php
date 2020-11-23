@@ -63,18 +63,6 @@ return [
             ]) : [],
         ],
 
-        'eucomb'  => [
-            'driver'     => 'mysql',
-            'host'       => env('EUCOMB_HOST', 'localhost'),
-            'database'   => env('EUCOMB_DATABASE', 'forge'),
-            'username'   => env('EUCOMB_USERNAME', 'forge'),
-            'password'   => env('EUCOMB_PASSWORD', ''),
-            'charset'    => 'utf8',
-            'collation'  => 'utf8_unicode_ci',
-            'prefix'     => '',
-            'strict'     => false,
-         ],
-
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),

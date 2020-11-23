@@ -18,7 +18,7 @@ class UserController extends Controller
      */
     public function index(User $model, Request $request)
     {
-        /* Consultando a los usuarios de la base de datos y enviando a la vista user.index */
+        // Consultando a los usuarios de la base de datos y enviando a la vista user.index
         $request->user()->authorizeRoles(['admin_master', 'admin_eucomb', 'admin_estacion', 'usuario']);
         return view('users.index', ['users' => $model::all()]);
     }

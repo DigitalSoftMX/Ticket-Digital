@@ -8,13 +8,13 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
-use App\Role;
 use App\Station;
 use App\User;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use SimpleXMLElement;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -51,10 +51,8 @@ class AuthController extends Controller
             return $this->errorResponse($validator->errors());
         }
         // Membresia aleatoria no repetible
-        $date = substr(Carbon::now()->format('Y'), 2);
         while (true) {
-            $membership = rand(100000, 999999);
-            $membership = 'E-' . $date . $membership;
+            $membership = 'E-' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
             if (!(User::where('username', $membership)->exists())) {
                 break;
             }
@@ -66,7 +64,7 @@ class AuthController extends Controller
         $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => 0, 'image' => $membership]);
         $client = new Client();
         $client->create($request->all());
-        $user->roles()->attach(Role::where('name', 'usuario')->first());
+        $user->roles()->attach('5');
         if ($request->number_plate != "" || $request->type_car != "") {
             $request->merge(['client_id' => $user->client->id]);
             $car = new DataCar();
@@ -79,8 +77,7 @@ class AuthController extends Controller
     // Metodo para iniciar sesion, delvuelve el token
     private function getToken($request, $user)
     {
-        $creds = $request->only('email', 'password');
-        if (!$token = JWTAuth::attempt($creds)) {
+        if (!$token = JWTAuth::attempt($request->only('email', 'password'))) {
             return $this->errorResponse('Datos incorrectos');
         }
         $user->update(['remember_token' => $token]);
@@ -94,9 +91,9 @@ class AuthController extends Controller
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($request->token));
-            return $this->successReponse('message', 'Cierre de sesion correcto');
+            return $this->successReponse('message', 'Cierre de sesión correcto');
         } catch (Exception $e) {
-            return $this->errorResponse('Token invalido');
+            return $this->errorResponse('Token inválido');
         }
     }
     // Metodo para actualizar la ip de una estacion
@@ -104,7 +101,7 @@ class AuthController extends Controller
     {
         $station = Station::where('number_station', $station_id)->first();
         $station->update($request->only('ip'));
-        return "Direcció IP actualizado correctamente";
+        return "Dirección IP actualizado correctamente";
     }
     // Funcion mensaje correcto
     private function successReponse($name, $data)
@@ -121,5 +118,26 @@ class AuthController extends Controller
             'ok' => false,
             'message' => $message
         ]);
+    }
+    // Precios de gasolina para wordpress, no se incluye en el proyecto Ticket
+    public function price(Request $request)
+    {
+        if ($request->place != null && $request->type != null) {
+            $prices = new SimpleXMLElement('https://publicacionexterna.azurewebsites.net/publicaciones/prices', NULL, TRUE);
+            $precio = '--';
+            foreach ($prices->place as $place) {
+                if ($place['place_id'] == $request->place) {
+                    foreach ($place->gas_price as $price) {
+                        if ($price['type'] == $request->type) {
+                            $precio = (float) $price;
+                            return $precio;
+                        }
+                    }
+                }
+            }
+            return $precio;
+        } else {
+            return 'Falta el lugar o el tipo de gasolina';
+        }
     }
 }
