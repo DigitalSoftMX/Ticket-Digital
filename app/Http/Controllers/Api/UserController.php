@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Client;
 use App\DataCar;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -10,7 +9,7 @@ use App\User;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use App\Eucomb\User as EucombUser;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -33,58 +32,13 @@ class UserController extends Controller
                     $dataCar = array('number_plate' => '', 'type_car' => '');
                 }
                 $data['data_car'] = $dataCar;
-                return $this->successMessage('user', $data);
-                break;
+                return $this->successResponse('user', $data);
             case 'despachador':
                 $data = $this->getDataUser($user);
-                return $this->successMessage('user', $data);
-                break;
+                return $this->successResponse('user', $data);
             default:
                 return $this->logout(JWTAuth::getToken());
         }
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
     }
 
     /**
@@ -96,66 +50,54 @@ class UserController extends Controller
      */
     public function update(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string',
+            'first_surname' => 'required|string',
+            'email' => 'required|email',
+            'phone' => 'required|string|min:10|max:10',
+        ]);
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors());
+        }
         switch (($user = Auth::user())->roles[0]->name) {
             case 'usuario':
                 // Registrando la informacion basica del cliente
-                $client = $this->setDataUser($user->id, $request);
-                $client->sex = $request->sex;
+                $user->update($request->only('name', 'first_surname', 'second_surname', 'phone', 'address', 'sex'));
                 //registrando el correo
                 if ($request->email != $user->email) {
-                    if (!($request->email == $user->email) && !(EucombUser::where("email", $request->email)->exists()) && !(User::where('email', $request->email)->exists())) {
-                        $client->email = $request->email;
+                    if (!(User::where('email', $request->email)->exists())) {
+                        $user->update($request->only('email'));
                     } else {
-                        return $this->errorMessage('La dirección de correo ya existe');
+                        return $this->errorResponse('La dirección de correo ya existe');
                     }
                 }
-                // Registrando el cumpleaños
-                $birthdate = Client::find($user->client->id);
-                $birthdate->birthdate = $request->birthdate;
-                $birthdate->save();
+                $user->client->update($request->only('birthdate'));
                 // Registrando las datos del carro
                 if ($request->number_plate != "" || $request->type_car != "") {
-                    if (($dataCar = DataCar::find($user->client->id)) == "") {
+                    if ($user->client->car == null) {
+                        $request->merge(['client_id' => $user->client->id]);
                         $car = new DataCar();
-                        $car->client_id = $user->client->id;
-                        $car->number_plate = $request->number_plate;
-                        $car->type_car = $request->type_car;
-                        $car->save();
+                        $car->create($request->only('client_id', 'number_plate', 'type_car'));
                     } else {
-                        $dataCar->number_plate = $request->number_plate;
-                        $dataCar->type_car = $request->type_car;
-                        $dataCar->save();
+                        $user->client->car->update($request->only('number_plate', 'type_car'));
                     }
                 }
                 // Registrando la contraseña
                 if ($request->password != "") {
-                    $client->password = bcrypt($request->password);
-                    $client->save();
+                    $user->update(['password' => bcrypt($request->password)]);
                     $this->logout(JWTAuth::getToken());
-                    return $this->successMessage('message', 'Datos actualizados correctamente, inicie sesion de nuevo');
+                    return $this->successResponse('message', 'Datos actualizados correctamente, inicie sesión de nuevo');
                 }
-                $client->save();
                 break;
             case 'despachador':
-                $dispatcher = $this->setDataUser($user->id, $request);
-                $dispatcher->save();
+                $user->update($request->only('name', 'first_surname', 'second_surname', 'phone', 'address'));
                 break;
             default:
                 return $this->logout(JWTAuth::getToken());
         }
-        return $this->successMessage('message', 'Datos actualizados correctamente');
+        return $this->successResponse('message', 'Datos actualizados correctamente');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        //
-    }
     // Funcion para obtener la informacion basica de un usuario
     private function getDataUser($user)
     {
@@ -169,29 +111,18 @@ class UserController extends Controller
         );
         return $data;
     }
-    // Metodo para establecer la informacion basica de un usuario
-    private function setDataUser($id, $request)
-    {
-        $user = User::find($id);
-        $user->name = $request->name;
-        $user->first_surname = $request->first_surname;
-        $user->second_surname = $request->second_surname;
-        $user->phone = $request->phone;
-        $user->address = $request->address;
-        return $user;
-    }
     // Metodo para cerrar sesion
     private function logout($token)
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($token));
-            return $this->successMessage('message', 'Cierre de sesion correcto');
+            return $this->successResponse('message', 'Cierre de sesion correcto');
         } catch (Exception $e) {
-            return $this->errorMessage('Token invalido');
+            return $this->errorResponse('Token invalido');
         }
     }
     // Funcion mensaje correcto
-    private function successMessage($name, $data)
+    private function successResponse($name, $data)
     {
         return response()->json([
             'ok' => true,
@@ -199,7 +130,7 @@ class UserController extends Controller
         ]);
     }
     // Funcion mensaje de error
-    private function errorMessage($message)
+    private function errorResponse($message)
     {
         return response()->json([
             'ok' => false,

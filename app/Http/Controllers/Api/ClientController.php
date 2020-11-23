@@ -69,6 +69,7 @@ class ClientController extends Controller
                                 $data['gasoline'] = $balance->gasoline->name;
                                 $data['no_island'] = $balance->no_island;
                                 $data['no_bomb'] = $balance->no_bomb;
+                                $data['sale'] = $balance->sale;
                                 array_push($payments, $data);
                             }
                             return $this->successResponse('payments', $payments);
