@@ -14,7 +14,6 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use SimpleXMLElement;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -118,26 +117,5 @@ class AuthController extends Controller
             'ok' => false,
             'message' => $message
         ]);
-    }
-    // Precios de gasolina para wordpress, no se incluye en el proyecto Ticket
-    public function price(Request $request)
-    {
-        if ($request->place != null && $request->type != null) {
-            $prices = new SimpleXMLElement('https://publicacionexterna.azurewebsites.net/publicaciones/prices', NULL, TRUE);
-            $precio = '--';
-            foreach ($prices->place as $place) {
-                if ($place['place_id'] == $request->place) {
-                    foreach ($place->gas_price as $price) {
-                        if ($price['type'] == $request->type) {
-                            $precio = (float) $price;
-                            return $precio;
-                        }
-                    }
-                }
-            }
-            return $precio;
-        } else {
-            return 'Falta el lugar o el tipo de gasolina';
-        }
     }
 }
