@@ -18,10 +18,9 @@ class ClientController extends Controller
     public function main()
     {
         if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            if (($car = $user->client->car) != "") {
+            $dataCar = array('number_plate' => '', 'type_car' => '');
+            if (($car = $user->client->car) != null) {
                 $dataCar = array('number_plate' => $car->number_plate, 'type_car' => $car->type_car);
-            } else {
-                $dataCar = array('number_plate' => '', 'type_car' => '');
             }
             $data['id'] = $user->id;
             $data['name'] = $user->name;

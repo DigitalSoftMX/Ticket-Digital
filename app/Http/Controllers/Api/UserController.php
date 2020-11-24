@@ -54,7 +54,7 @@ class UserController extends Controller
             'name' => 'required|string',
             'first_surname' => 'required|string',
             'email' => 'required|email',
-            'phone' => 'required|string|min:10|max:10',
+            // 'phone' => 'required|string|min:10|max:10',
         ]);
         if ($validator->fails()) {
             return $this->errorResponse($validator->errors());

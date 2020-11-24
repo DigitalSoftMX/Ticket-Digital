@@ -11,27 +11,7 @@
 |
 */
 
-use Illuminate\Http\Request;
-
-Route::get('/precio_gasolina', function (Request $request) {
-	if ($request->place != null && $request->type != null) {
-		$prices = new SimpleXMLElement('https://publicacionexterna.azurewebsites.net/publicaciones/prices', NULL, TRUE);
-		$precio = '--';
-		foreach ($prices->place as $place) {
-			if ($place['place_id'] == $request->place) {
-				foreach ($place->gas_price as $price) {
-					if ($price['type'] == $request->type) {
-						$precio = (float) $price;
-						return $precio;
-					}
-				}
-			}
-		}
-		return $precio;
-	} else {
-		return 'Falta el lugar o el tipo de gasolina';
-	}
-});
+Route::get('/precio_gasolina', 'Api\AuthController@price');
 
 Route::get('/', function () {
 	return view('auth.login');
