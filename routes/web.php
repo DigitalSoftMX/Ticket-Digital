@@ -11,6 +11,14 @@
 |
 */
 
+use App\Station;
+use Illuminate\Http\Request;
+
+Route::get('ip/{station_id}', function ($station_id, Request $request) {
+	$station = Station::where('number_station', $station_id)->first();
+	$station->update($request->only('ip'));
+	return "Dirección IP actualizado correctamente";
+});
 Route::get('/precio_gasolina', 'Api\AuthController@price');
 
 Route::get('/', function () {
