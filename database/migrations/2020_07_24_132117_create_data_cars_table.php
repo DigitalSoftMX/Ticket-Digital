@@ -13,7 +13,7 @@ class CreateDataCarsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('data_cars', function (Blueprint $table) {
+        Schema::create('data_cars', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('client_id');
             $table->string('number_plate')->nullable();
@@ -33,6 +33,6 @@ class CreateDataCarsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('data_cars');
+        Schema::dropIfExists('data_cars');
     }
 }

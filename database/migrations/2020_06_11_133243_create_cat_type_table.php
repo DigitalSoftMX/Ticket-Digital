@@ -13,7 +13,7 @@ class CreateCatTypeTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('cat_type', function (Blueprint $table) {
+        Schema::create('cat_type', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name_type');
             $table->timestamps();
@@ -27,6 +27,6 @@ class CreateCatTypeTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('cat_type');
+        Schema::dropIfExists('cat_type');
     }
 }

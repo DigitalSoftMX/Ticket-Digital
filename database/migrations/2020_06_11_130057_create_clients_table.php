@@ -13,7 +13,7 @@ class CreateClientsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('clients', function (Blueprint $table) {
+        Schema::create('clients', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id');
             $table->double('current_balance');
@@ -37,6 +37,6 @@ class CreateClientsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('clients');
+        Schema::dropIfExists('clients');
     }
 }

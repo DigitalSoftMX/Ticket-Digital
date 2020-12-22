@@ -13,7 +13,7 @@ class CreateUsersTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('users', function (Blueprint $table) {
+        Schema::create('users', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
             $table->string('first_surname');
@@ -22,6 +22,7 @@ class CreateUsersTable extends Migration
             $table->string('email')->unique();
             $table->char('sex')->nullable();
             $table->string('phone')->nullable();
+            $table->string('image')->nullable();
             $table->string('address')->nullable();
             $table->integer('active');
             $table->string('password');
@@ -37,6 +38,6 @@ class CreateUsersTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('users');
+        Schema::dropIfExists('users');
     }
 }

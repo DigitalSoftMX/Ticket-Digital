@@ -13,7 +13,7 @@ class CreatePermissionRoleTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('permission_role', function (Blueprint $table) {
+        Schema::create('permission_role', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('permission_id');
             $table->unsignedBigInteger('role_id');
@@ -35,6 +35,6 @@ class CreatePermissionRoleTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('permission_role');
+        Schema::dropIfExists('permission_role');
     }
 }

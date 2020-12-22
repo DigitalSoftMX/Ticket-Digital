@@ -13,7 +13,7 @@ class CreateIslandsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('islands', function (Blueprint $table) {
+        Schema::create('islands', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('station_id');
             $table->integer('island');
@@ -33,6 +33,6 @@ class CreateIslandsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('islands');
+        Schema::dropIfExists('islands');
     }
 }

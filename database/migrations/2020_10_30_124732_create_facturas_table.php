@@ -13,7 +13,7 @@ class CreateFacturasTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('facturas', function (Blueprint $table) {
+        Schema::create('facturas', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('serie')->nullable();
             $table->timestamp('fecha')->nullable();
@@ -78,6 +78,6 @@ class CreateFacturasTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('facturas');
+        Schema::dropIfExists('facturas');
     }
 }

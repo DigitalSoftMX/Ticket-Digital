@@ -13,7 +13,7 @@ class CreateDoublePointTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('doublepoint', function (Blueprint $table) {
+        Schema::create('doublepoint', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->integer('active')->nullable();
             $table->timestamps();
@@ -27,6 +27,6 @@ class CreateDoublePointTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('doublepoint');
+        Schema::dropIfExists('doublepoint');
     }
 }

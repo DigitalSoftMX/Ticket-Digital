@@ -13,7 +13,7 @@ class CreateDispatchersTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('dispatchers', function (Blueprint $table) {
+        Schema::create('dispatchers', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('station_id');
@@ -46,6 +46,6 @@ class CreateDispatchersTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('dispatchers');
+        Schema::dropIfExists('dispatchers');
     }
 }

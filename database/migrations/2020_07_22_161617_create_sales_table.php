@@ -13,7 +13,7 @@ class CreateSalesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('sales', function (Blueprint $table) {
+        Schema::create('sales', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('dispatcher_id');
             $table->bigInteger('sale')->nullable(); //puede repetirse el numero de venta
@@ -61,6 +61,6 @@ class CreateSalesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('sales');
+        Schema::dropIfExists('sales');
     }
 }

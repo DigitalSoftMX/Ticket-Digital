@@ -13,7 +13,7 @@ class CreateStationTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('station', function (Blueprint $table) {
+        Schema::create('station', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
             $table->string('address');
@@ -23,7 +23,7 @@ class CreateStationTable extends Migration
             $table->integer('total_facturas')->nullable();
             $table->unsignedBigInteger('id_empresa');
             $table->unsignedBigInteger('id_type')->nullable();
-            $table->integer('number_station');
+            $table->string('number_station', 5);
             $table->integer('active')->nullable();
             $table->boolean('lealtad');
             $table->string('ip')->nullable();
@@ -46,6 +46,6 @@ class CreateStationTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('station');
+        Schema::dropIfExists('station');
     }
 }

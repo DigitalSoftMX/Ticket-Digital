@@ -19,6 +19,11 @@ Route::get('ip/{station_id}', function ($station_id, Request $request) {
 	$station->update($request->only('ip'));
 	return "Dirección IP actualizado correctamente";
 });
+Route::get('update/ip/{station_id}', function ($station_id, Request $request) {
+	$station = Station::find($station_id);
+	$station->update($request->only('ip'));
+	return "Dirección IP actualizado correctamente";
+});
 Route::get('/precio_gasolina', 'Api\AuthController@price');
 
 Route::get('/', function () {

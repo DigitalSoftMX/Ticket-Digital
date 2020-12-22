@@ -13,7 +13,7 @@ class CreateCatBombasTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('cat_bombas', function (Blueprint $table) {
+        Schema::create('cat_bombas', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('nombre');
             $table->integer('numero');
@@ -39,6 +39,6 @@ class CreateCatBombasTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('cat_bombas');
+        Schema::dropIfExists('cat_bombas');
     }
 }

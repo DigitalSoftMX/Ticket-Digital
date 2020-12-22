@@ -13,7 +13,7 @@ class CreateChangeMembershipsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('change_memberships', function (Blueprint $table) {
+        Schema::create('change_memberships', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('qr_membership');
             $table->unsignedBigInteger('id_users');
@@ -34,6 +34,6 @@ class CreateChangeMembershipsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('change_memberships');
+        Schema::dropIfExists('change_memberships');
     }
 }

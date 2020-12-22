@@ -6,8 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class SharedBalance extends Model
 {
-    // Accediendo a la base de datos por default del proyecto
-    protected $connection = 'mysql';
     // Funcion para obtener la informacion de la estacion por medio de su id
     public function station()
     {

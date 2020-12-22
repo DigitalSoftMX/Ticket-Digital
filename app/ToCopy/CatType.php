@@ -6,9 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CatType extends Model
 {
-    /* Accediendo a la base de datos de Eucomb */
-    protected $connection = 'mysql';
-    /* Accediendo a la tabla station */
+    // Accedeciendo a la tabla cat_type
     protected $table = 'cat_type';
     protected $fillable = ['id', 'name_type'];
 }

@@ -13,7 +13,7 @@ class CreateConjuntoMembershipsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('conjunto_memberships', function (Blueprint $table) {
+        Schema::create('conjunto_memberships', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('membresia');
             $table->string('number_usuario');
@@ -33,6 +33,6 @@ class CreateConjuntoMembershipsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('conjunto_memberships');
+        Schema::dropIfExists('conjunto_memberships');
     }
 }

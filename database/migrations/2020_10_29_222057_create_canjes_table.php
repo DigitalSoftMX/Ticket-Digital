@@ -13,7 +13,7 @@ class CreateCanjesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('canjes', function (Blueprint $table) {
+        Schema::create('canjes', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('identificador');
             $table->string('conta');
@@ -28,6 +28,7 @@ class CreateCanjesTable extends Migration
             $table->dateTime('estado_uno')->nullable();
             $table->dateTime('estado_dos')->nullable();
             $table->dateTime('estado_tres')->nullable();
+            $table->string('ip_user')->nullable();
             $table->timestamps();
 
             $table->foreign('id_estacion')->references('id')->on('station')
@@ -47,6 +48,6 @@ class CreateCanjesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('canjes');
+        Schema::dropIfExists('canjes');
     }
 }

@@ -6,9 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Client extends Model
 {
-    /* Accediendo a la base de datos por default del proyecto */
-    protected $connection = 'mysql';
-
     protected $fillable = ['user_id', 'current_balance', 'shared_balance', 'points', 'image', 'birthdate', 'ids'];
     // Relacion con el usuario
     public function user()

@@ -13,7 +13,7 @@ class CreateDepositsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('deposits', function (Blueprint $table) {
+        Schema::create('deposits', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('client_id');
             $table->float('balance');
@@ -44,6 +44,6 @@ class CreateDepositsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('deposits');
+        Schema::dropIfExists('deposits');
     }
 }

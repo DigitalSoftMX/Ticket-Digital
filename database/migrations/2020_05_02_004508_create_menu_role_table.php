@@ -17,7 +17,6 @@ class CreateMenuRoleTable extends Migration
             $table->bigIncrements('id');
             $table->unsignedBigInteger('menu_id');
             $table->unsignedBigInteger('role_id');
-            $table->timestamps();
 
             $table->foreign('menu_id')->references('id')->on('menus')
                 ->onDelete('cascade')

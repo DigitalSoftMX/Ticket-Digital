@@ -13,7 +13,7 @@ class CreateVouchersTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('vouchers', function (Blueprint $table) {
+        Schema::create('vouchers', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
             $table->integer('points');
@@ -45,6 +45,6 @@ class CreateVouchersTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('vouchers');
+        Schema::dropIfExists('vouchers');
     }
 }
