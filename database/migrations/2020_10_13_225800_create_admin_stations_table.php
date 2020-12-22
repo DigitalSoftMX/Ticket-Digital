@@ -13,7 +13,7 @@ class CreateAdminStationsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('admin_stations', function (Blueprint $table) {
+        Schema::create('admin_stations', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('station_id');
@@ -41,6 +41,6 @@ class CreateAdminStationsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('admin_stations');
+        Schema::dropIfExists('admin_stations');
     }
 }

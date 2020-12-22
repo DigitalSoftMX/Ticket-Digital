@@ -13,7 +13,7 @@ class CreateAwardsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('awards', function (Blueprint $table) {
+        Schema::create('awards', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
             $table->integer('points');
@@ -37,6 +37,6 @@ class CreateAwardsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('awards');
+        Schema::dropIfExists('awards');
     }
 }

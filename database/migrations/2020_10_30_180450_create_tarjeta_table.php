@@ -13,7 +13,7 @@ class CreateTarjetaTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('tarjeta', function (Blueprint $table) {
+        Schema::create('tarjeta', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('number_usuario');
             $table->integer('active');
@@ -32,6 +32,6 @@ class CreateTarjetaTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('tarjeta');
+        Schema::dropIfExists('tarjeta');
     }
 }

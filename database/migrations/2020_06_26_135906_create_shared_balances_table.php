@@ -14,7 +14,7 @@ class CreateSharedBalancesTable extends Migration
     public function up()
     {
 
-        Schema::connection('mysql')->create('shared_balances', function (Blueprint $table) {
+        Schema::create('shared_balances', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('transmitter_id');
             $table->unsignedBigInteger('receiver_id');
@@ -48,6 +48,6 @@ class CreateSharedBalancesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('shared_balances');
+        Schema::dropIfExists('shared_balances');
     }
 }

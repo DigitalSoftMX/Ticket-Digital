@@ -13,7 +13,7 @@ class CreateContactsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('contacts', function (Blueprint $table) {
+        Schema::create('contacts', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('transmitter_id');
             $table->unsignedBigInteger('receiver_id');
@@ -36,6 +36,6 @@ class CreateContactsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('contacts');
+        Schema::dropIfExists('contacts');
     }
 }

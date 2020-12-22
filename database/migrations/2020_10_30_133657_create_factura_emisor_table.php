@@ -13,7 +13,7 @@ class CreateFacturaEmisorTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('factura_emisor', function (Blueprint $table) {
+        Schema::create('factura_emisor', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('nombre');
             $table->string('rfc');
@@ -61,6 +61,6 @@ class CreateFacturaEmisorTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('factura_emisor');
+        Schema::dropIfExists('factura_emisor');
     }
 }

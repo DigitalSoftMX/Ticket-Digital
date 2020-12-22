@@ -13,7 +13,7 @@ class CreateCatStateTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('cat_state', function (Blueprint $table) {
+        Schema::create('cat_state', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name_state');
             $table->timestamps();
@@ -27,6 +27,6 @@ class CreateCatStateTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('cat_state');
+        Schema::dropIfExists('cat_state');
     }
 }

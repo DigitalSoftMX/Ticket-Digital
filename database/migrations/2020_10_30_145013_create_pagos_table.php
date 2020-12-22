@@ -13,7 +13,7 @@ class CreatePagosTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('pagos', function (Blueprint $table) {
+        Schema::create('pagos', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->integer('pago');
             $table->integer('num_timbres')->nullable();
@@ -40,6 +40,6 @@ class CreatePagosTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('pagos');
+        Schema::dropIfExists('pagos');
     }
 }

@@ -13,7 +13,7 @@ class CreatePermissionsTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('permissions', function (Blueprint $table) {
+        Schema::create('permissions', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
             $table->string('display_name')->nullable();
@@ -30,6 +30,6 @@ class CreatePermissionsTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('permissions');
+        Schema::dropIfExists('permissions');
     }
 }

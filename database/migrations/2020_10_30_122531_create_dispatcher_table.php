@@ -13,7 +13,7 @@ class CreateDispatcherTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('dispatcher', function (Blueprint $table) {
+        Schema::create('dispatcher', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('qr_dispatcher');
             $table->integer('active');
@@ -39,6 +39,6 @@ class CreateDispatcherTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('dispatcher');
+        Schema::dropIfExists('dispatcher');
     }
 }

@@ -10,9 +10,6 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
-    // Accediendo a la base de datos por default del proyecto
-    protected $connection = 'mysql';
-
     use Notifiable;
     // Relacion a muchos para el rol del usuario
     public function roles()

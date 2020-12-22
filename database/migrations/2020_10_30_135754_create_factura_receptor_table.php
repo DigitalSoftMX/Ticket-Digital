@@ -13,7 +13,7 @@ class CreateFacturaReceptorTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('factura_receptor', function (Blueprint $table) {
+        Schema::create('factura_receptor', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('nombre');
             $table->string('rfc');
@@ -35,6 +35,6 @@ class CreateFacturaReceptorTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('factura_receptor');
+        Schema::dropIfExists('factura_receptor');
     }
 }

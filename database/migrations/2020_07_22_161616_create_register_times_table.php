@@ -13,7 +13,7 @@ class CreateRegisterTimesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('register_times', function (Blueprint $table) {
+        Schema::create('register_times', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('dispatcher_id');
             $table->unsignedBigInteger('station_id');
@@ -41,6 +41,6 @@ class CreateRegisterTimesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('register_times');
+        Schema::dropIfExists('register_times');
     }
 }

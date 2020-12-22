@@ -13,7 +13,7 @@ class CreateCatPreciosTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('cat_precios', function (Blueprint $table) {
+        Schema::create('cat_precios', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->integer('num_ticket');
             $table->double('costo');
@@ -32,6 +32,6 @@ class CreateCatPreciosTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('cat_precios');
+        Schema::dropIfExists('cat_precios');
     }
 }

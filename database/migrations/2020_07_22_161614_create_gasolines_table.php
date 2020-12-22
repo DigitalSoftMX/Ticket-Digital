@@ -13,7 +13,7 @@ class CreateGasolinesTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('gasolines', function (Blueprint $table) {
+        Schema::create('gasolines', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
             $table->timestamps();
@@ -27,6 +27,6 @@ class CreateGasolinesTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('gasolines');
+        Schema::dropIfExists('gasolines');
     }
 }

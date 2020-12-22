@@ -13,7 +13,7 @@ class CreateCountVouchersTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('count_vouchers', function (Blueprint $table) {
+        Schema::create('count_vouchers', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('id_station');
             $table->integer('min');
@@ -33,6 +33,6 @@ class CreateCountVouchersTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('count_vouchers');
+        Schema::dropIfExists('count_vouchers');
     }
 }

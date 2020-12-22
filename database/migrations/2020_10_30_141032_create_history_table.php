@@ -13,7 +13,7 @@ class CreateHistoryTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('history', function (Blueprint $table) {
+        Schema::create('history', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('folio');
             $table->string('folio_exchange');
@@ -47,6 +47,6 @@ class CreateHistoryTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('history');
+        Schema::dropIfExists('history');
     }
 }

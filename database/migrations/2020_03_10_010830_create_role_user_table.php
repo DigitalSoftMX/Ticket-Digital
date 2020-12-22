@@ -13,7 +13,7 @@ class CreateRoleUserTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('role_user', function (Blueprint $table) {
+        Schema::create('role_user', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('role_id');
@@ -35,6 +35,6 @@ class CreateRoleUserTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('role_user');
+        Schema::dropIfExists('role_user');
     }
 }
