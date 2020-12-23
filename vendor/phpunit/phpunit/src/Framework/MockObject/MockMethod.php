@@ -9,15 +9,18 @@
  */
 namespace PHPUnit\Framework\MockObject;
 
-use ReflectionClass;
-use ReflectionException;
-use ReflectionMethod;
-use Text_Template;
+use SebastianBergmann\Type\ObjectType;
+use SebastianBergmann\Type\Type;
+use SebastianBergmann\Type\UnknownType;
+use SebastianBergmann\Type\VoidType;
 
+/**
+ * @internal This class is not covered by the backward compatibility promise for PHPUnit
+ */
 final class MockMethod
 {
     /**
-     * @var Text_Template[]
+     * @var \Text_Template[]
      */
     private static $templates = [];
 
@@ -52,7 +55,7 @@ final class MockMethod
     private $argumentsForCall;
 
     /**
-     * @var string
+     * @var Type
      */
     private $returnType;
 
@@ -81,7 +84,10 @@ final class MockMethod
      */
     private $allowsReturnNull;
 
-    public static function fromReflection(ReflectionMethod $method, bool $callOriginalMethod, bool $cloneArguments): self
+    /**
+     * @throws RuntimeException
+     */
+    public static function fromReflection(\ReflectionMethod $method, bool $callOriginalMethod, bool $cloneArguments): self
     {
         if ($method->isPrivate()) {
             $modifier = 'private';
@@ -101,17 +107,10 @@ final class MockMethod
             $reference = '';
         }
 
-        if ($method->hasReturnType()) {
-            $returnType = $method->getReturnType()->getName();
-        } else {
-            $returnType = '';
-        }
-
         $docComment = $method->getDocComment();
 
-        if (\is_string($docComment)
-            && \preg_match('#\*[ \t]*+@deprecated[ \t]*+(.*?)\r?+\n[ \t]*+\*(?:[ \t]*+@|/$)#s', $docComment, $deprecation)
-        ) {
+        if (\is_string($docComment) &&
+            \preg_match('#\*[ \t]*+@deprecated[ \t]*+(.*?)\r?+\n[ \t]*+\*(?:[ \t]*+@|/$)#s', $docComment, $deprecation)) {
             $deprecation = \trim(\preg_replace('#[ \t]*\r?\n[ \t]*+\*[ \t]*+#', ' ', $deprecation[1]));
         } else {
             $deprecation = null;
@@ -122,9 +121,9 @@ final class MockMethod
             $method->getName(),
             $cloneArguments,
             $modifier,
-            self::getMethodParameters($method),
-            self::getMethodParameters($method, true),
-            $returnType,
+            self::getMethodParametersForDeclaration($method),
+            self::getMethodParametersForCall($method),
+            self::deriveReturnType($method),
             $reference,
             $callOriginalMethod,
             $method->isStatic(),
@@ -142,7 +141,7 @@ final class MockMethod
             'public',
             '',
             '',
-            '',
+            new UnknownType,
             '',
             false,
             false,
@@ -151,7 +150,7 @@ final class MockMethod
         );
     }
 
-    public function __construct(string $className, string $methodName, bool $cloneArguments, string $modifier, string $argumentsForDeclaration, string $argumentsForCall, string $returnType, string $reference, bool $callOriginalMethod, bool $static, ?string $deprecation, bool $allowsReturnNull)
+    public function __construct(string $className, string $methodName, bool $cloneArguments, string $modifier, string $argumentsForDeclaration, string $argumentsForCall, Type $returnType, string $reference, bool $callOriginalMethod, bool $static, ?string $deprecation, bool $allowsReturnNull)
     {
         $this->className               = $className;
         $this->methodName              = $methodName;
@@ -173,15 +172,13 @@ final class MockMethod
     }
 
     /**
-     * @throws \ReflectionException
-     * @throws \PHPUnit\Framework\MockObject\RuntimeException
-     * @throws \InvalidArgumentException
+     * @throws RuntimeException
      */
     public function generateCode(): string
     {
         if ($this->static) {
             $templateFile = 'mocked_static_method.tpl';
-        } elseif ($this->returnType === 'void') {
+        } elseif ($this->returnType instanceof VoidType) {
             $templateFile = \sprintf(
                 '%s_method_void.tpl',
                 $this->callOriginalMethod ? 'proxied' : 'mocked'
@@ -193,36 +190,10 @@ final class MockMethod
             );
         }
 
-        $returnType = $this->returnType;
-        // @see https://bugs.php.net/bug.php?id=70722
-        if ($returnType === 'self') {
-            $returnType = $this->className;
-        }
-
-        // @see https://github.com/sebastianbergmann/phpunit-mock-objects/issues/406
-        if ($returnType === 'parent') {
-            $reflector = new ReflectionClass($this->className);
-
-            $parentClass = $reflector->getParentClass();
-
-            if ($parentClass === false) {
-                throw new RuntimeException(
-                    \sprintf(
-                        'Cannot mock %s::%s because "parent" return type declaration is used but %s does not have a parent class',
-                        $this->className,
-                        $this->methodName,
-                        $this->className
-                    )
-                );
-            }
-
-            $returnType = $parentClass->getName();
-        }
-
         $deprecation = $this->deprecation;
 
         if (null !== $this->deprecation) {
-            $deprecation         = "The $this->className::$this->methodName method is deprecated ($this->deprecation).";
+            $deprecation         = "The {$this->className}::{$this->methodName} method is deprecated ({$this->deprecation}).";
             $deprecationTemplate = $this->getTemplate('deprecation.tpl');
 
             $deprecationTemplate->setVar([
@@ -236,29 +207,33 @@ final class MockMethod
 
         $template->setVar(
             [
-                'arguments_decl'  => $this->argumentsForDeclaration,
-                'arguments_call'  => $this->argumentsForCall,
-                'return_delim'    => $returnType ? ': ' : '',
-                'return_type'     => $this->allowsReturnNull ? '?' . $returnType : $returnType,
-                'arguments_count' => !empty($this->argumentsForCall) ? \substr_count($this->argumentsForCall, ',') + 1 : 0,
-                'class_name'      => $this->className,
-                'method_name'     => $this->methodName,
-                'modifier'        => $this->modifier,
-                'reference'       => $this->reference,
-                'clone_arguments' => $this->cloneArguments ? 'true' : 'false',
-                'deprecation'     => $deprecation,
+                'arguments_decl'     => $this->argumentsForDeclaration,
+                'arguments_call'     => $this->argumentsForCall,
+                'return_declaration' => $this->returnType->getReturnTypeDeclaration(),
+                'arguments_count'    => !empty($this->argumentsForCall) ? \substr_count($this->argumentsForCall, ',') + 1 : 0,
+                'class_name'         => $this->className,
+                'method_name'        => $this->methodName,
+                'modifier'           => $this->modifier,
+                'reference'          => $this->reference,
+                'clone_arguments'    => $this->cloneArguments ? 'true' : 'false',
+                'deprecation'        => $deprecation,
             ]
         );
 
         return $template->render();
     }
 
-    private function getTemplate(string $template): Text_Template
+    public function getReturnType(): Type
+    {
+        return $this->returnType;
+    }
+
+    private function getTemplate(string $template): \Text_Template
     {
         $filename = __DIR__ . \DIRECTORY_SEPARATOR . 'Generator' . \DIRECTORY_SEPARATOR . $template;
 
         if (!isset(self::$templates[$filename])) {
-            self::$templates[$filename] = new Text_Template($filename);
+            self::$templates[$filename] = new \Text_Template($filename);
         }
 
         return self::$templates[$filename];
@@ -269,7 +244,71 @@ final class MockMethod
      *
      * @throws RuntimeException
      */
-    private static function getMethodParameters(ReflectionMethod $method, bool $forCall = false): string
+    private static function getMethodParametersForDeclaration(\ReflectionMethod $method): string
+    {
+        $parameters = [];
+
+        foreach ($method->getParameters() as $i => $parameter) {
+            $name = '$' . $parameter->getName();
+
+            /* Note: PHP extensions may use empty names for reference arguments
+             * or "..." for methods taking a variable number of arguments.
+             */
+            if ($name === '$' || $name === '$...') {
+                $name = '$arg' . $i;
+            }
+
+            $nullable        = '';
+            $default         = '';
+            $reference       = '';
+            $typeDeclaration = '';
+            $type            = null;
+            $typeName        = null;
+
+            if ($parameter->hasType()) {
+                $type = $parameter->getType();
+
+                if ($type instanceof \ReflectionNamedType) {
+                    $typeName = $type->getName();
+                }
+            }
+
+            if ($parameter->isVariadic()) {
+                $name = '...' . $name;
+            } elseif ($parameter->isDefaultValueAvailable()) {
+                $default = ' = ' . \var_export($parameter->getDefaultValue(), true);
+            } elseif ($parameter->isOptional()) {
+                $default = ' = null';
+            }
+
+            if ($type !== null) {
+                if ($typeName !== 'mixed' && $parameter->allowsNull()) {
+                    $nullable = '?';
+                }
+
+                if ($typeName === 'self') {
+                    $typeDeclaration = $method->getDeclaringClass()->getName() . ' ';
+                } elseif ($typeName !== null) {
+                    $typeDeclaration = $typeName . ' ';
+                }
+            }
+
+            if ($parameter->isPassedByReference()) {
+                $reference = '&';
+            }
+
+            $parameters[] = $nullable . $typeDeclaration . $reference . $name . $default;
+        }
+
+        return \implode(', ', $parameters);
+    }
+
+    /**
+     * Returns the parameters of a function or method.
+     *
+     * @throws \ReflectionException
+     */
+    private static function getMethodParametersForCall(\ReflectionMethod $method): string
     {
         $parameters = [];
 
@@ -284,72 +323,50 @@ final class MockMethod
             }
 
             if ($parameter->isVariadic()) {
-                if ($forCall) {
-                    continue;
-                }
-
-                $name = '...' . $name;
-            }
-
-            $nullable        = '';
-            $default         = '';
-            $reference       = '';
-            $typeDeclaration = '';
-
-            if (!$forCall) {
-                if ($parameter->hasType() && $parameter->allowsNull()) {
-                    $nullable = '?';
-                }
-
-                if ($parameter->hasType() && $parameter->getType()->getName() !== 'self') {
-                    $typeDeclaration = $parameter->getType()->getName() . ' ';
-                } else {
-                    try {
-                        $class = $parameter->getClass();
-                    } catch (ReflectionException $e) {
-                        throw new RuntimeException(
-                            \sprintf(
-                                'Cannot mock %s::%s() because a class or ' .
-                                'interface used in the signature is not loaded',
-                                $method->getDeclaringClass()->getName(),
-                                $method->getName()
-                            ),
-                            0,
-                            $e
-                        );
-                    }
-
-                    if ($class !== null) {
-                        $typeDeclaration = $class->getName() . ' ';
-                    }
-                }
-
-                if (!$parameter->isVariadic()) {
-                    if ($parameter->isDefaultValueAvailable()) {
-                        try {
-                            $value = \var_export($parameter->getDefaultValue(), true);
-                        } catch (\ReflectionException $e) {
-                            throw new RuntimeException(
-                                $e->getMessage(),
-                                (int) $e->getCode(),
-                                $e
-                            );
-                        }
-
-                        $default = ' = ' . $value;
-                    } elseif ($parameter->isOptional()) {
-                        $default = ' = null';
-                    }
-                }
+                continue;
             }
 
             if ($parameter->isPassedByReference()) {
-                $reference = '&';
+                $parameters[] = '&' . $name;
+            } else {
+                $parameters[] = $name;
             }
-
-            $parameters[] = $nullable . $typeDeclaration . $reference . $name . $default;
         }
 
         return \implode(', ', $parameters);
+    }
+
+    private static function deriveReturnType(\ReflectionMethod $method): Type
+    {
+        $returnType = $method->getReturnType();
+
+        if ($returnType === null) {
+            return new UnknownType();
+        }
+
+        // @see https://bugs.php.net/bug.php?id=70722
+        if ($returnType->getName() === 'self') {
+            return ObjectType::fromName($method->getDeclaringClass()->getName(), $returnType->allowsNull());
+        }
+
+        // @see https://github.com/sebastianbergmann/phpunit-mock-objects/issues/406
+        if ($returnType->getName() === 'parent') {
+            $parentClass = $method->getDeclaringClass()->getParentClass();
+
+            if ($parentClass === false) {
+                throw new RuntimeException(
+                    \sprintf(
+                        'Cannot mock %s::%s because "parent" return type declaration is used but %s does not have a parent class',
+                        $method->getDeclaringClass()->getName(),
+                        $method->getName(),
+                        $method->getDeclaringClass()->getName()
+                    )
+                );
+            }
+
+            return ObjectType::fromName($parentClass->getName(), $returnType->allowsNull());
+        }
+
+        return Type::fromName($returnType->getName(), $returnType->allowsNull());
     }
 }

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /*
  * This file is part of PHPUnit.
  *
@@ -11,9 +11,12 @@ namespace PHPUnit\Runner;
 
 use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\AssertionFailedError;
+use PHPUnit\Framework\ExpectationFailedException;
 use PHPUnit\Framework\IncompleteTestError;
+use PHPUnit\Framework\PHPTAssertionFailedError;
 use PHPUnit\Framework\SelfDescribing;
 use PHPUnit\Framework\SkippedTestError;
+use PHPUnit\Framework\SyntheticSkippedError;
 use PHPUnit\Framework\Test;
 use PHPUnit\Framework\TestResult;
 use PHPUnit\Util\PHP\AbstractPhpProcess;
@@ -22,36 +25,10 @@ use Text_Template;
 use Throwable;
 
 /**
- * Runner for PHPT test cases.
+ * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-class PhptTestCase implements SelfDescribing, Test
+final class PhptTestCase implements SelfDescribing, Test
 {
-    /**
-     * @var string[]
-     */
-    private const SETTINGS = [
-        'allow_url_fopen=1',
-        'auto_append_file=',
-        'auto_prepend_file=',
-        'disable_functions=',
-        'display_errors=1',
-        'docref_ext=.html',
-        'docref_root=',
-        'error_append_string=',
-        'error_prepend_string=',
-        'error_reporting=-1',
-        'html_errors=0',
-        'log_errors=0',
-        'magic_quotes_runtime=0',
-        'open_basedir=',
-        'output_buffering=Off',
-        'output_handler=',
-        'report_memleaks=0',
-        'report_zend_debug=0',
-        'safe_mode=0',
-        'xdebug.default_enable=0',
-    ];
-
     /**
      * @var string
      */
@@ -99,7 +76,6 @@ class PhptTestCase implements SelfDescribing, Test
      * Runs a test and collects its result in a TestResult instance.
      *
      * @throws Exception
-     * @throws \ReflectionException
      * @throws \SebastianBergmann\CodeCoverage\CoveredCodeNotExecutedException
      * @throws \SebastianBergmann\CodeCoverage\InvalidArgumentException
      * @throws \SebastianBergmann\CodeCoverage\MissingCoversAnnotationException
@@ -125,7 +101,7 @@ class PhptTestCase implements SelfDescribing, Test
 
         $code     = $this->render($sections['FILE']);
         $xfail    = false;
-        $settings = $this->parseIniSection(self::SETTINGS);
+        $settings = $this->parseIniSection($this->settings($result->getCollectCodeCoverageInformation()));
 
         $result->startTest($this);
 
@@ -183,17 +159,37 @@ class PhptTestCase implements SelfDescribing, Test
 
             if ($xfail !== false) {
                 $failure = new IncompleteTestError($xfail, 0, $e);
+            } elseif ($e instanceof ExpectationFailedException) {
+                $comparisonFailure = $e->getComparisonFailure();
+
+                if ($comparisonFailure) {
+                    $diff = $comparisonFailure->getDiff();
+                } else {
+                    $diff = $e->getMessage();
+                }
+
+                $hint    = $this->getLocationHintFromDiff($diff, $sections);
+                $trace   = \array_merge($hint, \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS));
+                $failure = new PHPTAssertionFailedError(
+                    $e->getMessage(),
+                    0,
+                    $trace[0]['file'],
+                    $trace[0]['line'],
+                    $trace,
+                    $comparisonFailure ? $diff : ''
+                );
             }
+
             $result->addFailure($this, $failure, $time);
         } catch (Throwable $t) {
             $result->addError($this, $t, $time);
         }
 
-        if ($result->allCompletelyImplemented() && $xfail !== false) {
+        if ($xfail !== false && $result->allCompletelyImplemented()) {
             $result->addFailure($this, new IncompleteTestError('XFAIL section but test passes'), $time);
         }
 
-        $this->runClean($sections);
+        $this->runClean($sections, $result->getCollectCodeCoverageInformation());
 
         $result->endTest($this, $time);
 
@@ -288,6 +284,8 @@ class PhptTestCase implements SelfDescribing, Test
     }
 
     /**
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
      * @throws Exception
      */
     private function assertPhptExpectation(array $sections, string $output): void
@@ -308,6 +306,7 @@ class PhptTestCase implements SelfDescribing, Test
                 if ($expected === null) {
                     throw new Exception('No PHPT expectation found');
                 }
+
                 Assert::$sectionAssertion($expected, $actual);
 
                 return;
@@ -336,7 +335,13 @@ class PhptTestCase implements SelfDescribing, Test
                 $message = \substr($skipMatch[1], 2);
             }
 
-            $result->addFailure($this, new SkippedTestError($message), 0);
+            $hint  = $this->getLocationHint($message, $sections, 'SKIPIF');
+            $trace = \array_merge($hint, \debug_backtrace(\DEBUG_BACKTRACE_IGNORE_ARGS));
+            $result->addFailure(
+                $this,
+                new SyntheticSkippedError($message, 0, $trace[0]['file'], $trace[0]['line'], $trace),
+                0
+            );
             $result->endTest($this, 0);
 
             return true;
@@ -345,7 +350,7 @@ class PhptTestCase implements SelfDescribing, Test
         return false;
     }
 
-    private function runClean(array &$sections): void
+    private function runClean(array &$sections, bool $collectCoverage): void
     {
         $this->phpUtil->setStdin('');
         $this->phpUtil->setArgs('');
@@ -353,7 +358,7 @@ class PhptTestCase implements SelfDescribing, Test
         if (isset($sections['CLEAN'])) {
             $cleanCode = $this->render($sections['CLEAN']);
 
-            $this->phpUtil->runJob($cleanCode, self::SETTINGS);
+            $this->phpUtil->runJob($cleanCode, $this->settings($collectCoverage));
         }
     }
 
@@ -382,10 +387,15 @@ class PhptTestCase implements SelfDescribing, Test
             'REQUEST',
         ];
 
+        $lineNr = 0;
+
         foreach (\file($this->filename) as $line) {
+            $lineNr++;
+
             if (\preg_match('/^--([_A-Z]+)--/', $line, $result)) {
-                $section            = $result[1];
-                $sections[$section] = '';
+                $section                        = $result[1];
+                $sections[$section]             = '';
+                $sections[$section . '_offset'] = $lineNr;
 
                 continue;
             }
@@ -411,7 +421,7 @@ class PhptTestCase implements SelfDescribing, Test
         foreach ($unsupportedSections as $section) {
             if (isset($sections[$section])) {
                 throw new Exception(
-                    "PHPUnit does not support PHPT $section sections"
+                    "PHPUnit does not support PHPT {$section} sections"
                 );
             }
         }
@@ -448,8 +458,6 @@ class PhptTestCase implements SelfDescribing, Test
                 }
 
                 $sections[$section] = \file_get_contents($testDirectory . $externalFilename);
-
-                unset($sections[$section . '_EXTERNAL']);
             }
         }
     }
@@ -563,11 +571,19 @@ class PhptTestCase implements SelfDescribing, Test
 
     private function cleanupForCoverage(): array
     {
+        $coverage = [];
         $files    = $this->getCoverageFiles();
-        $coverage = @\unserialize(\file_get_contents($files['coverage']));
 
-        if ($coverage === false) {
-            $coverage = [];
+        if (\file_exists($files['coverage'])) {
+            $buffer = @\file_get_contents($files['coverage']);
+
+            if ($buffer !== false) {
+                $coverage = @\unserialize($buffer);
+
+                if ($coverage === false) {
+                    $coverage = [];
+                }
+            }
         }
 
         foreach ($files as $file) {
@@ -591,6 +607,177 @@ class PhptTestCase implements SelfDescribing, Test
             }
 
             $settings[] = $key . '=' . $value;
+        }
+
+        return $settings;
+    }
+
+    private function getLocationHintFromDiff(string $message, array $sections): array
+    {
+        $needle       = '';
+        $previousLine = '';
+        $block        = 'message';
+
+        foreach (\preg_split('/\r\n|\r|\n/', $message) as $line) {
+            $line = \trim($line);
+
+            if ($block === 'message' && $line === '--- Expected') {
+                $block = 'expected';
+            }
+
+            if ($block === 'expected' && $line === '@@ @@') {
+                $block = 'diff';
+            }
+
+            if ($block === 'diff') {
+                if (\strpos($line, '+') === 0) {
+                    $needle = $this->getCleanDiffLine($previousLine);
+
+                    break;
+                }
+
+                if (\strpos($line, '-') === 0) {
+                    $needle = $this->getCleanDiffLine($line);
+
+                    break;
+                }
+            }
+
+            if (!empty($line)) {
+                $previousLine = $line;
+            }
+        }
+
+        return $this->getLocationHint($needle, $sections);
+    }
+
+    private function getCleanDiffLine(string $line): string
+    {
+        if (\preg_match('/^[\-+]([\'\"]?)(.*)\1$/', $line, $matches)) {
+            $line = $matches[2];
+        }
+
+        return $line;
+    }
+
+    private function getLocationHint(string $needle, array $sections, ?string $sectionName = null): array
+    {
+        $needle = \trim($needle);
+
+        if (empty($needle)) {
+            return [[
+                'file' => \realpath($this->filename),
+                'line' => 1,
+            ]];
+        }
+
+        if ($sectionName) {
+            $search = [$sectionName];
+        } else {
+            $search = [
+                // 'FILE',
+                'EXPECT',
+                'EXPECTF',
+                'EXPECTREGEX',
+            ];
+        }
+
+        foreach ($search as $section) {
+            if (!isset($sections[$section])) {
+                continue;
+            }
+
+            if (isset($sections[$section . '_EXTERNAL'])) {
+                $externalFile = \trim($sections[$section . '_EXTERNAL']);
+
+                return [
+                    [
+                        'file' => \realpath(\dirname($this->filename) . \DIRECTORY_SEPARATOR . $externalFile),
+                        'line' => 1,
+                    ],
+                    [
+                        'file' => \realpath($this->filename),
+                        'line' => ($sections[$section . '_EXTERNAL_offset'] ?? 0) + 1,
+                    ],
+                ];
+            }
+
+            $sectionOffset = $sections[$section . '_offset'] ?? 0;
+            $offset        = $sectionOffset + 1;
+
+            foreach (\preg_split('/\r\n|\r|\n/', $sections[$section]) as $line) {
+                if (\strpos($line, $needle) !== false) {
+                    return [[
+                        'file' => \realpath($this->filename),
+                        'line' => $offset,
+                    ]];
+                }
+                $offset++;
+            }
+        }
+
+        if ($sectionName) {
+            // String not found in specified section, show user the start of the named section
+            return [[
+                'file' => \realpath($this->filename),
+                'line' => $sectionOffset,
+            ]];
+        }
+
+        // No section specified, show user start of code
+        return [[
+            'file' => \realpath($this->filename),
+            'line' => 1,
+        ]];
+    }
+
+    /**
+     * @psalm-return list<string>
+     */
+    private function settings(bool $collectCoverage): array
+    {
+        $settings = [
+            'allow_url_fopen=1',
+            'auto_append_file=',
+            'auto_prepend_file=',
+            'disable_functions=',
+            'display_errors=1',
+            'docref_ext=.html',
+            'docref_root=',
+            'error_append_string=',
+            'error_prepend_string=',
+            'error_reporting=-1',
+            'html_errors=0',
+            'log_errors=0',
+            'open_basedir=',
+            'output_buffering=Off',
+            'output_handler=',
+            'report_memleaks=0',
+            'report_zend_debug=0',
+        ];
+
+        if (\extension_loaded('pcov')) {
+            if ($collectCoverage) {
+                $settings[] = 'pcov.enabled=1';
+            } else {
+                $settings[] = 'pcov.enabled=0';
+            }
+        }
+
+        if (\extension_loaded('xdebug')) {
+            if (\version_compare(\phpversion('xdebug'), '3', '>=')) {
+                if ($collectCoverage) {
+                    $settings[] = 'xdebug.mode=coverage';
+                } else {
+                    $settings[] = 'xdebug.mode=off';
+                }
+            } else {
+                $settings[] = 'xdebug.default_enable=0';
+
+                if ($collectCoverage) {
+                    $settings[] = 'xdebug.coverage_enable=1';
+                }
+            }
         }
 
         return $settings;

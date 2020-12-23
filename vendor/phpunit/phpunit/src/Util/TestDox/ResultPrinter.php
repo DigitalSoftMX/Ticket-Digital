@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /*
  * This file is part of PHPUnit.
  *
@@ -20,7 +20,7 @@ use PHPUnit\Runner\BaseTestRunner;
 use PHPUnit\Util\Printer;
 
 /**
- * Base class for printers of TestDox documentation.
+ * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 abstract class ResultPrinter extends Printer implements TestListener
 {
@@ -316,7 +316,7 @@ abstract class ResultPrinter extends Printer implements TestListener
 
         if (!empty($this->groups)) {
             foreach ($test->getGroups() as $group) {
-                if (\in_array($group, $this->groups)) {
+                if (\in_array($group, $this->groups, true)) {
                     return true;
                 }
             }
@@ -326,7 +326,7 @@ abstract class ResultPrinter extends Printer implements TestListener
 
         if (!empty($this->excludeGroups)) {
             foreach ($test->getGroups() as $group) {
-                if (\in_array($group, $this->excludeGroups)) {
+                if (\in_array($group, $this->excludeGroups, true)) {
                     return false;
                 }
             }
