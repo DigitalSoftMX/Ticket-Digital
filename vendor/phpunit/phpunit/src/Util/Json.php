@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /*
  * This file is part of PHPUnit.
  *
@@ -11,6 +11,9 @@ namespace PHPUnit\Util;
 
 use PHPUnit\Framework\Exception;
 
+/**
+ * @internal This class is not covered by the backward compatibility promise for PHPUnit
+ */
 final class Json
 {
     /**
@@ -20,7 +23,7 @@ final class Json
      */
     public static function prettify(string $json): string
     {
-        $decodedJson = \json_decode($json, true);
+        $decodedJson = \json_decode($json, false);
 
         if (\json_last_error()) {
             throw new Exception(
@@ -28,15 +31,16 @@ final class Json
             );
         }
 
-        return \json_encode($decodedJson, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
+        return \json_encode($decodedJson, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
     }
 
-    /*
+    /**
      * To allow comparison of JSON strings, first process them into a consistent
      * format so that they can be compared as strings.
+     *
      * @return array ($error, $canonicalized_json)  The $error parameter is used
-     * to indicate an error decoding the json.  This is used to avoid ambiguity
-     * with JSON strings consisting entirely of 'null' or 'false'.
+     *               to indicate an error decoding the json. This is used to avoid ambiguity
+     *               with JSON strings consisting entirely of 'null' or 'false'.
      */
     public static function canonicalize(string $json): array
     {
@@ -53,14 +57,15 @@ final class Json
         return [false, $reencodedJson];
     }
 
-    /*
+    /**
      * JSON object keys are unordered while PHP array keys are ordered.
+     *
      * Sort all array keys to ensure both the expected and actual values have
      * their keys in the same order.
      */
     private static function recursiveSort(&$json): void
     {
-        if (\is_array($json) === false) {
+        if (!\is_array($json)) {
             // If the object is not empty, change it to an associative array
             // so we can sort the keys (and we will still re-encode it
             // correctly, since PHP encodes associative arrays as JSON objects.)

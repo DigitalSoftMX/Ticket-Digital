@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /*
  * This file is part of PHPUnit.
  *
@@ -10,14 +10,14 @@
 namespace PHPUnit\Util\TestDox;
 
 /**
- * Prints TestDox documentation in HTML format.
+ * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class HtmlResultPrinter extends ResultPrinter
 {
     /**
      * @var string
      */
-    private const PAGE_HEADER = <<<EOT
+    private const PAGE_HEADER = <<<'EOT'
 <!doctype html>
 <html lang="en">
     <head>
@@ -53,7 +53,7 @@ EOT;
     /**
      * @var string
      */
-    private const CLASS_HEADER = <<<EOT
+    private const CLASS_HEADER = <<<'EOT'
 
         <h2 id="%s">%s</h2>
         <ul>
@@ -63,14 +63,14 @@ EOT;
     /**
      * @var string
      */
-    private const CLASS_FOOTER = <<<EOT
+    private const CLASS_FOOTER = <<<'EOT'
         </ul>
 EOT;
 
     /**
      * @var string
      */
-    private const PAGE_FOOTER = <<<EOT
+    private const PAGE_FOOTER = <<<'EOT'
 
     </body>
 </html>

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /*
  * This file is part of PHPUnit.
  *
@@ -11,6 +11,9 @@ namespace PHPUnit\Util;
 
 use Closure;
 
+/**
+ * @internal This class is not covered by the backward compatibility promise for PHPUnit
+ */
 final class GlobalState
 {
     /**
@@ -26,13 +29,18 @@ final class GlobalState
         '_REQUEST',
     ];
 
+    /**
+     * @throws Exception
+     */
     public static function getIncludedFilesAsString(): string
     {
-        return static::processIncludedFilesAsString(\get_included_files());
+        return self::processIncludedFilesAsString(\get_included_files());
     }
 
     /**
      * @param string[] $files
+     *
+     * @throws Exception
      */
     public static function processIncludedFilesAsString(array $files): string
     {
@@ -48,7 +56,7 @@ final class GlobalState
             $file = $files[$i];
 
             if (!empty($GLOBALS['__PHPUNIT_ISOLATION_BLACKLIST']) &&
-                \in_array($file, $GLOBALS['__PHPUNIT_ISOLATION_BLACKLIST'])) {
+                \in_array($file, $GLOBALS['__PHPUNIT_ISOLATION_BLACKLIST'], true)) {
                 continue;
             }
 
@@ -71,14 +79,13 @@ final class GlobalState
 
     public static function getIniSettingsAsString(): string
     {
-        $result      = '';
-        $iniSettings = \ini_get_all(null, false);
+        $result = '';
 
-        foreach ($iniSettings as $key => $value) {
+        foreach (\ini_get_all(null, false) as $key => $value) {
             $result .= \sprintf(
                 '@ini_set(%s, %s);' . "\n",
                 self::exportVariable($key),
-                self::exportVariable($value)
+                self::exportVariable((string) $value)
             );
         }
 
@@ -162,7 +169,7 @@ final class GlobalState
                 $result = false;
             }
 
-            if ($result === false) {
+            if (!$result) {
                 break;
             }
         }
