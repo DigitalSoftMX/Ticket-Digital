@@ -21,7 +21,7 @@ If you don't already have an Apache local environment with PHP and MySQL, use on
  - Mac: https://wpshout.com/quick-guides/how-to-install-mamp-on-your-mac/
 
 Also, you will need to install Composer: https://getcomposer.org/doc/00-intro.md   
-And Laravel: https://laravel.com/docs/6.x/installation
+And Laravel: https://laravel.com/docs/7.x/installation
 
 ## Installation
 
@@ -30,11 +30,12 @@ After initializing a fresh instance of Laravel (and making all the necessary con
 ### Via composer
 
 1. `Cd` to your Laravel app  
-2. Install this preset via `composer require laravel-frontend-presets/material-dashboard`. No need to register the service provider. Laravel 5.5 & up can auto detect the package.
-3. Run `php artisan preset material` command to install the Argon preset. This will install all the necessary assets and also the custom auth views, it will also add the auth route in `routes/web.php`
+2. Type in your terminal: `composer require laravel/ui` and `php artisan ui vue --auth`
+3. Install this preset via `composer require laravel-frontend-presets/material-dashboard`. No need to register the service provider. Laravel 5.5 & up can auto detect the package.
+4. Run `php artisan ui material` command to install the Argon preset. This will install all the necessary assets and also the custom auth views, it will also add the auth route in `routes/web.php`
 (NOTE: If you run this command several times, be sure to clean up the duplicate Auth entries in routes/web.php)
-4. In your terminal run `composer dump-autoload`
-5. Run `php artisan migrate --seed` to create basic users table
+5. In your terminal run `composer dump-autoload`
+6. Run `php artisan migrate --seed` to create basic users table
 
 ### By using the archive
 
@@ -44,17 +45,18 @@ After initializing a fresh instance of Laravel (and making all the necessary con
 4. Open `composer.json` file 
 5. Add `"LaravelFrontendPresets\\MaterialPreset\\": "presets/material/src"` to `autoload/psr-4` and to `autoload-dev/psr-4`
 6. Add `LaravelFrontendPresets\MaterialPreset\MaterialPresetServiceProvider::class` to `config/app.php` file
-7. In your terminal run `composer dump-autoload`
-8. Run `php artisan preset material` command to install the Material preset. This will install all the necessary assets and also the custom auth views, it will also add the auth route in `routes/web.php`
+7. Type in your terminal: `composer require laravel/ui` and `php artisan ui vue --auth`
+8. In your terminal run `composer dump-autoload`
+9. Run `php artisan ui material` command to install the Material preset. This will install all the necessary assets and also the custom auth views, it will also add the auth route in `routes/web.php`
 (NOTE: If you run this command several times, be sure to clean up the duplicate Auth entries in routes/web.php)
-9. Run `php artisan migrate --seed` to create basic users table
+10. Run `php artisan migrate --seed` to create basic users table
 
 
 ## Usage
 
 Register a user or login using **admin@material.com** and **secret** and start testing the preset (make sure to run the migrations and seeders for these credentials to be available).
 
-Besides the dashboard and the auth pages this preset also has a user management example and an edit profile page. All the necessary files (controllers, requests, views) are installed out of the box and all the needed routes are added to `routes/web.php`. Keep in mind that all of the features can be viewed once you login using the credentials provided above or by registering your own user. 
+Besides the dashboard and the auth pages this preset also has an edit profile page. All the necessary files (controllers, requests, views) are installed out of the box and all the needed routes are added to `routes/web.php`. Keep in mind that all of the features can be viewed once you login using the credentials provided above or by registering your own user. 
 
 ### Dashboard
 
@@ -64,7 +66,7 @@ You can access the dashboard either by using the "**Dashboard**" link in the lef
 
 You have the option to edit the current logged in user's profile (change name, email and password). To access this page just click the "**User profile**" link in the left sidebar or by adding **/profile** in the url.
 
-The `App\Htttp\Controlers\ProfileController` handles the update of the user information. 
+The `App\Http\Controllers\ProfileController` handles the update of the user information. 
 
 ```
 public function update(ProfileRequest $request)
@@ -85,57 +87,6 @@ public function rules()
         'password' => ['required', 'min:6', 'confirmed', 'different:old_password'],
         'password_confirmation' => ['required', 'min:6'],
     ];
-}
-```
-
-### User management
-
-The preset comes with a user management option out of the box. To access this click the "**User Management**" link in the left sidebar or add **/user** to the url.
-The first thing you will see is the listing of the existing users. You can add new ones by clicking the "**Add user**" button (above the table on the right). On the Add user page you will see the form that allows you to do this. All pages are generate using blade templates:
-
-```
-<div class="row">
-  <label class="col-sm-2 col-form-label">{{ __('Name') }}</label>
-  <div class="col-sm-7">
-    <div class="form-group{{ $errors->has('name') ? ' has-danger' : '' }}">
-      <input class="form-control{{ $errors->has('name') ? ' is-invalid' : '' }}" name="name" id="input-name" type="text" placeholder="{{ __('Name') }}" value="{{ old('name') }}" required="true" aria-required="true"/>
-      @if ($errors->has('name'))
-        <span id="name-error" class="error text-danger" for="input-name">{{ $errors->first('name') }}</span>
-      @endif
-    </div>
-  </div>
-</div>
-```
-
-Also validation rules were added so you will know exactely what to enter in the form fields (see `App\Http\Requests\UserRequest`). Note that these validation rules also apply for the user edit option.
-
-```
-public function rules()
-{
-    return [
-        'name' => [
-            'required', 'min:3'
-        ],
-        'email' => [
-            'required', 'email', Rule::unique((new User)->getTable())->ignore($this->route()->user->id ?? null)
-        ],
-        'password' => [
-            $this->route()->user ? 'nullable' : 'required', 'confirmed', 'min:6'
-        ]
-    ];
-}
-```
-
-Once you add more users, the list will get bigger and for every user you will have edit and delete options (access these options by clicking the three dotted menu that appears at the end of every line). 
-
-All the sample code for the user management can be found in `App\Http\Controllers\UserController`. See store method example bellow:
-
-```
-public function store(UserRequest $request, User $model)
-{
-    $model->create($request->merge(['password' => Hash::make($request->get('password'))])->all());
-
-    return redirect()->route('user.index')->withStatus(__('User successfully created.'));
 }
 ```
 ## Table of Contents
@@ -466,8 +417,6 @@ The documentation for the Material Dashboard Laravel is hosted at our [website](
         |       edit.blade.php
         |       
         \---users
-                create.blade.php
-                edit.blade.php
                 index.blade.php
 ```
 
