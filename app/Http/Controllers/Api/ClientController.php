@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\DispatcherHistoryPayment;
+use App\Sale;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
 use App\Station;
-use App\UserHistoryDeposit;
+use App\Deposit;
 use Illuminate\Support\Facades\Auth;
 use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -15,10 +15,10 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class ClientController extends Controller
 {
     // funcion para obtener informacion del usuario hacia la pagina princial
-    public function main()
+    public function index()
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            $dataCar = array('number_plate' => '', 'type_car' => '');
+        if (($user = Auth::user())->verifyRole(5)) {
+            $dataCar = array('number_plate' => null, 'type_car' => null);
             if (($car = $user->client->car) != null) {
                 $dataCar = array('number_plate' => $car->number_plate, 'type_car' => $car->type_car);
             }
@@ -28,9 +28,9 @@ class ClientController extends Controller
             $data['second_surname'] = $user->second_surname;
             $data['email'] = $user->email;
             $data['client']['membership'] = $user->username;
-            $data['client']['current_balance'] = $user->client->current_balance;
-            $data['client']['shared_balance'] = $user->client->shared_balance;
-            $data['client']['total_shared_balance'] = count(SharedBalance::where([['receiver_id', $user->client->id], ['balance', '>', 0], ['status', 4]])->get());
+            $data['client']['current_balance'] = $user->client->deposits->where('status', 4)->sum('balance');
+            $data['client']['shared_balance'] = $user->client->depositReceived->where('status', 4)->sum('balance');
+            $data['client']['total_shared_balance'] = count($user->client->depositReceived->where('status', 4)->where('balance', '>', 0));
             $data['client']['points'] = $user->client->points;
             $data['client']['image_qr'] = $user->username;
             $data['data_car'] = $dataCar;
@@ -41,7 +41,7 @@ class ClientController extends Controller
     // Funcion principal para la ventana de abonos
     public function getListStations()
     {
-        if (Auth::user()->roles[0]->name == 'usuario') {
+        if (Auth::user()->verifyRole(5)) {
             $data = array();
             foreach (Station::all() as $station) {
                 array_push($data, array('id' => $station->id, 'name' => $station->name));
@@ -53,12 +53,12 @@ class ClientController extends Controller
     // Funcion para devolver el historial de abonos a la cuenta del usuario
     public function history(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
+        if (($user = Auth::user())->verifyRole(5)) {
             try {
+                $payments = array();
                 switch ($request->type) {
                     case 'payment':
-                        if (count($balances = $this->getBalances(new DispatcherHistoryPayment(), $request->start, $request->end, $user, null, null)) > 0) {
-                            $payments = array();
+                        if (count($balances = $this->getBalances(new Sale(), $request->start, $request->end, $user, null, null)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['balance'] = $balance->payment;
                                 $data['station'] = $balance->station->name;
@@ -73,9 +73,9 @@ class ClientController extends Controller
                             }
                             return $this->successResponse('payments', $payments);
                         }
+                        break;
                     case 'balance':
-                        if (count($balances = $this->getBalances(new UserHistoryDeposit(), $request->start, $request->end, $user, 4, null)) > 0) {
-                            $payments = array();
+                        if (count($balances = $this->getBalances(new Deposit(), $request->start, $request->end, $user, 4, null)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['balance'] = $balance->balance;
                                 $data['station'] = $balance->station->name;
@@ -86,16 +86,19 @@ class ClientController extends Controller
                             }
                             return $this->successResponse('balances', $payments);
                         }
+                        break;
                     case 'share':
                         if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'transmitter_id')) > 0) {
                             $payments = $this->getSharedBalances($balances, 'receiver');
                             return $this->successResponse('balances', $payments);
                         }
+                        break;
                     case 'received':
                         if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'receiver_id')) > 0) {
                             $payments = $this->getSharedBalances($balances, 'transmitter');
                             return $this->successResponse('balances', $payments);
                         }
+                        break;
                 }
                 return $this->errorResponse('Sin movimientos en la cuenta');
             } catch (Exception $e) {

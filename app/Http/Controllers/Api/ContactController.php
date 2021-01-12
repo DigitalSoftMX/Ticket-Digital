@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Client;
 use App\Contact;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use App\Eucomb\User as EucombUser;
 use App\User;
 use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -17,8 +15,8 @@ class ContactController extends Controller
     // Funcion para obtener los contactos de un usuario
     public function getListContacts()
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            if (count($contacts = Contact::where('transmitter_id', $user->client->id)->get()) > 0) {
+        if (($user = Auth::user())->verifyRole(5)) {
+            if (count($contacts = $user->client->contacts) > 0) {
                 $listContacts = array();
                 foreach ($contacts as $contact) {
                     $data['id'] = $contact->receiver->id;
@@ -37,7 +35,7 @@ class ContactController extends Controller
     // Funcion para obtener un contacto buscado por un usuario tipo cliente
     public function lookingForContact(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
+        if (($user = Auth::user())->verifyRole(5)) {
             if (($contact = User::where([['username', $request->membership], ['username', '!=', $user->username]])->first()) != null) {
                 if ($contact->roles[0]->id == 5) {
                     $userTicket['id'] = $contact->client->id;
@@ -55,12 +53,10 @@ class ContactController extends Controller
     // Funcion para agregar un contacto a un contacto
     public function addContact(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            if (!(Contact::where([['transmitter_id', $user->client->id], ['receiver_id', $request->id_contact]])->exists())) {
+        if (($user = Auth::user())->verifyRole(5)) {
+            if (!($user->client->contacts->where('receiver_id', $request->id_contact)->first())) {
                 $contact = new Contact;
-                $contact->transmitter_id = $user->client->id;
-                $contact->receiver_id = $request->id_contact;
-                $contact->save();
+                $contact->create($request->merge(['transmitter_id' => $user->client->id, 'receiver_id' => $request->id_contact])->all());
                 return $this->successResponse('message', 'Contacto agregado correctamente');
             }
             return $this->errorResponse('El usuario ya ha sido agregado anteriormente');
@@ -70,8 +66,8 @@ class ContactController extends Controller
     // Funcion para eliminar a un contacto
     public function deleteContact(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            if (($contact = Contact::where([['transmitter_id', $user->client->id], ['receiver_id', $request->id_contact]])->first()) != null) {
+        if (($user = Auth::user())->verifyRole(5)) {
+            if (($contact = $user->client->contacts->where('receiver_id', $request->id_contact)->first()) != null) {
                 $contact->delete();
                 return $this->successResponse('message', 'Contacto eliminado correctamente');
             }

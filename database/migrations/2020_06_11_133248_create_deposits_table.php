@@ -17,7 +17,6 @@ class CreateDepositsTable extends Migration
             $table->bigIncrements('id');
             $table->unsignedBigInteger('client_id');
             $table->float('balance');
-            $table->integer('points');
             $table->string('image_payment');
             $table->unsignedBigInteger('station_id');
             $table->unsignedBigInteger('status');

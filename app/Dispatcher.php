@@ -26,6 +26,11 @@ class Dispatcher extends Model
     // Relacion con la tabla de registro de cobros
     public function historyPayments()
     {
-        return $this->belongsTo(DispatcherHistoryPayment::class);
+        return $this->belongsTo(Sale::class);
+    }
+    // Relacion con los turnos
+    public function times()
+    {
+        return $this->hasMany(RegisterTime::class);
     }
 }

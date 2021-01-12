@@ -26,16 +26,15 @@ class UserController extends Controller
                 $data['email'] = $user->email;
                 $data['sex'] = $user->sex;
                 $data['birthdate'] = $user->client->birthdate;
-                if (($car = $user->client->car) != "") {
+                if (($car = $user->client->car) != null) {
                     $dataCar = array('number_plate' => $car->number_plate, 'type_car' => $car->type_car);
                 } else {
-                    $dataCar = array('number_plate' => '', 'type_car' => '');
+                    $dataCar = array('number_plate' => null, 'type_car' => null);
                 }
                 $data['data_car'] = $dataCar;
                 return $this->successResponse('user', $data);
             case 'despachador':
-                $data = $this->getDataUser($user);
-                return $this->successResponse('user', $data);
+                return $this->successResponse('user', $this->getDataUser($user));
             default:
                 return $this->logout(JWTAuth::getToken());
         }
@@ -50,17 +49,16 @@ class UserController extends Controller
      */
     public function update(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string',
-            'first_surname' => 'required|string',
-            'email' => 'required|email',
-            // 'phone' => 'required|string|min:10|max:10',
-        ]);
-        if ($validator->fails()) {
-            return $this->errorResponse($validator->errors());
-        }
         switch (($user = Auth::user())->roles[0]->name) {
             case 'usuario':
+                $validator = Validator::make($request->all(), [
+                    'name' => 'required|string',
+                    'first_surname' => 'required|string',
+                    'email' => 'required|email',
+                ]);
+                if ($validator->fails()) {
+                    return $this->errorResponse($validator->errors());
+                }
                 // Registrando la informacion basica del cliente
                 $user->update($request->only('name', 'first_surname', 'second_surname', 'phone', 'address', 'sex'));
                 //registrando el correo
@@ -75,10 +73,19 @@ class UserController extends Controller
                 // Registrando las datos del carro
                 if ($request->number_plate != "" || $request->type_car != "") {
                     if ($user->client->car == null) {
-                        $request->merge(['client_id' => $user->client->id]);
-                        $car = new DataCar();
-                        $car->create($request->only('client_id', 'number_plate', 'type_car'));
+                        if (!(DataCar::where('number_plate', $request->number_plate)->exists())) {
+                            $request->merge(['client_id' => $user->client->id]);
+                            $car = new DataCar();
+                            $car->create($request->only('client_id', 'number_plate', 'type_car'));
+                        } else {
+                            return $this->errorResponse('El numero de placa ya ha sido registrado');
+                        }
                     } else {
+                        if ($request->number_plate != $user->client->car->number_plate) {
+                            if (DataCar::where('number_plate', $request->number_plate)->exists()) {
+                                return $this->errorResponse('El numero de placa ya ha sido registrado');
+                            }
+                        }
                         $user->client->car->update($request->only('number_plate', 'type_car'));
                     }
                 }
@@ -86,10 +93,19 @@ class UserController extends Controller
                 if ($request->password != "") {
                     $user->update(['password' => bcrypt($request->password)]);
                     $this->logout(JWTAuth::getToken());
-                    return $this->successResponse('message', 'Datos actualizados correctamente, inicie sesión de nuevo');
+                    return $this->successResponse('message', 'Datos actualizados correctamente, inicie sesión nuevamente');
                 }
                 break;
             case 'despachador':
+                $validator = Validator::make($request->all(), [
+                    'name' => 'required|string',
+                    'first_surname' => 'required|string',
+                    'phone' => 'required|string|min:10|max:10',
+                    'address' => 'required'
+                ]);
+                if ($validator->fails()) {
+                    return $this->errorResponse($validator->errors());
+                }
                 $user->update($request->only('name', 'first_surname', 'second_surname', 'phone', 'address'));
                 break;
             default:
@@ -116,7 +132,7 @@ class UserController extends Controller
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($token));
-            return $this->successResponse('message', 'Cierre de sesion correcto');
+            return $this->successResponse('message', 'Usuario no autorizado');
         } catch (Exception $e) {
             return $this->errorResponse('Token invalido');
         }
