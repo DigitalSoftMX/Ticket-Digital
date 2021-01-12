@@ -2,34 +2,27 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Client;
-use App\DispatcherHistoryPayment;
+use App\Sale;
 use App\Gasoline;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\RegisterTime;
 use App\Schedule;
-use App\SharedBalance;
 use App\User;
-use App\UserHistoryDeposit;
 use Exception;
 use Illuminate\Support\Facades\Auth;
-use XBase\Table;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class DispatcherController extends Controller
 {
     // Funcion principal del despachador
-    public function main()
+    public function index()
     {
-        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+        if (($user = Auth::user())->verifyRole(4)) {
             $schedule = Schedule::where('station_id', $user->dispatcher->station->id)->whereTime('start', '<=', now()->format('H:i'))->whereTime('end', '>=', now()->format('H:i'))->first();
-            if (count($time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get()) > 0) {
-                $payments = DispatcherHistoryPayment::whereDate('created_at', now()->format('Y-m-d'))->where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['time_id', $time[count($time) - 1]->id]])->get();
-                $totalPayment = 0;
-                foreach ($payments as $payment) {
-                    $totalPayment += $payment->payment;
-                }
+            if (($time = $user->dispatcher->times->last()) != null) {
+                $payments = Sale::whereDate('created_at', now()->format('Y-m-d'))->where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station_id], ['time_id', $time->id]])->get();
+                $totalPayment = $payments->sum('payment');
             } else {
                 $payments = array();
                 $totalPayment = 0;
@@ -53,25 +46,25 @@ class DispatcherController extends Controller
     // Registro de inicio de turno y termino de turno
     public function startEndTime(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+        if (($user = Auth::user())->verifyRole(4)) {
+            $time = $user->dispatcher->times->last();
             switch ($request->time) {
                 case 'true':
+                    if ($time != null) {
+                        if ($time->status == 6) {
+                            return $this->errorResponse('Finalice el turno actual para iniciar otro');
+                        }
+                    }
                     $schedule = Schedule::whereTime('start', '<=', now()->format('H:i'))->whereTime('end', '>=', now()->format('H:i'))->where('station_id', $user->dispatcher->station->id)->first();
                     $time = new RegisterTime();
-                    $time->dispatcher_id = $user->dispatcher->id;
-                    $time->station_id = $user->dispatcher->station->id;
-                    $time->schedule_id = $schedule->id;
-                    $time->save();
+                    $time->create(['dispatcher_id' => $user->dispatcher->id, 'station_id' => $user->dispatcher->station->id, 'schedule_id' => $schedule->id, 'status' => 6]);
                     return $this->successResponse('message', 'Inicio de turno registrado');
                 case 'false':
-                    try {
-                        $time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get();
-                        $time[count($time) - 1]->updated_at = now();
-                        $time[count($time) - 1]->save();
+                    if ($time != null) {
+                        $time->update(['status' => 8]);
                         return $this->successResponse('message', 'Fin de turno registrado');
-                    } catch (Exception $e) {
-                        return $this->errorResponse('Turno no registrado');
                     }
+                    return $this->errorResponse('Turno no registrado');
             }
             return $this->errorResponse('Registro no valido');
         }
@@ -80,7 +73,7 @@ class DispatcherController extends Controller
     // Metodo para obtner la lista de gasolina
     public function gasolineList()
     {
-        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+        if (($user = Auth::user())->verifyRole(4)) {
             $gasolines = array();
             $islands = array();
             foreach (Gasoline::all() as $gasoline) {
@@ -99,38 +92,20 @@ class DispatcherController extends Controller
     // Obteniendo el valor de venta por bomba
     public function getSale(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+        if (($user = Auth::user())->verifyRole(4)) {
             try {
                 ini_set("allow_url_fopen", 1);
-                $json = $this->curl_get_file_contents('http://' . $user->dispatcher->station->ip . '/sales/public/record.php?bomb_id=' . $request->bomb_id);
-                return \json_decode($json, true);
+                $curl = curl_init();
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($curl, CURLOPT_URL, 'http://' . $user->dispatcher->station->ip . '/sales/public/record.php?bomb_id=' . $request->bomb_id);
+                $contents = curl_exec($curl);
+                curl_close($curl);
+                if ($contents) {
+                    return \json_decode($contents, true);
+                }
+                return $this->errorResponse('Intente más tarde');
             } catch (Exception $e) {
                 return $this->errorResponse('La ip o la bomba son incorrectos');
-            }
-        }
-        return $this->logout(JWTAuth::getToken());
-    }
-    // Funcion para obtener los datos de una venta en Eucomb
-    public function dataSale(Request $request)
-    {
-        if (Auth::user()->roles[0]->name == 'despachador') {
-            /* accediendo a la lectura del archivo .dbf NOTA:este archivo es dinamico y necesitamos accesos a las estaciones
-            para su obtencion y lectura correcta*/
-            try {
-                $table = new Table('../storage/app/public/TRANS.DBF', null, 'cp1251');
-                $sales = array();
-                while ($record = $table->nextRecord()) {
-                    if ($record->get('bomba') == $request->bomb_id) {
-                        $sale['id_gasoline'] = $record->get('prod');
-                        $sale['liters'] = $record->get('cant');
-                        $sale['price'] = $record->get('importe');
-                        $sale['sale'] = $record->get('id_venta');
-                        array_push($sales, $sale);
-                    }
-                }
-                return $this->successResponse('sale', $sales[count($sales) - 1]);
-            } catch (Exception $e) {
-                return $this->errorResponse('Ha ocurrido un error al buscar el registro');
             }
         }
         return $this->logout(JWTAuth::getToken());
@@ -138,35 +113,36 @@ class DispatcherController extends Controller
     // Funcion para realizar el cobro hacia un cliente
     public function makeNotification(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+        if (($user = Auth::user())->verifyRole(4)) {
             if (($dispatcher = $user->dispatcher)->station_id == $request->id_station) {
                 if (($client = User::where('username', $request->membership)->first()) != null) {
                     if ($request->tr_membership == "") {
-                        $payment = UserHistoryDeposit::where([['client_id', $client->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first();
+                        $deposit = $client->client->deposits->where('status', 4)->where('station_id', $request->id_station)->where('balance', '>=', $request->price)->first();
                     } else {
-                        $transmitter = User::where('username', $request->tr_membership)->first();
-                        $payment = SharedBalance::where([['transmitter_id', $transmitter->client->id], ['receiver_id', $client->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first();
+                        if (($transmitter = User::where('username', $request->tr_membership)->first()) == null) {
+                            return $this->errorResponse('La membresía del receptor no esta disponible');
+                        }
+                        $deposit = $client->client->depositReceived->where('transmitter_id', $transmitter->client->id)->where('station_id', $request->id_station)->where('balance', '>=', $request->price)->where('status', 4)->first();
                     }
-                    if ($payment != null) {
-                        $time = RegisterTime::where([['dispatcher_id', $dispatcher->id], ['station_id', $dispatcher->station->id]])->get();
+                    if ($deposit != null) {
                         $gasoline = Gasoline::find($request->id_gasoline);
                         $fields = array(
                             'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
                             'data' => array(
-                                "price" => $request->price,
-                                "gasoline" => $gasoline->name,
-                                "liters" => $request->liters,
-                                "estacion" => $dispatcher->station->name,
-                                'ids_dispatcher' => $request->ids_dispatcher,
                                 'id_dispatcher' => $dispatcher->id,
-                                'id_gasoline' => $request->id_gasoline,
+                                'sale' => $request->sale,
+                                'id_gasoline' => $gasoline->id,
+                                "liters" => $request->liters,
+                                "price" => $request->price,
                                 'id_schedule' => (Schedule::whereTime('start', '<=', now()->format('H:i'))->whereTime('end', '>=', now()->format('H:i'))->where('station_id', $dispatcher->station_id)->first())->id,
                                 'id_station' => $dispatcher->station_id,
-                                'tr_membership' => $request->tr_membership,
-                                'id_time' => $time[count($time) - 1]->id,
+                                'id_time' => $dispatcher->times->last()->id,
                                 'no_island' => $dispatcher->island->island,
                                 'no_bomb' => $request->bomb_id,
-                                'sale' => $request->sale
+                                "gasoline" => $gasoline->name,
+                                "estacion" => $dispatcher->station->name,
+                                'ids_dispatcher' => $request->ids_dispatcher,
+                                'tr_membership' => $request->tr_membership
                             ), 'contents' => array(
                                 "en" => "English message from postman",
                                 "es" => "Realizaste una solicitud de pago."
@@ -190,7 +166,7 @@ class DispatcherController extends Controller
                         curl_close($ch);
                         return $this->successResponse('notification', \json_decode($response));
                     }
-                    return $this->errorResponse('No hay abonos realizados');
+                    return $this->errorResponse('Saldo insuficiente');
                 }
                 return $this->errorResponse('Membresía no disponible');
             }
@@ -201,10 +177,9 @@ class DispatcherController extends Controller
     // Funcion para obtener la lista de horarios de una estacion
     public function getListSchedules()
     {
-        if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            $schedules = Schedule::where('station_id', $user->dispatcher->station_id)->get();
+        if (($user = Auth::user())->verifyRole(4)) {
             $dataSchedules = array();
-            foreach ($schedules as $schedule) {
+            foreach ($user->dispatcher->station->schedules as $schedule) {
                 $data = array('id' => $schedule->id, 'name' => $schedule->name);
                 array_push($dataSchedules, $data);
             }
@@ -215,9 +190,9 @@ class DispatcherController extends Controller
     // Funcion para obtener los cobros del dia
     public function getPaymentsNow()
     {
-        if (($user = Auth::user())->roles[0]->name == 'despachador') {
-            if (count($time = RegisterTime::where([['dispatcher_id', $user->dispatcher->id], ['station_id', $user->dispatcher->station->id]])->get()) > 0) {
-                return $this->getPayments(['time_id', $time[count($time) - 1]->id], $user->dispatcher, now()->format('Y-m-d'));
+        if (($user = Auth::user())->verifyRole(4)) {
+            if (($time = $user->dispatcher->times->last()) != null) {
+                return $this->getPayments(['time_id', $time->id], $user->dispatcher, now()->format('Y-m-d'));
             }
             return $this->errorResponse('Aun no hay registro de cobros');
         }
@@ -226,7 +201,7 @@ class DispatcherController extends Controller
     // Funcion para devolver la lista de cobros por fecha
     public function getListPayments(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'despachador') {
+        if (($user = Auth::user())->verifyRole(4)) {
             return $this->getPayments(['schedule_id', $request->id_schedule], $user->dispatcher, $request->date);
         }
         return $this->logout(JWTAuth::getToken());
@@ -234,7 +209,7 @@ class DispatcherController extends Controller
     // Funcion para listar los cobros del depachador
     private function getPayments($array, $dispatcher, $date)
     {
-        if (count($payments = DispatcherHistoryPayment::where([['dispatcher_id', $dispatcher->id], ['station_id', $dispatcher->station_id], $array])->whereDate('created_at', $date)->get()) > 0) {
+        if (count($payments = Sale::where([['dispatcher_id', $dispatcher->id], ['station_id', $dispatcher->station_id], $array])->whereDate('created_at', $date)->get()) > 0) {
             $dataPayment = array();
             $magna = 0;
             $premium = 0;
@@ -276,18 +251,6 @@ class DispatcherController extends Controller
         } catch (Exception $e) {
             return $this->errorResponse('Token invalido');
         }
-    }
-    // consulta por uRL
-    function curl_get_file_contents($URL)
-    {
-        $c = curl_init();
-        curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($c, CURLOPT_URL, $URL);
-        $contents = curl_exec($c);
-        curl_close($c);
-
-        if ($contents) return $contents;
-        else return FALSE;
     }
     // Funcion mensajes de error
     private function errorResponse($message)

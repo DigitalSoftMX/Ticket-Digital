@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Client;
-use App\DispatcherHistoryPayment;
+use App\Sale;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\SharedBalance;
 use App\User;
-use App\UserHistoryDeposit;
+use App\Deposit;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -18,8 +18,8 @@ class BalanceController extends Controller
     // Funcion para obtener la lista de los abonos realizados por el usuario a su cuenta
     public function getPersonalPayments()
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            if (count($payments = UserHistoryDeposit::where([['client_id', $user->client->id], ['balance', '>', 0], ['status', 4]])->get()) > 0) {
+        if (($user = Auth::user())->verifyRole(5)) {
+            if (count($payments = $user->client->deposits->where('status', 4)->where('balance', '>', 0)) > 0) {
                 $deposits = array();
                 foreach ($payments as $payment) {
                     $data['id'] = $payment->id;
@@ -38,21 +38,16 @@ class BalanceController extends Controller
     // Funcion para realizar un abono a la cuenta de un usuario
     public function addBalance(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
+        if (($user = Auth::user())->verifyRole(5)) {
             if ($request->deposit % 100 == 0 && $request->deposit > 0) {
                 // Obteniendo el archivo de imagen de pago
                 if (($file = $request->file('image')) != NULL) {
                     if ((strpos($file->getClientMimeType(), 'image')) === false) {
                         return $this->errorResponse('El archivo no es una imagen');
                     }
-                    $history = new UserHistoryDeposit();
-                    $history->client_id = $user->client->id;
-                    $history->balance = $request->deposit;
-                    $history->points = 0;
-                    $history->image_payment = $request->file('image')->store($user->username . '/' . $request->id_station, 'public');
-                    $history->station_id = $request->id_station;
-                    $history->status = 1;
-                    $history->save();
+                    $request->merge(['client_id' => $user->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
+                    $deposit = new Deposit();
+                    $deposit->create($request->all());
                     return $this->successResponse('message', 'Abono realizado correctamente');
                 }
                 return $this->errorResponse('Debe subir su comprobante');
@@ -64,9 +59,8 @@ class BalanceController extends Controller
     // Funcion para devolver la membresía del cliente y la estacion
     public function useBalance(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            $payment = UserHistoryDeposit::find($request->id_payment);
-            if ($payment != null && $payment->client_id == $user->client->id) {
+        if (($user = Auth::user())->verifyRole(5)) {
+            if (($payment = $user->client->deposits->find($request->id_payment)) != null) {
                 $station['id'] = $payment->station->id;
                 $station['name'] = $payment->station->name;
                 $station['number_station'] = $payment->station->number_station;
@@ -83,34 +77,30 @@ class BalanceController extends Controller
     // Funcion para enviar saldo a un contacto del usuario
     public function sendBalance(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
+        if (($user = Auth::user())->verifyRole(5)) {
             if ($request->balance % 100 == 0 && $request->balance > 0) {
                 // Obteniendo el saldo disponible en la estacion correspondiente
-                $payment = UserHistoryDeposit::find($request->id_payment);
-                if ($payment != null && $payment->client_id == $user->client->id && $payment->status == 4) {
-                    if (!($request->balance > $payment->balance)) {
-                        $this->registerSharedBalance($user, $request, $payment, 5);
+                $payment = $user->client->deposits->find($request->id_payment);
+                if ($payment != null && $payment->status == 4) {
+                    if ($payment->balance >= $request->balance) {
+                        $request->merge(['transmitter_id' => $user->client->id, 'receiver_id' => $request->id_contact, 'station_id' => $payment->station_id, 'status' => 5]);
+                        $sharedBalance = new SharedBalance();
+                        $sharedBalance->create($request->all());
                         if (($receivedBalance = SharedBalance::where([['transmitter_id', $user->client->id], ['receiver_id', $request->id_contact], ['station_id', $payment->station_id], ['status', 4]])->first()) != null) {
                             $receivedBalance->balance += $request->balance;
                             $receivedBalance->save();
                         } else {
-                            $this->registerSharedBalance($user, $request, $payment, 4);
+                            $sharedBalance = new SharedBalance();
+                            $sharedBalance->create($request->merge(['status' => 4])->all());
                         }
                         $payment->balance -= $request->balance;
                         $payment->save();
-                        // Actualizando el abono total del cliente emisor
-                        $user->client->current_balance -= $request->balance;
-                        $user->client->save();
-                        // Acutalizando el abono compartido del cliente receptor
-                        $receiverUser = Client::find($request->id_contact);
-                        $receiverUser->shared_balance += $request->balance;
-                        $receiverUser->save();
-                        $this->makeNotification($receiverUser->ids, null, 'Te han compartido saldo', 'Saldo compartido');
+                        $this->makeNotification(Client::find($request->id_contact)->ids, null, 'Te han compartido saldo', 'Saldo compartido');
                         return $this->successResponse('message', 'Saldo compartido correctamente');
                     }
-                    return $this->errorResponse('El deposito es mayor al disponible');
+                    return $this->errorResponse('Saldo insuficiente');
                 }
-                return $this->errorResponse('El deposito no corresponde al usuario');
+                return $this->errorResponse('Saldo no disponible');
             }
             return $this->errorResponse('La cantidad debe ser multiplo de $100');
         }
@@ -119,8 +109,8 @@ class BalanceController extends Controller
     // Funcion que busca los abonos recibidos
     public function listReceivedPayments()
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            if (count($balances = SharedBalance::where([['receiver_id', $user->client->id], ['balance', '>', 0], ['status', 4]])->get()) > 0) {
+        if (($user = Auth::user())->verifyRole(5)) {
+            if (count($balances = $user->client->depositReceived->where('status', 4)->where('balance', '>', 0)) > 0) {
                 $receivedBalances = array();
                 foreach ($balances as $balance) {
                     $data['id'] = $balance->id;
@@ -142,16 +132,15 @@ class BalanceController extends Controller
     // Funcion para devolver informacion de un saldo compartido
     public function useSharedBalance(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
-            $payment = SharedBalance::find($request->id_payment);
-            if ($payment != null && $payment->receiver_id == $user->client->id) {
-                $station['id'] = $payment->station->id;
-                $station['name'] = $payment->station->name;
-                $station['number_station'] = $payment->station->number_station;
+        if (($user = Auth::user())->verifyRole(5)) {
+            if (($deposit = $user->client->depositReceived->find($request->id_payment)) != null) {
+                $station['id'] = $deposit->station->id;
+                $station['name'] = $deposit->station->name;
+                $station['number_station'] = $deposit->station->number_station;
                 return response()->json([
                     'ok' => true,
-                    'tr_membership' => $payment->transmitter->user->username,
-                    'membership' => $payment->receiver->user->username,
+                    'tr_membership' => $deposit->transmitter->user->username,
+                    'membership' => $deposit->receiver->user->username,
                     'station' => $station
                 ]);
             }
@@ -162,36 +151,48 @@ class BalanceController extends Controller
     // Funcion para realizar un pago autorizado por el cliente
     public function makePayment(Request $request)
     {
-        if (($user = Auth::user())->roles[0]->name == 'usuario') {
+        if (($user = Auth::user())->verifyRole(5)) {
             if ($request->authorization == "true") {
                 try {
+                    $request->merge(['dispatcher_id' => $request->id_dispatcher, 'gasoline_id' => $request->id_gasoline, 'payment' => $request->price, 'schedule_id' => $request->id_schedule, 'station_id' => $request->id_station, 'client_id' => $user->client->id, 'time_id' => $request->id_time]);
                     if ($request->tr_membership == "") {
-                        if (($payment = UserHistoryDeposit::where([['client_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first()) != null) {
-                            $this->registerPayment($request, $user->client->id, $payment);
-                            $user->client->current_balance -= $request->price;
+                        if (($deposit = $user->client->deposits->where('status', 4)->where('station_id', $request->id_station)->where('balance', '>=', $request->price)->first()) != null) {
+                            $sale = new Sale();
+                            $sale->create($request->all());
+                            $deposit->balance -= $request->price;
+                            $deposit->save();
                             if ($request->id_gasoline != 3) {
-                                $user->client->points += $this->roundHalfDown($request->liters);
-                                $payment->points += $this->roundHalfDown($request->liters);
+                                $points = 0;
+                                foreach (Sale::where([['client_id', $user->client->id], ['transmitter_id', null]])->whereDate('created_at', now()->format('Y-m-d'))->get() as $payment) {
+                                    $points += $this->roundHalfDown($payment->liters);
+                                }
+                                if ($points > 80) {
+                                    $points -= $this->roundHalfDown($user->client->payments->last()->liters);
+                                    if ($points <= 80) {
+                                        $points = 80 - $points;
+                                    } else {
+                                        $points = 0;
+                                    }
+                                } else {
+                                    $points = $this->roundHalfDown($request->liters);
+                                }
+                                $user->client->points += $points;
+                                $user->client->save();
                             }
-                            $payment->save();
-                            $user->client->save();
                         } else {
                             return $this->errorResponse('Saldo insuficiente');
                         }
                     } else {
                         $transmitter = User::where('username', $request->tr_membership)->first();
-                        if (($payment = SharedBalance::where([['transmitter_id', $transmitter->client->id], ['receiver_id', $user->client->id], ['station_id', $request->id_station], ['balance', '>=', $request->price], ['status', 4]])->first()) != null) {
-                            $this->registerPayment($request, $user->client->id, $payment);
+                        if (($payment = $user->client->depositReceived->where('transmitter_id', $transmitter->client->id)->where('station_id', $request->id_station)->where('status', 4)->where('balance', '>=', $request->price)->first()) != null) {
+                            $sale = new Sale();
+                            $sale->create($request->merge(['transmitter_id' => $transmitter->client->id])->all());
+                            $payment->balance -= $request->price;
                             $payment->save();
-                            $user->client->shared_balance -= $request->price;
-                            $user->client->save();
                             if ($request->id_gasoline != 3) {
                                 $transmitter->client->points += $this->roundHalfDown($request->liters);
-                                $points = UserHistoryDeposit::where([['client_id', $transmitter->client->id], ['station_id', $request->id_station], ['status', 4]])->first();
-                                $points->points += $this->roundHalfDown($request->liters);
-                                $points->save();
+                                $transmitter->client->save();
                             }
-                            $transmitter->client->save();
                         } else {
                             return $this->errorResponse('Saldo insuficiente');
                         }
@@ -204,35 +205,6 @@ class BalanceController extends Controller
             return $this->makeNotification($request->ids_dispatcher, null, 'Cobro cancelado', 'Pago con QR');
         }
         return $this->logout(JWTAuth::getToken());
-    }
-    // Funcion para registrar un saldo compartido
-    private function registerSharedBalance($user, $request, $payment, $status)
-    {
-        $sharedBalance = new SharedBalance();
-        $sharedBalance->transmitter_id = $user->client->id;
-        $sharedBalance->receiver_id = $request->id_contact;
-        $sharedBalance->balance = $request->balance;
-        $sharedBalance->station_id = $payment->station_id;
-        $sharedBalance->status = $status;
-        $sharedBalance->save();
-    }
-    // Funcion para registrar los pagos
-    private function registerPayment($request, $id, $payment)
-    {
-        $registerPayment = new DispatcherHistoryPayment();
-        $registerPayment->dispatcher_id = $request->id_dispatcher;
-        $registerPayment->sale = $request->sale;
-        $registerPayment->gasoline_id = $request->id_gasoline;
-        $registerPayment->liters = $request->liters;
-        $registerPayment->payment = $request->price;
-        $registerPayment->schedule_id = $request->id_schedule;
-        $registerPayment->station_id = $request->id_station;
-        $registerPayment->client_id = $id;
-        $registerPayment->time_id = $request->id_time;
-        $registerPayment->no_island = $request->no_island;
-        $registerPayment->no_bomb = $request->no_bomb;
-        $registerPayment->save();
-        $payment->balance -= $request->price;
     }
     // Funcion para enviar una notificacion
     private function makeNotification($idsDispatcher, $idsClient, $message, $notification)

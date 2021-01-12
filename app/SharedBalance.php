@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SharedBalance extends Model
 {
+    protected $fillable = ['transmitter_id', 'receiver_id', 'balance', 'station_id', 'status'];
     // Funcion para obtener la informacion de la estacion por medio de su id
     public function station()
     {

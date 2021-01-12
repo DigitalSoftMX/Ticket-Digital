@@ -4,10 +4,9 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DispatcherHistoryPayment extends Model
+class Sale extends Model
 {
-    /* Accediendo a la tabla ventas */
-    protected $table = 'sales';
+    protected $fillable = ['dispatcher_id', 'sale', 'gasoline_id', 'liters', 'payment', 'schedule_id', 'station_id', 'client_id', 'time_id', 'no_island', 'no_bomb', 'transmitter_id'];
     // Enlace con el tipo de gasolina
     public function gasoline()
     {

@@ -2,13 +2,12 @@
 
 namespace App;
 
-use App\Api\Status;
 use Illuminate\Database\Eloquent\Model;
+use App\Api\Status;
 
-class UserHistoryDeposit extends Model
+class Deposit extends Model
 {
-    /* Accediendo a la tabla deposit */
-    protected $table = 'deposits';
+    protected $fillable = ['client_id', 'balance', 'image_payment', 'station_id', 'status'];
     // Conexion con la estacion a la que pertenece el abono
     public function station()
     {

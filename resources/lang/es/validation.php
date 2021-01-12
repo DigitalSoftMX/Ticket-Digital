@@ -181,5 +181,7 @@ return [
         'title'                 => 'título',
         'username'              => 'usuario',
         'year'                  => 'año',
+        'number_plate'          => 'número de placa',
+        'first_surname' => 'apellido paterno'
     ],
 ];

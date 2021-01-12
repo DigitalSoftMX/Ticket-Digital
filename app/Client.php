@@ -13,14 +13,24 @@ class Client extends Model
         return $this->belongsTo(User::class);
     }
     // Relacion para los depositos realizados por el cliente
+    public function deposits()
+    {
+        return $this->hasMany(Deposit::class);
+    }
+    // Relacion con los depositos compartidos
+    public function depositReceived()
+    {
+        return $this->hasMany(SharedBalance::class, 'receiver_id', 'id');
+    }
+    // Relacion para los depositos realizados por el cliente
     public function historyDeposits()
     {
-        return $this->belongsTo(UserHistoryDeposit::class);
+        return $this->belongsTo(Deposit::class);
     }
     // Relacion para los contactos del cliente
     public function contacts()
     {
-        return $this->belongsTo(Contact::class);
+        return $this->hasMany(Contact::class, 'transmitter_id', 'id');
     }
     // Relacion con el tipo de vehiculo
     public function car()
@@ -30,6 +40,6 @@ class Client extends Model
     // Relacion con los pagos que ha realizado
     public function payments()
     {
-        return $this->belongsTo(DispatcherHistoryPayment::class);
+        return $this->hasMany(Sale::class);
     }
 }

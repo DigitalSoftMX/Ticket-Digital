@@ -11,6 +11,16 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 class User extends Authenticatable implements JWTSubject
 {
     use Notifiable;
+    // Metodo para validar un rol permitido
+    public function verifyRole($role)
+    {
+        foreach ($this->roles as $rol) {
+            if ($rol->id == $role) {
+                return true;
+            }
+        }
+        return false;
+    }
     // Relacion a muchos para el rol del usuario
     public function roles()
     {

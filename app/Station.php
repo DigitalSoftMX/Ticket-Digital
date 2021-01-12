@@ -19,7 +19,7 @@ class Station extends Model
     // Relacion con los horarios de la estacion
     public function schedules()
     {
-        return $this->belongsTo(Schedule::class);
+        return $this->hasMany(Schedule::class);
     }
     // Relacino con las islas y bombas de la estacion
     public function islands()

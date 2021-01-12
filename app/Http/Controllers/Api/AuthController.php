@@ -22,16 +22,32 @@ class AuthController extends Controller
     // Metodo para inicar sesion
     public function login(Request $request)
     {
-        switch (count($user = User::where('email', $request->email)->get())) {
+        if (($u = User::where('username', $request->email)->first()) != null) {
+            if ($u->email != null) {
+                $user = User::where('email', $u->email)->get();
+                $request->merge(['email' => $u->email]);
+            } else {
+                return $this->errorResponse('No existe un correo electrónico registrado. Ingrese un correo electrónico.', $u->id);
+            }
+        } else {
+            $user = User::where('email', $request->email)->get();
+        }
+        switch (count($user)) {
             case 0:
-                return $this->errorResponse('El usuario no existe');
+                return $this->errorResponse('El usuario no existe', null);
             case 1:
-                if ($user[0]->roles[0]->name == 'usuario' || $user[0]->roles[0]->name == 'despachador') {
-                    return $this->getToken($request, $user[0]);
+                foreach ($user[0]->roles as $rol) {
+                    if ($rol->id == 4 || $rol->id == 5) {
+                        return $this->getToken($request, $user[0], $rol->id);
+                    }
                 }
-                return $this->errorResponse('Usuario no autorizado');
+                return $this->errorResponse('Usuario no autorizado', null);
             default:
-                return $this->errorResponse('Debe cambiar su correo desde la aplicación Eucomb');
+                if ($u != null) {
+                    return $this->errorResponse('Correo duplicado. Ingrese un nuevo correo.', $u->id);
+                } else {
+                    return $this->errorResponse('Intente ingresar con su membresía.', null);
+                }
         }
     }
     // Metodo para registrar a un usuario nuevo
@@ -44,9 +60,10 @@ class AuthController extends Controller
                 'required', 'email', Rule::unique((new User)->getTable())
             ],
             'password' => 'required|string|min:6',
+            'number_plate' => [Rule::unique((new DataCar())->getTable())],
         ]);
         if ($validator->fails()) {
-            return $this->errorResponse($validator->errors());
+            return $this->errorResponse($validator->errors(), null);
         }
         // Membresia aleatoria no repetible
         while (true) {
@@ -70,19 +87,23 @@ class AuthController extends Controller
         }
         Storage::disk('public')->deleteDirectory($user->username);
         $request->merge(['password' => $password]);
-        return $this->getToken($request, $user);
+        return $this->getToken($request, $user, 5);
     }
-    // Metodo para iniciar sesion, delvuelve el token
-    private function getToken($request, $user)
+    // Método para actualizar solo el correo eletrónico de un usuario
+    public function updateEmail(Request $request)
     {
-        if (!$token = JWTAuth::attempt($request->only('email', 'password'))) {
-            return $this->errorResponse('Datos incorrectos');
+        $validator = Validator::make($request->all(), [
+            'id' => 'required',
+            'email' => [
+                'required', 'email', Rule::unique((new User)->getTable())
+            ],
+        ]);
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors(), $request->id);
         }
-        $user->update(['remember_token' => $token]);
-        if ($user->roles[0]->name == 'usuario') {
-            $user->client->update($request->only('ids'));
-        }
-        return $this->successReponse('token', $token);
+        $user = User::find($request->id);
+        $user->update($request->only('email'));
+        return $this->successReponse('email', $request->email);
     }
     // Metodo para cerrar sesion
     public function logout(Request $request)
@@ -91,8 +112,20 @@ class AuthController extends Controller
             JWTAuth::invalidate(JWTAuth::parseToken($request->token));
             return $this->successReponse('message', 'Cierre de sesión correcto');
         } catch (Exception $e) {
-            return $this->errorResponse('Token inválido');
+            return $this->errorResponse('Token inválido', null);
         }
+    }
+    // Metodo para iniciar sesion, delvuelve el token
+    private function getToken($request, $user, $rol)
+    {
+        if (!$token = JWTAuth::attempt($request->only('email', 'password'))) {
+            return $this->errorResponse('Datos incorrectos', null);
+        }
+        $user->update(['remember_token' => $token]);
+        if ($rol == 5) {
+            $user->client->update($request->only('ids'));
+        }
+        return $this->successReponse('token', $token);
     }
     // Metodo para actualizar la ip de una estacion
     public function uploadIPStation($station_id, Request $request)
@@ -110,11 +143,12 @@ class AuthController extends Controller
         ]);
     }
     // Metodo mensaje de error
-    private function errorResponse($message)
+    private function errorResponse($message, $email)
     {
         return response()->json([
             'ok' => false,
-            'message' => $message
+            'message' => $message,
+            'id' => $email
         ]);
     }
     // Precios de gasolina para wordpress, no se incluye en el proyecto Ticket
