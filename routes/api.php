@@ -37,6 +37,7 @@ Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('balance/getlistreceived', 'Api\BalanceController@listReceivedPayments');
     Route::get('balance/getlistreceived/use', 'Api\BalanceController@useSharedBalance');
     Route::post('balance/makepayment', 'Api\BalanceController@makePayment');
+    Route::post('points', 'Api\BalanceController@addPoints');
 });
 //Rutas para contactos
 Route::group(['middleware' => 'jwtAuth'], function () {
