@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Client;
 use App\DataCar;
+use App\Empresa;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Validation\Rule;
@@ -67,7 +68,7 @@ class AuthController extends Controller
         }
         // Membresia aleatoria no repetible
         while (true) {
-            $membership = 'E-' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
+            $membership = 'E' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
             if (!(User::where('username', $membership)->exists())) {
                 break;
             }
@@ -76,7 +77,7 @@ class AuthController extends Controller
         $request->merge(['username' => $membership, 'active' => 1, 'password' => Hash::make($request->password)]);
         $user = new User();
         $user = $user->create($request->all());
-        $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => 0, 'image' => $membership]);
+        $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => Empresa::find(1)->points, 'image' => $membership]);
         $client = new Client();
         $client->create($request->all());
         $user->roles()->attach('5');

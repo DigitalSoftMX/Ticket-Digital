@@ -182,6 +182,9 @@ return [
         'username'              => 'usuario',
         'year'                  => 'año',
         'number_plate'          => 'número de placa',
-        'first_surname' => 'apellido paterno'
+        'first_surname' => 'apellido paterno',
+        'code' => 'código',
+        'station' => 'estación',
+        'sale' => 'venta'
     ],
 ];

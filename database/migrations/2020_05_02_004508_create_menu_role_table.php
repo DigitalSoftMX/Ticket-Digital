@@ -13,7 +13,7 @@ class CreateMenuRoleTable extends Migration
      */
     public function up()
     {
-        Schema::connection('mysql')->create('menu_role', function (Blueprint $table) {
+        Schema::create('menu_role', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('menu_id');
             $table->unsignedBigInteger('role_id');
@@ -35,6 +35,6 @@ class CreateMenuRoleTable extends Migration
      */
     public function down()
     {
-        Schema::connection('mysql')->dropIfExists('menu_role');
+        Schema::dropIfExists('menu_role');
     }
 }

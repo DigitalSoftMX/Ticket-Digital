@@ -18,6 +18,7 @@ class CreateRegisterTimesTable extends Migration
             $table->unsignedBigInteger('dispatcher_id');
             $table->unsignedBigInteger('station_id');
             $table->unsignedBigInteger('schedule_id');
+            $table->unsignedBigInteger('status')->nullable();
             $table->timestamps();
 
             $table->foreign('dispatcher_id')->references('id')->on('dispatchers')
@@ -29,6 +30,10 @@ class CreateRegisterTimesTable extends Migration
                 ->onUpdate('cascade');
 
             $table->foreign('schedule_id')->references('id')->on('schedules')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+
+            $table->foreign('status')->references('id')->on('status')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
         });

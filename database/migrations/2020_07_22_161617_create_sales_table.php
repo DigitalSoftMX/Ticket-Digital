@@ -26,6 +26,7 @@ class CreateSalesTable extends Migration
             $table->unsignedBigInteger('time_id');
             $table->integer('no_island');
             $table->integer('no_bomb');
+            $table->unsignedBigInteger('transmitter_id')->nullable();
             $table->timestamps();
 
             $table->foreign('dispatcher_id')->references('id')->on('dispatchers')
@@ -49,6 +50,10 @@ class CreateSalesTable extends Migration
                 ->onUpdate('cascade');
 
             $table->foreign('time_id')->references('id')->on('register_times')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+
+            $table->foreign('transmitter_id')->references('id')->on('clients')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
         });
