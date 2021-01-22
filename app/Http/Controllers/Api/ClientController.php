@@ -44,7 +44,10 @@ class ClientController extends Controller
         if (Auth::user()->verifyRole(5)) {
             $data = array();
             foreach (Station::all() as $station) {
-                array_push($data, array('id' => $station->id, 'name' => $station->name));
+                $dataStation['id'] = $station->id;
+                $dataStation['name'] = $station->name;
+                $dataStation['address'] = $station->address;
+                array_push($data, $dataStation);
             }
             return $this->successResponse('stations', $data);
         }

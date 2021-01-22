@@ -617,6 +617,7 @@ class ComposerStaticInitaab82abb8abc19bf7d34940c7817c179
         'App\\DataCar' => __DIR__ . '/../..' . '/app/DataCar.php',
         'App\\Deposit' => __DIR__ . '/../..' . '/app/Deposit.php',
         'App\\Dispatcher' => __DIR__ . '/../..' . '/app/Dispatcher.php',
+        'App\\Empresa' => __DIR__ . '/../..' . '/app/Empresa.php',
         'App\\Exceptions\\Handler' => __DIR__ . '/../..' . '/app/Exceptions/Handler.php',
         'App\\Gasoline' => __DIR__ . '/../..' . '/app/Gasoline.php',
         'App\\Http\\Controllers\\Api\\AuthController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/AuthController.php',
