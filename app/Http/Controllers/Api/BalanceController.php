@@ -286,6 +286,16 @@ class BalanceController extends Controller
         }
         return $this->logout(JWTAuth::getToken());
     }
+    // Método para realizar canjes
+    public function exchange()
+    {
+        if (($user = Auth::user())->verifyRole(5)) {
+            if($user->client->points){
+                
+            }
+        }
+        return $this->logout(JWTAuth::getToken());
+    }
     // Funcion para enviar una notificacion
     private function makeNotification($idsDispatcher, $idsClient, $message, $notification)
     {

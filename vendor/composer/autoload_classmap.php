@@ -13,6 +13,7 @@ return array(
     'App\\DataCar' => $baseDir . '/app/DataCar.php',
     'App\\Deposit' => $baseDir . '/app/Deposit.php',
     'App\\Dispatcher' => $baseDir . '/app/Dispatcher.php',
+    'App\\Empresa' => $baseDir . '/app/Empresa.php',
     'App\\Exceptions\\Handler' => $baseDir . '/app/Exceptions/Handler.php',
     'App\\Gasoline' => $baseDir . '/app/Gasoline.php',
     'App\\Http\\Controllers\\Api\\AuthController' => $baseDir . '/app/Http/Controllers/Api/AuthController.php',
