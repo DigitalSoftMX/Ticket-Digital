@@ -47,6 +47,7 @@ class ClientController extends Controller
                 $dataStation['id'] = $station->id;
                 $dataStation['name'] = $station->name;
                 $dataStation['address'] = $station->address;
+                $dataStation['image'] = asset('public' . $station->image);
                 array_push($data, $dataStation);
             }
             return $this->successResponse('stations', $data);

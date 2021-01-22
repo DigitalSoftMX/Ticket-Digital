@@ -290,8 +290,7 @@ class BalanceController extends Controller
     public function exchange()
     {
         if (($user = Auth::user())->verifyRole(5)) {
-            if($user->client->points){
-                
+            if ($user->client->points) {
             }
         }
         return $this->logout(JWTAuth::getToken());
