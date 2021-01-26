@@ -42,4 +42,9 @@ class Client extends Model
     {
         return $this->hasMany(Sale::class);
     }
+    // Relacion con los escaneos QR's
+    public function paymentsQrs()
+    {
+        return $this->hasMany(SalesQr::class);
+    }
 }

@@ -26,4 +26,14 @@ class Station extends Model
     {
         return $this->hasMany(Island::class);
     }
+    // Relacion con los vales de la estacion
+    public function voucher()
+    {
+        return $this->hasOne(Voucher::class, 'id_station', 'id');
+    }
+    // Relacion con el rango de vales de la estacion
+    public function vouchers()
+    {
+        return $this->hasMany(CountVoucher::class, 'id_station', 'id');
+    }
 }

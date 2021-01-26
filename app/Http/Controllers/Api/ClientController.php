@@ -103,6 +103,8 @@ class ClientController extends Controller
                             return $this->successResponse('balances', $payments);
                         }
                         break;
+                        // Historial para lealtad
+                        
                 }
                 return $this->errorResponse('Sin movimientos en la cuenta');
             } catch (Exception $e) {
