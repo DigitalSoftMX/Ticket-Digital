@@ -27,6 +27,7 @@ class CreateStationTable extends Migration
             $table->integer('active')->nullable();
             $table->boolean('lealtad');
             $table->string('ip')->nullable();
+            $table->string('image');
             $table->timestamps();
 
             $table->foreign('id_empresa')->references('id')->on('empresas')

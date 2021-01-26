@@ -126,6 +126,11 @@ class DispatcherController extends Controller
                     }
                     if ($deposit != null) {
                         $gasoline = Gasoline::find($request->id_gasoline);
+                        $no_island = null;
+                        try {
+                            $no_island = $dispatcher->station->islands->where('bomb', $request->bomb_id)->first()->island;
+                        } catch (Exception $e) {
+                        }
                         $fields = array(
                             'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
                             'data' => array(
@@ -137,7 +142,7 @@ class DispatcherController extends Controller
                                 'id_schedule' => (Schedule::whereTime('start', '<=', now()->format('H:i'))->whereTime('end', '>=', now()->format('H:i'))->where('station_id', $dispatcher->station_id)->first())->id,
                                 'id_station' => $dispatcher->station_id,
                                 'id_time' => $dispatcher->times->last()->id,
-                                'no_island' => $dispatcher->island->island,
+                                'no_island' => $no_island,
                                 'no_bomb' => $request->bomb_id,
                                 "gasoline" => $gasoline->name,
                                 "estacion" => $dispatcher->station->name,
