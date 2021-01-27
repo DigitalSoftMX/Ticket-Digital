@@ -216,7 +216,7 @@ class BalanceController extends Controller
             }
             if (($station = Station::where('number_station', $request->station)->first()) != null) {
                 if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists()) {
-                    return $this->errorResponse('Esta venta fue registrado anteriormente');
+                    return $this->errorResponse('Esta venta fue registrada anteriormente');
                 }
                 if (count(SalesQr::where([['client_id', $user->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
                     try {
