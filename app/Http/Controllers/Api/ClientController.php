@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\SharedBalance;
 use App\Station;
 use App\Deposit;
+use App\Exchange;
+use App\SalesQr;
 use Illuminate\Support\Facades\Auth;
 use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -53,7 +55,6 @@ class ClientController extends Controller
             }
             $exchanges = array();
             foreach ($user->client->exchanges->where('status', '!=', 14) as $exchange) {
-                $dataExchange['id'] = $exchange->id;
                 $dataExchange['station'] = $exchange->station->name;
                 $dataExchange['invoice'] = $exchange->exchange;
                 $dataExchange['status'] = $exchange->estado->name;
@@ -114,7 +115,30 @@ class ClientController extends Controller
                         }
                         break;
                     case 'exchange':
-                        return 'Historial de canjes';
+                        if (count($balances = $this->getBalances(new Exchange(), $request->start, $request->end, $user, 14, 'exchange')) > 0) {
+                            foreach ($balances as $balance) {
+                                $data['points'] = $balance->points;
+                                $data['station'] = $balance->station->name;
+                                $data['invoice'] = $balance->exchange;
+                                $data['status'] = 'Puntos restados';
+                                $data['date'] = $balance->created_at->format('Y/m/d');
+                                array_push($payments, $data);
+                            }
+                            return $this->successResponse('exchanges', $payments, null, null);
+                        }
+                        break;
+                    case 'points':
+                        if (count($balances = $this->getBalances(new SalesQr(), $request->start, $request->end, $user, null, null)) > 0) {
+                            foreach ($balances as $balance) {
+                                $data['points'] = $balance->points;
+                                $data['station'] = $balance->station->name;
+                                $data['status'] = 'Puntos sumados';
+                                $data['sale'] = $balance->sale;
+                                $data['date'] = $balance->created_at->format('Y/m/d');
+                                array_push($payments, $data);
+                            }
+                            return $this->successResponse('points', $payments, null, null);
+                        }
                         break;
                 }
                 return $this->errorResponse('Sin movimientos en la cuenta');
@@ -133,6 +157,10 @@ class ClientController extends Controller
         }
         if ($status != null) {
             $query[1] = ['status', '!=', $status];
+        }
+        if ($type == 'exchange') {
+            $query = [['client_id', $user->client->id]];
+            $query[1] = ['status', $status];
         }
         if ($start == "" && $end == "") {
             $balances = $model::where($query)->get();
