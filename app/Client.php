@@ -47,4 +47,9 @@ class Client extends Model
     {
         return $this->hasMany(SalesQr::class);
     }
+    // Relacion con los canjes
+    public function exchanges()
+    {
+        return $this->hasMany(Exchange::class);
+    }
 }

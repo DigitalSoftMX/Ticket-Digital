@@ -34,23 +34,33 @@ class ClientController extends Controller
             $data['client']['points'] = $user->client->points;
             $data['client']['image_qr'] = $user->username;
             $data['data_car'] = $dataCar;
-            return $this->successResponse('user', $data);
+            return $this->successResponse('user', $data, null, null);
         }
         return $this->logout(JWTAuth::getToken());
     }
     // Funcion principal para la ventana de abonos
     public function getListStations()
     {
-        if (Auth::user()->verifyRole(5)) {
-            $data = array();
+        if (($user = Auth::user())->verifyRole(5)) {
+            $stations = array();
             foreach (Station::all() as $station) {
                 $dataStation['id'] = $station->id;
                 $dataStation['name'] = $station->name;
+                $dataStation['number_station'] = $station->number_station;
                 $dataStation['address'] = $station->address;
                 $dataStation['image'] = asset($station->image);
-                array_push($data, $dataStation);
+                array_push($stations, $dataStation);
             }
-            return $this->successResponse('stations', $data);
+            $exchanges = array();
+            foreach ($user->client->exchanges->where('status', '!=', 14) as $exchange) {
+                $dataExchange['id'] = $exchange->id;
+                $dataExchange['station'] = $exchange->station->name;
+                $dataExchange['invoice'] = $exchange->exchange;
+                $dataExchange['status'] = $exchange->estado->name;
+                $dataExchange['date'] = $exchange->created_at->format('Y/m/d');
+                array_push($exchanges, $dataExchange);
+            }
+            return $this->successResponse('stations', $stations, 'exchanges', $exchanges);
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -75,7 +85,7 @@ class ClientController extends Controller
                                 $data['sale'] = $balance->sale;
                                 array_push($payments, $data);
                             }
-                            return $this->successResponse('payments', $payments);
+                            return $this->successResponse('payments', $payments, null, null);
                         }
                         break;
                     case 'balance':
@@ -88,23 +98,24 @@ class ClientController extends Controller
                                 $data['hour'] = $balance->created_at->format('H:i:s');
                                 array_push($payments, $data);
                             }
-                            return $this->successResponse('balances', $payments);
+                            return $this->successResponse('balances', $payments, null, null);
                         }
                         break;
                     case 'share':
                         if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'transmitter_id')) > 0) {
                             $payments = $this->getSharedBalances($balances, 'receiver');
-                            return $this->successResponse('balances', $payments);
+                            return $this->successResponse('balances', $payments, null, null);
                         }
                         break;
                     case 'received':
                         if (count($balances = $this->getBalances(new SharedBalance(), $request->start, $request->end, $user, 4, 'receiver_id')) > 0) {
                             $payments = $this->getSharedBalances($balances, 'transmitter');
-                            return $this->successResponse('balances', $payments);
+                            return $this->successResponse('balances', $payments, null, null);
                         }
                         break;
-                        // Historial para lealtad
-                        
+                    case 'exchange':
+                        return 'Historial de canjes';
+                        break;
                 }
                 return $this->errorResponse('Sin movimientos en la cuenta');
             } catch (Exception $e) {
@@ -171,11 +182,18 @@ class ClientController extends Controller
         ]);
     }
     // Funcion mensaje correcto
-    private function successResponse($name, $data)
+    private function successResponse($name, $data, $array, $dataArray)
     {
+        if ($array != null) {
+            return response()->json([
+                'ok' => true,
+                $name => $data,
+                $array => $dataArray
+            ]);
+        }
         return response()->json([
             'ok' => true,
-            $name => $data
+            $name => $data,
         ]);
     }
 }
