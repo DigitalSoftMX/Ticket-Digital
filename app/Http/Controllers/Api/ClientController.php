@@ -47,7 +47,7 @@ class ClientController extends Controller
             $stations = array();
             foreach (Station::all() as $station) {
                 $dataStation['id'] = $station->id;
-                $dataStation['name'] = $station->name;
+                $dataStation['name'] = $station->abrev . ' - ' . $station->name;
                 $dataStation['number_station'] = $station->number_station;
                 $dataStation['address'] = $station->address;
                 $dataStation['image'] = asset($station->image);

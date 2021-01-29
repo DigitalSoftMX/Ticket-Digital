@@ -262,7 +262,7 @@ class BalanceController extends Controller
                             if ($points == 0) {
                                 $qr->delete();
                                 $limit = (Empresa::find(1)->double_points) * 80;
-                                return $this->errorResponse("Ha llegado al limite de $limit puntos por día");
+                                return $this->errorResponse("Ha llegado al límite de $limit puntos por día");
                             } else {
                                 $qr->update(['points' => $points]);
                             }
@@ -287,7 +287,7 @@ class BalanceController extends Controller
         if (($user = Auth::user())->verifyRole(5)) {
             if (($station = Station::find($request->id)) != null) {
                 if ($user->client->points < $station->voucher->points) {
-                    return $this->errorResponse('El canjes no se puede realizar, no cuentas con puntos suficientes');
+                    return $this->errorResponse('El canje no se puede realizar, no cuentas con puntos suficientes');
                 }
                 if (Exchange::where('client_id', $user->client->id)->whereDate('created_at', now()->format('Y-m-d'))->exists()) {
                     return $this->errorResponse('Solo se puede realizar un canje de vale por día');
