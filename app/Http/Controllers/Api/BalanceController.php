@@ -305,8 +305,11 @@ class BalanceController extends Controller
                     if ($voucher == 0) {
                         return $this->errorResponse('Intente más tarde');
                     }
-                    $exchange = new Exchange();
-                    $exchange->create(array('client_id' => $user->client->id, 'exchange' => $voucher, 'station_id' => $request->id, 'points' => $station->voucher->points, 'value' => $station->voucher->value, 'status' => 11));
+                    Exchange::create(array('client_id' => $user->client->id, 'exchange' => $voucher, 'station_id' => $request->id, 'points' => $station->voucher->points, 'value' => $station->voucher->value, 'status' => 11));
+                    $range->remaining--;
+                    $range->save();
+                    $user->client->points -= $station->voucher->points;
+                    $user->client->save();
                     return $this->successResponse('message', 'Al recoger tu vale presenta una identificación oficial en la estación');
                 }
                 return $this->errorResponse('Intente más tarde');
