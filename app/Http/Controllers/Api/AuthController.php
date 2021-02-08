@@ -2,11 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Canje;
 use App\Client;
 use App\DataCar;
 use App\Empresa;
+use App\Exchange;
+use App\Gasoline;
+use App\History;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Lealtad\Tarjeta;
+use App\Lealtad\Ticket;
+use App\SalesQr;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use App\Station;
@@ -39,6 +46,10 @@ class AuthController extends Controller
             case 1:
                 foreach ($user[0]->roles as $rol) {
                     if ($rol->id == 4 || $rol->id == 5) {
+                        $validator = Validator::make($request->only('email'), ['email' => 'email']);
+                        if ($validator->fails()) {
+                            return $this->errorResponse('Su correo actual no es válido. Ingrese un nuevo correo.', $user[0]->id);
+                        }
                         return $this->getToken($request, $user[0], $rol->id);
                     }
                 }
@@ -124,6 +135,66 @@ class AuthController extends Controller
         }
         $user->update(['remember_token' => $token]);
         if ($rol == 5) {
+            /* if ($user->client->ids == null) {
+                if (count($dataPoints = Tarjeta::where('number_usuario', $user->username)->get()) > 0) {
+                    $user->client->update(['points' => $dataPoints->sum('totals'), 'visits' => $dataPoints->sum('visits')]);
+                    foreach ($dataPoints as $dataPoint) {
+                        $dataPoint->delete();
+                    }
+                }
+                foreach (Ticket::where('number_usuario', $user->username)->get() as $ticket) {
+                    if ($ticket->descrip != 'Solo se permiten sumar 80 puntos por día' && $ticket->descrip != 'Pertenece a otro beneficio') {
+                        $dataSaleQr = new SalesQr();
+                        $dataSaleQr->sale = $ticket->number_ticket;
+                        if ($ticket->descrip == 'Información errónea') {
+                            $dataSaleQr->gasoline_id = null;
+                            $dataSaleQr->points = 0;
+                            $dataSaleQr->liters = 0;
+                            $dataSaleQr->payment = 0;
+                        } else {
+                            $dataSaleQr->gasoline_id = Gasoline::where('name', 'LIKE', '%' . $ticket->producto . '%')->first()->id;
+                            $dataSaleQr->points = $ticket->punto;
+                            $dataSaleQr->liters = $ticket->litro;
+                            $dataSaleQr->payment = $ticket->costo;
+                        }
+                        $dataSaleQr->station_id = $ticket->id_gas;
+                        $dataSaleQr->client_id = $user->client->id;
+                        $dataSaleQr->created_at = $ticket->created_at;
+                        $dataSaleQr->updated_at = $ticket->updated_at;
+                        $dataSaleQr->save();
+                    }
+                    $ticket->delete();
+                }
+                foreach (History::where('number_usuario', $user->username)->get() as $history) {
+                    $dataHistoryExchange = new Exchange();
+                    $dataHistoryExchange->client_id = $user->client->id;
+                    $dataHistoryExchange->exchange = $history->numero;
+                    $dataHistoryExchange->station_id = $history->id_station;
+                    $dataHistoryExchange->points = $history->points;
+                    $dataHistoryExchange->value = $history->value;
+                    $dataHistoryExchange->status = 14;
+                    $dataHistoryExchange->admin_id = $history->id_admin;
+                    $dataHistoryExchange->created_at = $history->created_at;
+                    $dataHistoryExchange->updated_at = $history->updated_at;
+                    $dataHistoryExchange->save();
+                    $history->delete();
+                }
+                foreach (Canje::where('number_usuario', $user->username)->get() as $canje) {
+                    if (!(Exchange::where('exchange', $canje->conta)->exists())) {
+                        $dataExchange = new Exchange();
+                        $dataExchange->client_id = $user->client->id;
+                        $dataExchange->exchange = $canje->conta;
+                        $dataExchange->station_id = $canje->id_estacion;
+                        $dataExchange->points = $canje->punto;
+                        $dataExchange->value = $canje->value;
+                        $dataExchange->status = $canje->estado + 10;
+                        $dataExchange->created_at = $canje->created_at;
+                        $dataExchange->updated_at = $canje->updated_at;
+                        $dataExchange->save();
+                    }
+                    $canje->delete();
+                }
+            } */
             $user->client->update($request->only('ids'));
         }
         return $this->successReponse('token', $token);

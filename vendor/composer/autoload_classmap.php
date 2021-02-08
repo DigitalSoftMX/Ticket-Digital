@@ -48,6 +48,7 @@ return array(
     'App\\Http\\Middleware\\VerifyCsrfToken' => $baseDir . '/app/Http/Middleware/VerifyCsrfToken.php',
     'App\\Http\\Requests\\PasswordRequest' => $baseDir . '/app/Http/Requests/PasswordRequest.php',
     'App\\Imports\\EstacionImport' => $baseDir . '/app/Imports/EstacionImport.php',
+    'App\\Lealtad\\Tarjeta' => $baseDir . '/app/Lealtad/Tarjeta.php',
     'App\\Manager' => $baseDir . '/app/Manager.php',
     'App\\Menu' => $baseDir . '/app/Menu.php',
     'App\\Providers\\AppServiceProvider' => $baseDir . '/app/Providers/AppServiceProvider.php',

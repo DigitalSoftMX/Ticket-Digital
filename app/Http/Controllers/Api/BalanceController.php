@@ -172,8 +172,9 @@ class BalanceController extends Controller
                             if ($request->id_gasoline != 3) {
                                 $points = $this->addEightyPoints($user->client->id, $request->liters);
                                 $user->client->points += $points;
-                                $user->client->save();
                             }
+                            $user->client->visits++;
+                            $user->client->save();
                         } else {
                             return $this->errorResponse('Saldo insuficiente');
                         }
@@ -186,6 +187,8 @@ class BalanceController extends Controller
                             $payment->save();
                             $transmitter->client->points += $this->roundHalfDown($request->liters);
                             $transmitter->client->save();
+                            $user->client->visits++;
+                            $user->client->save();
                         } else {
                             return $this->errorResponse('Saldo insuficiente');
                         }
@@ -267,6 +270,7 @@ class BalanceController extends Controller
                                 $qr->update(['points' => $points]);
                             }
                             $user->client->points += $points;
+                            $user->client->visits++;
                             $user->client->save();
                             return $this->successResponse('points', "Se han sumado sus puntos correctamente");
                         }
