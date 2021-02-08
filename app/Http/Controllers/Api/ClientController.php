@@ -50,6 +50,8 @@ class ClientController extends Controller
                 $dataStation['name'] = $station->abrev . ' - ' . $station->name;
                 $dataStation['number_station'] = $station->number_station;
                 $dataStation['address'] = $station->address;
+                $dataStation['email'] = $station->email;
+                $dataStation['phone'] = $station->phone;
                 $dataStation['image'] = asset($station->image);
                 array_push($stations, $dataStation);
             }
