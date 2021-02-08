@@ -652,6 +652,7 @@ class ComposerStaticInitaab82abb8abc19bf7d34940c7817c179
         'App\\Http\\Middleware\\VerifyCsrfToken' => __DIR__ . '/../..' . '/app/Http/Middleware/VerifyCsrfToken.php',
         'App\\Http\\Requests\\PasswordRequest' => __DIR__ . '/../..' . '/app/Http/Requests/PasswordRequest.php',
         'App\\Imports\\EstacionImport' => __DIR__ . '/../..' . '/app/Imports/EstacionImport.php',
+        'App\\Lealtad\\Tarjeta' => __DIR__ . '/../..' . '/app/Lealtad/Tarjeta.php',
         'App\\Manager' => __DIR__ . '/../..' . '/app/Manager.php',
         'App\\Menu' => __DIR__ . '/../..' . '/app/Menu.php',
         'App\\Providers\\AppServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AppServiceProvider.php',

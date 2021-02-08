@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Client extends Model
 {
-    protected $fillable = ['user_id', 'current_balance', 'shared_balance', 'points', 'image', 'birthdate', 'ids'];
+    protected $fillable = ['user_id', 'current_balance', 'shared_balance', 'points', 'visits', 'image', 'birthdate', 'ids'];
     // Relacion con el usuario
     public function user()
     {
