@@ -86,16 +86,13 @@ class AuthController extends Controller
         }
         $password = $request->password;
         $request->merge(['username' => $membership, 'active' => 1, 'password' => Hash::make($request->password)]);
-        $user = new User();
-        $user = $user->create($request->all());
-        $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => Empresa::find(1)->points, 'image' => $membership]);
-        $client = new Client();
-        $client->create($request->all());
+        $user = User::create($request->all());
+        $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => Empresa::find(1)->points, 'image' => $membership, 'visits' => 0]);
+        Client::create($request->all());
         $user->roles()->attach('5');
         if ($request->number_plate != "" || $request->type_car != "") {
             $request->merge(['client_id' => $user->client->id]);
-            $car = new DataCar();
-            $car->create($request->only(['client_id', 'number_plate', 'type_car']));
+            DataCar::create($request->only(['client_id', 'number_plate', 'type_car']));
         }
         Storage::disk('public')->deleteDirectory($user->username);
         $request->merge(['password' => $password]);
@@ -135,6 +132,11 @@ class AuthController extends Controller
         }
         $user->update(['remember_token' => $token]);
         if ($rol == 5) {
+            if ($user->client == null) {
+                $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => Empresa::find(1)->points, 'image' => $user->username, 'visits' => 0]);
+                $user->client = Client::create($request->except('ids'));
+                $user->client->save();
+            }
             /* if ($user->client->ids == null) {
                 if (count($dataPoints = Tarjeta::where('number_usuario', $user->username)->get()) > 0) {
                     $user->client->update(['points' => $dataPoints->sum('totals'), 'visits' => $dataPoints->sum('visits')]);
@@ -142,55 +144,43 @@ class AuthController extends Controller
                         $dataPoint->delete();
                     }
                 }
-                foreach (Ticket::where('number_usuario', $user->username)->get() as $ticket) {
-                    if ($ticket->descrip != 'Solo se permiten sumar 80 puntos por día' && $ticket->descrip != 'Pertenece a otro beneficio') {
-                        $dataSaleQr = new SalesQr();
-                        $dataSaleQr->sale = $ticket->number_ticket;
-                        if ($ticket->descrip == 'Información errónea') {
-                            $dataSaleQr->gasoline_id = null;
-                            $dataSaleQr->points = 0;
-                            $dataSaleQr->liters = 0;
-                            $dataSaleQr->payment = 0;
-                        } else {
-                            $dataSaleQr->gasoline_id = Gasoline::where('name', 'LIKE', '%' . $ticket->producto . '%')->first()->id;
-                            $dataSaleQr->points = $ticket->punto;
-                            $dataSaleQr->liters = $ticket->litro;
-                            $dataSaleQr->payment = $ticket->costo;
-                        }
-                        $dataSaleQr->station_id = $ticket->id_gas;
-                        $dataSaleQr->client_id = $user->client->id;
-                        $dataSaleQr->created_at = $ticket->created_at;
-                        $dataSaleQr->updated_at = $ticket->updated_at;
-                        $dataSaleQr->save();
-                    }
-                    $ticket->delete();
-                }
+                $this->ticketsToSalesQRs(Ticket::where([['number_usuario', $user->username], ['descrip', 'LIKE', '%puntos sumados%']])->get(), 1, $user->client->id);
+                $this->ticketsToSalesQRs(Ticket::where([['number_usuario', $user->username], ['descrip', 'LIKE', '%Puntos Dobles Sumados%']])->get(), 2, $user->client->id);
+                $this->ticketsToSalesQRs(Ticket::where([['number_usuario', $user->username], ['descrip', 'LIKE', '%Información errónea%']])->get(), 3, $user->client->id);
+                $this->ticketsToSalesQRs(Ticket::where([['number_usuario', $user->username], ['descrip', 'LIKE', '%pendiente%']])->get(), 4, $user->client->id);
+                $this->ticketsToSalesQRs(Ticket::where('number_usuario', $user->username)->get(), 5, null);
                 foreach (History::where('number_usuario', $user->username)->get() as $history) {
-                    $dataHistoryExchange = new Exchange();
-                    $dataHistoryExchange->client_id = $user->client->id;
-                    $dataHistoryExchange->exchange = $history->numero;
-                    $dataHistoryExchange->station_id = $history->id_station;
-                    $dataHistoryExchange->points = $history->points;
-                    $dataHistoryExchange->value = $history->value;
-                    $dataHistoryExchange->status = 14;
-                    $dataHistoryExchange->admin_id = $history->id_admin;
-                    $dataHistoryExchange->created_at = $history->created_at;
-                    $dataHistoryExchange->updated_at = $history->updated_at;
-                    $dataHistoryExchange->save();
+                    try {
+                        $dataHistoryExchange = new Exchange();
+                        $dataHistoryExchange->client_id = $user->client->id;
+                        $dataHistoryExchange->exchange = $history->numero;
+                        $dataHistoryExchange->station_id = $history->id_station;
+                        $dataHistoryExchange->points = $history->points;
+                        $dataHistoryExchange->value = $history->value;
+                        $dataHistoryExchange->status = 14;
+                        $dataHistoryExchange->admin_id = $history->id_admin;
+                        $dataHistoryExchange->created_at = $history->created_at;
+                        $dataHistoryExchange->updated_at = $history->updated_at;
+                        $dataHistoryExchange->save();
+                    } catch (Exception $e) {
+                    }
                     $history->delete();
                 }
                 foreach (Canje::where('number_usuario', $user->username)->get() as $canje) {
-                    if (!(Exchange::where('exchange', $canje->conta)->exists())) {
-                        $dataExchange = new Exchange();
-                        $dataExchange->client_id = $user->client->id;
-                        $dataExchange->exchange = $canje->conta;
-                        $dataExchange->station_id = $canje->id_estacion;
-                        $dataExchange->points = $canje->punto;
-                        $dataExchange->value = $canje->value;
-                        $dataExchange->status = $canje->estado + 10;
-                        $dataExchange->created_at = $canje->created_at;
-                        $dataExchange->updated_at = $canje->updated_at;
-                        $dataExchange->save();
+                    try {
+                        if (!(Exchange::where('exchange', $canje->conta)->exists())) {
+                            $dataExchange = new Exchange();
+                            $dataExchange->client_id = $user->client->id;
+                            $dataExchange->exchange = $canje->conta;
+                            $dataExchange->station_id = $canje->id_estacion;
+                            $dataExchange->points = $canje->punto;
+                            $dataExchange->value = $canje->value;
+                            $dataExchange->status = $canje->estado + 10;
+                            $dataExchange->created_at = $canje->created_at;
+                            $dataExchange->updated_at = $canje->updated_at;
+                            $dataExchange->save();
+                        }
+                    } catch (Exception $e) {
                     }
                     $canje->delete();
                 }
@@ -198,6 +188,37 @@ class AuthController extends Controller
             $user->client->update($request->only('ids'));
         }
         return $this->successReponse('token', $token);
+    }
+    // Metodo para copiar el historial de Tickets a SalesQR
+    private function ticketsToSalesQRs($tickets, $status, $id)
+    {
+        foreach ($tickets as $ticket) {
+            if ($status != 5) {
+                try {
+                    $dataSaleQr = new SalesQr();
+                    $dataSaleQr->sale = $ticket->number_ticket;
+                    $dataSaleQr->station_id = $ticket->id_gas;
+                    $dataSaleQr->client_id = $id;
+                    $dataSaleQr->created_at = $ticket->created_at;
+                    $dataSaleQr->updated_at = $ticket->updated_at;
+                    if ($status == 1 || $status == 2) {
+                        $dataSaleQr->gasoline_id = Gasoline::where('name', 'LIKE', '%' . $ticket->producto . '%')->first()->id;
+                        $dataSaleQr->liters = $ticket->litro;
+                        $dataSaleQr->points = $ticket->punto;
+                        $dataSaleQr->payment = $ticket->costo;
+                    }
+                    if ($status == 3 || $status == 4) {
+                        $dataSaleQr->gasoline_id = null;
+                        $dataSaleQr->liters = 0;
+                        $dataSaleQr->points = 0;
+                        $dataSaleQr->payment = 0;
+                    }
+                    $dataSaleQr->save();
+                } catch (Exception $e) {
+                }
+            }
+            $ticket->delete();
+        }
     }
     // Metodo para actualizar la ip de una estacion
     public function uploadIPStation($station_id, Request $request)
