@@ -20,10 +20,6 @@ class ClientController extends Controller
     public function index()
     {
         if (($user = Auth::user())->verifyRole(5)) {
-            $dataCar = array('number_plate' => null, 'type_car' => null);
-            if (($car = $user->client->car) != null) {
-                $dataCar = array('number_plate' => $car->number_plate, 'type_car' => $car->type_car);
-            }
             $data['id'] = $user->id;
             $data['name'] = $user->name;
             $data['first_surname'] = $user->first_surname;
@@ -35,7 +31,7 @@ class ClientController extends Controller
             $data['client']['total_shared_balance'] = count($user->client->depositReceived->where('status', 4)->where('balance', '>', 0));
             $data['client']['points'] = $user->client->points;
             $data['client']['image_qr'] = $user->username;
-            $data['data_car'] = $dataCar;
+            $data['data_car'] = ($user->client->car != null) ? array('number_plate' => $user->client->car->number_plate, 'type_car' => $user->client->car->type_car) : array('number_plate' => null, 'type_car' => null);
             return $this->successResponse('user', $data, null, null);
         }
         return $this->logout(JWTAuth::getToken());
@@ -134,7 +130,7 @@ class ClientController extends Controller
                             foreach ($balances as $balance) {
                                 $data['points'] = $balance->points;
                                 $data['station'] = $balance->station->name;
-                                $data['status'] = 'Puntos sumados';
+                                $data['status'] = ($balance->points == 0) ? 'Intente escanear su ticket nuevamente' : 'Puntos sumados';
                                 $data['sale'] = $balance->sale;
                                 $data['date'] = $balance->created_at->format('Y/m/d');
                                 array_push($payments, $data);
@@ -171,13 +167,9 @@ class ClientController extends Controller
         } elseif ($end == "") {
             $balances = $model::where($query)->whereDate('created_at', '>=', $start)->get();
         } else {
-            if ($start > $end) {
-                return null;
-            } else {
-                $balances = $model::where($query)->whereDate('created_at', '>=', $start)->whereDate('created_at', '<=', $end)->get();
-            }
+            $balances = ($start > $end) ? null : $model::where($query)->whereDate('created_at', '>=', $start)->whereDate('created_at', '<=', $end)->get();
         }
-        return $balances;
+        return ($balances != null) ? $balances->sortByDesc('created_at') : null;
     }
     // Obteniendo el historial enviodo o recibido
     private function getSharedBalances($balances, $person)
@@ -214,16 +206,15 @@ class ClientController extends Controller
     // Funcion mensaje correcto
     private function successResponse($name, $data, $array, $dataArray)
     {
-        if ($array != null) {
-            return response()->json([
+        return ($array != null) ?
+            response()->json([
                 'ok' => true,
                 $name => $data,
                 $array => $dataArray
+            ]) :
+            response()->json([
+                'ok' => true,
+                $name => $data,
             ]);
-        }
-        return response()->json([
-            'ok' => true,
-            $name => $data,
-        ]);
     }
 }

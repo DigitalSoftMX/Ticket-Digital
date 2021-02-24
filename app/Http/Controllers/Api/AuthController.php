@@ -47,19 +47,12 @@ class AuthController extends Controller
                 foreach ($user[0]->roles as $rol) {
                     if ($rol->id == 4 || $rol->id == 5) {
                         $validator = Validator::make($request->only('email'), ['email' => 'email']);
-                        if ($validator->fails()) {
-                            return $this->errorResponse('Su correo actual no es válido. Ingrese un nuevo correo.', $user[0]->id);
-                        }
-                        return $this->getToken($request, $user[0], $rol->id);
+                        return ($validator->fails()) ? $this->errorResponse('Su correo actual no es válido. Ingrese un nuevo correo.', $user[0]->id) : $this->getToken($request, $user[0], $rol->id);
                     }
                 }
                 return $this->errorResponse('Usuario no autorizado', null);
             default:
-                if ($u != null) {
-                    return $this->errorResponse('Correo duplicado. Ingrese un nuevo correo.', $u->id);
-                } else {
-                    return $this->errorResponse('Intente ingresar con su membresía.', null);
-                }
+                return ($u != null) ? $this->errorResponse('Correo duplicado. Ingrese un nuevo correo.', $u->id) : $this->errorResponse('Intente ingresar con su membresía.', null);
         }
     }
     // Metodo para registrar a un usuario nuevo

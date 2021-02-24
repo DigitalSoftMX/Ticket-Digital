@@ -26,12 +26,8 @@ class UserController extends Controller
                 $data['email'] = $user->email;
                 $data['sex'] = $user->sex;
                 $data['birthdate'] = $user->client->birthdate;
-                if (($car = $user->client->car) != null) {
-                    $dataCar = array('number_plate' => $car->number_plate, 'type_car' => $car->type_car);
-                } else {
-                    $dataCar = array('number_plate' => null, 'type_car' => null);
-                }
-                $data['data_car'] = $dataCar;
+                $car = $user->client->car;
+                $data['data_car'] = ($car != null) ? array('number_plate' => $car->number_plate, 'type_car' => $car->type_car) : array('number_plate' => null, 'type_car' => null);
                 return $this->successResponse('user', $data);
             case 'despachador':
                 return $this->successResponse('user', $this->getDataUser($user));
