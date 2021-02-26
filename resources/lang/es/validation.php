@@ -38,7 +38,7 @@ return [
     'digits_between' => ':attribute debe tener entre :min y :max dígitos.',
     'dimensions'     => 'Las dimensiones de la imagen :attribute no son válidas.',
     'distinct'       => 'El campo :attribute contiene un valor duplicado.',
-    'email'          => ':attribute no es un correo válido',
+    'email'          => 'El :attribute no es un correo válido',
     'ends_with'      => 'El campo :attribute debe finalizar con uno de los siguientes valores: :values',
     'exists'         => ':attribute es inválido.',
     'file'           => 'El campo :attribute debe ser un archivo.',
