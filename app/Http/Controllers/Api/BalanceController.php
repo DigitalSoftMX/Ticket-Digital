@@ -217,127 +217,52 @@ class BalanceController extends Controller
                 return  $this->errorResponse($validator->errors());
             }
             if (($station = Station::where('number_station', $request->station)->first()) != null) {
-                /* $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+                $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
                 if ($saleQr != null && $saleQr->points == 0) {
-                    try {
-                        ini_set("allow_url_fopen", 1);
-                        $curl = curl_init();
-                        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-                        curl_setopt($curl, CURLOPT_URL, 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code);
-                        $contents = curl_exec($curl);
-                        curl_close($curl);
-                        if ($contents) {
-                            $contents = preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $contents);
-                            $sale = json_decode($contents, true);
-                            switch ($sale['validation']) {
-                                case 2:
-                                    return $this->errorResponse('El código es incorrecto');
-                                case 3:
-                                    return $this->errorResponse('Intente más tarde');
-                                case 404:
-                                    return $this->errorResponse('El id de venta no existe');
-                            }
-                            if ($sale['gasoline_id'] == 3) {
-                                $saleQr->delete();
-                                return $this->errorResponse('La suma de puntos no aplica para el producto diésel');
-                            }
-                            $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                            $start = $dateSale->modify('+10 minute');
-                            $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                            $dateSale->modify('+10 minute');
-                            $end = $dateSale->modify('+24 hours');
-                            if (now() < $start) {
-                                return $this->errorResponse("Escanee su QR 10 minutos despues de su compra");
-                            }
-                            if (now() > $end) {
-                                $saleQr->delete();
-                                return $this->errorResponse('Han pasado 24 hrs para escanear su QR');
-                            }
-                            if ($sale['status'] == 'L' || $sale['status'] == 'l') {
-                                $saleQr->delete();
-                                return $this->errorResponse('Esta venta pertenece a otro programa de recompensas');
-                            }
-                            $request->merge($sale);
-                            $request->merge(['station_id' => $station->id, 'client_id' => $user->client->id, 'points' => $this->roundHalfDown($request->liters)]);
-                            $saleQr->update($request->all());
-                            $points = $this->addEightyPoints($user->client->id, $request->liters);
-                            if ($points == 0) {
-                                $saleQr->delete();
-                                $limit = (Empresa::find(1)->double_points) * 80;
-                                return $this->errorResponse("Ha llegado al límite de $limit puntos por día");
-                            } else {
-                                $saleQr->update(['points' => $points]);
-                            }
-                            $user->client->points += $points;
-                            $user->client->visits++;
-                            $user->client->save();
-                            return $this->successResponse('points', "Se han sumado sus puntos correctamente");
-                        }
-                        return $this->errorResponse('Intente más tarde');
-                    } catch (Exception $e) {
-                        return $this->errorResponse('Intente más tarde');
+                    $sale = $this->getSaleOfStation($station, $request, $saleQr);
+                    if (is_string($sale)) {
+                        return $this->errorResponse($sale);
                     }
-                } */
+                    $data = $this->status_L($sale, $request, $station, $user, $saleQr);
+                    if (is_string($data)) {
+                        return $this->errorResponse($data);
+                    }
+                    $saleQr->update($data->all());
+                    return $this->addPointsEucomb($user, $data->points);
+                }
                 if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->exists()) {
                     return $this->errorResponse('Esta venta fue registrada anteriormente');
                 }
                 if (count(SalesQr::where([['client_id', $user->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
-                    try {
-                        ini_set("allow_url_fopen", 1);
-                        $curl = curl_init();
-                        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-                        curl_setopt($curl, CURLOPT_URL, 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code);
-                        $contents = curl_exec($curl);
-                        curl_close($curl);
-                        if ($contents) {
-                            $contents = preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $contents);
-                            $sale = json_decode($contents, true);
-                            switch ($sale['validation']) {
-                                case 2:
-                                    return $this->errorResponse('El código es incorrecto');
-                                case 3:
-                                    return $this->errorResponse('Intente más tarde');
-                                case 404:
-                                    return $this->errorResponse('El id de venta no existe');
-                            }
-                            if ($sale['gasoline_id'] == 3) {
-                                return $this->errorResponse('La suma de puntos no aplica para el producto diésel');
-                            }
-                            $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                            $start = $dateSale->modify('+10 minute');
-                            $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                            $dateSale->modify('+10 minute');
-                            $end = $dateSale->modify('+24 hours');
-                            if (now() < $start) {
-                                return $this->errorResponse("Escanee su QR 10 minutos despues de su compra");
-                            }
-                            if (now() > $end) {
-                                return $this->errorResponse('Han pasado 24 hrs para escanear su QR');
-                            }
-                            if ($sale['status'] == 'L' || $sale['status'] == 'l') {
-                                return $this->errorResponse('Esta venta pertenece a otro programa de recompensas');
-                            }
-                            $request->merge($sale);
-                            $request->merge(['station_id' => $station->id, 'client_id' => $user->client->id, 'points' => $this->roundHalfDown($request->liters)]);
-                            $qr = new SalesQr();
-                            $qr = $qr->create($request->all());
-                            $points = $this->addEightyPoints($user->client->id, $request->liters);
-                            if ($points == 0) {
-                                $qr->delete();
-                                $limit = (Empresa::find(1)->double_points) * 80;
-                                return $this->errorResponse("Ha llegado al límite de $limit puntos por día");
-                            } else {
-                                $qr->update(['points' => $points]);
-                            }
-                            $user->client->points += $points;
-                            $user->client->visits++;
-                            $user->client->save();
-                            return $this->successResponse('points', "Se han sumado sus puntos correctamente");
-                        }
-                        return $this->errorResponse('Intente más tarde');
-                    } catch (Exception $e) {
-                        return $this->errorResponse('Intente más tarde');
+                    $sale = $this->getSaleOfStation($station, $request);
+                    if (is_string($sale)) {
+                        return $this->errorResponse($sale);
                     }
+                    $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                    $start = $dateSale->modify('+10 minute');
+                    $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                    $dateSale->modify('+10 minute');
+                    $end = $dateSale->modify('+24 hours');
+                    if (now() < $start) {
+                        return $this->errorResponse("Escanee su QR 10 minutos despues de su compra");
+                    }
+                    if (now() > $end) {
+                        return $this->errorResponse('Han pasado 24 hrs para escanear su QR');
+                    }
+                    $data = $this->status_L($sale, $request, $station, $user);
+                    if (is_string($data)) {
+                        return $this->errorResponse($data);
+                    }
+                    $qr = SalesQr::create($data->all());
+                    $points = $this->addEightyPoints($user->client->id, $request->liters);
+                    if ($points == 0) {
+                        $qr->delete();
+                        $limit = (Empresa::find(1)->double_points) * 80;
+                        return $this->errorResponse("Ha llegado al límite de $limit puntos por día");
+                    } else {
+                        $qr->update(['points' => $points]);
+                    }
+                    return $this->addPointsEucomb($user, $points);
                 }
                 return $this->errorResponse('Solo puedes validar 4 QR\'s por día');
             }
@@ -356,9 +281,7 @@ class BalanceController extends Controller
                 if (Exchange::where('client_id', $user->client->id)->whereDate('created_at', now()->format('Y-m-d'))->exists()) {
                     return $this->errorResponse('Solo se puede realizar un canje de vale por día');
                 }
-                // Cambiaar para no dejar basura fisica
-                // Columna disponibles en min max de count vouchers
-                if (($range = $station->vouchers->where('status', 4)->last()) != null) {
+                if (($range = $station->vouchers->where('status', 4)->first()) != null) {
                     $voucher = 0;
                     for ($i = $range->min; $i <= $range->max; $i++) {
                         if (!(Canje::where('conta', $i)->exists()) && !(History::where('numero', $i)->exists()) && !(Exchange::where('exchange', $i)->exists())) {
@@ -371,6 +294,9 @@ class BalanceController extends Controller
                     }
                     Exchange::create(array('client_id' => $user->client->id, 'exchange' => $voucher, 'station_id' => $request->id, 'points' => $station->voucher->points, 'value' => $station->voucher->value, 'status' => 11));
                     $range->remaining--;
+                    if ($range->remaining == 0) {
+                        $range->status = 8;
+                    }
                     $range->save();
                     $user->client->points -= $station->voucher->points;
                     $user->client->save();
@@ -391,7 +317,7 @@ class BalanceController extends Controller
             $notification = '';
         }
         $fields = array(
-            'app_id' => "91acd53f-d191-4b38-9fa9-2bbbdc95961e",
+            'app_id' => "62450fc4-bb2b-4f2e-a748-70e8300c6ddb",
             'contents' => array(
                 "en" => "English message from postman",
                 "es" => $message
@@ -414,6 +340,61 @@ class BalanceController extends Controller
         $response = curl_exec($ch);
         curl_close($ch);
         return $this->successResponse('notification', \json_decode($response));
+    }
+    // Metodo para consultar la informacion de venta de una estacion
+    private function getSaleOfStation($station, $request, $saleQr = null)
+    {
+        try {
+            ini_set("allow_url_fopen", 1);
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($curl, CURLOPT_URL, 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code);
+            $contents = curl_exec($curl);
+            curl_close($curl);
+            if ($contents) {
+                $contents = preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $contents);
+                $sale = json_decode($contents, true);
+                switch ($sale['validation']) {
+                    case 2:
+                        return 'El código es incorrecto';
+                    case 3:
+                        return 'Intente más tarde';
+                    case 404:
+                        return 'El id de venta no existe';
+                }
+                if ($sale['gasoline_id'] == 3) {
+                    if ($saleQr != null) {
+                        $saleQr->delete();
+                    }
+                    return 'La suma de puntos no aplica para el producto diésel';
+                }
+                return $sale;
+            }
+            return 'Intente más tarde';
+        } catch (Exception $e) {
+            return 'Intente más tarde';
+        }
+    }
+    // Método para validar status L
+    private function status_L($sale, $request, $station, $user, $qr = null)
+    {
+        if ($sale['status'] == 'L' || $sale['status'] == 'l') {
+            if ($qr != null) {
+                $qr->delete();
+            }
+            return 'Esta venta pertenece a otro programa de recompensas';
+        }
+        $request->merge($sale);
+        $request->merge(['station_id' => $station->id, 'client_id' => $user->client->id, 'points' => $this->roundHalfDown($request->liters)]);
+        return $request;
+    }
+    // Método para sumar los puntos de Eucomb
+    private function addPointsEucomb($user, $points)
+    {
+        $user->client->points += $points;
+        $user->client->visits++;
+        $user->client->save();
+        return $this->successResponse('points', 'Se han sumado sus puntos correctamente');
     }
     // Metodo para calcular puntos
     private function addEightyPoints($clientId, $liters)
