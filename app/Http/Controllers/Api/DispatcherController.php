@@ -115,6 +115,9 @@ class DispatcherController extends Controller
     {
         if (($user = Auth::user())->verifyRole(4)) {
             if (($dispatcher = $user->dispatcher)->station_id == $request->id_station) {
+                if (Sale::where([['sale', $request->sale], ['station_id', $request->id_station]])->exists()) {
+                    return $this->errorResponse('La venta fue registrada anteriormente');
+                }
                 if (($client = User::where('username', $request->membership)->first()) != null) {
                     if ($request->tr_membership == "") {
                         $deposit = $client->client->deposits->where('status', 4)->where('station_id', $request->id_station)->where('balance', '>=', $request->price)->first();
@@ -175,7 +178,7 @@ class DispatcherController extends Controller
                 }
                 return $this->errorResponse('Membresía no disponible');
             }
-            return $this->errorResponse('Estacion incorrecta');
+            return $this->errorResponse('Estación incorrecta');
         }
         return $this->logout(JWTAuth::getToken());
     }
