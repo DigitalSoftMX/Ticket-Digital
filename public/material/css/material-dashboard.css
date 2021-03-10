@@ -6482,7 +6482,7 @@ button.bg-secondary:focus {
 }
 
 .bg-success {
-  background-color: #4caf50 !important;
+  background-image: linear-gradient(0deg, rgba(2,0,36,1) 0%, rgba(0,172,9,1) 0%, rgba(0,113,46,1) 100%) !important;
 }
 
 a.bg-success:hover,
