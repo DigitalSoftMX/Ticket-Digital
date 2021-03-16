@@ -130,9 +130,12 @@ class AuthController extends Controller
                 $user->client = Client::create($request->except('ids'));
                 $user->client->save();
             }
-            /* if ($user->client->ids == null) {
+            if ($user->client->ids == null) {
                 if (count($dataPoints = Tarjeta::where('number_usuario', $user->username)->get()) > 0) {
-                    $user->client->update(['points' => $dataPoints->sum('totals'), 'visits' => $dataPoints->sum('visits')]);
+                    $user->client->points += $dataPoints->sum('totals');
+                    $user->client->visits += $dataPoints->sum('visits');
+                    // $user->client->update(['points' => $dataPoints->sum('totals'), 'visits' => $dataPoints->sum('visits')]);
+                    $user->client->save();
                     foreach ($dataPoints as $dataPoint) {
                         $dataPoint->delete();
                     }
@@ -177,7 +180,7 @@ class AuthController extends Controller
                     }
                     $canje->delete();
                 }
-            } */
+            }
             $user->client->update($request->only('ids'));
         }
         return $this->successReponse('token', $token);
