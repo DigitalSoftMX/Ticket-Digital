@@ -126,7 +126,7 @@ class AuthController extends Controller
         $user->update(['remember_token' => $token]);
         if ($rol == 5) {
             if ($user->client == null) {
-                $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => Empresa::find(1)->points, 'image' => $user->username, 'visits' => 0]);
+                $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => 0, 'image' => $user->username, 'visits' => 0]);
                 $user->client = Client::create($request->except('ids'));
                 $user->client->save();
             }
