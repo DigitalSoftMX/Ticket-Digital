@@ -265,31 +265,28 @@ class AuthController extends Controller
     // Metodo para obtener los historiales de canjes
     public function exchanges()
     {
-        foreach (Role::find(5)->users as $user) {
-            if ($user->client == null) {
-                $data = ['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => 0, 'image' => $user->username, 'visits' => 0];
-                $user->client = Client::create($data);
-                $user->client->save();
+        foreach (Client::all() as $client) {
+            $user = $client->user;
+            foreach (History::where('number_usuario', $user->username)->get() as $history) {
+                try {
+                    $dataHistoryExchange = new Exchange();
+                    $dataHistoryExchange->client_id = $user->client->id;
+                    $dataHistoryExchange->exchange = $history->numero;
+                    $dataHistoryExchange->station_id = $history->id_station;
+                    $dataHistoryExchange->points = $history->points;
+                    $dataHistoryExchange->value = $history->value;
+                    $dataHistoryExchange->status = 14;
+                    $dataHistoryExchange->admin_id = $history->id_admin;
+                    $dataHistoryExchange->created_at = $history->created_at;
+                    $dataHistoryExchange->updated_at = $history->updated_at;
+                    $dataHistoryExchange->save();
+                } catch (Exception $e) {
+                }
+                $history->delete();
             }
         }
         return 'ok';
-        /* foreach (History::where('number_usuario', $user->username)->get() as $history) {
-            try {
-                $dataHistoryExchange = new Exchange();
-                $dataHistoryExchange->client_id = $user->client->id;
-                $dataHistoryExchange->exchange = $history->numero;
-                $dataHistoryExchange->station_id = $history->id_station;
-                $dataHistoryExchange->points = $history->points;
-                $dataHistoryExchange->value = $history->value;
-                $dataHistoryExchange->status = 14;
-                $dataHistoryExchange->admin_id = $history->id_admin;
-                $dataHistoryExchange->created_at = $history->created_at;
-                $dataHistoryExchange->updated_at = $history->updated_at;
-                $dataHistoryExchange->save();
-            } catch (Exception $e) {
-            }
-            $history->delete();
-        }
+        /* 
         foreach (Canje::where('number_usuario', $user->username)->get() as $canje) {
             try {
                 if (!(Exchange::where('exchange', $canje->conta)->exists())) {
