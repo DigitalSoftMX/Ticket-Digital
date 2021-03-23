@@ -238,6 +238,7 @@ class BalanceController extends Controller
                     if (is_string($sale)) {
                         return $this->errorResponse($sale);
                     }
+                    // return $sale;
                     $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
                     $start = $dateSale->modify('+10 minute');
                     $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);

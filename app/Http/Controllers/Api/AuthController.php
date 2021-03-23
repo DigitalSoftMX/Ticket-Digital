@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Lealtad\Tarjeta;
 use App\Lealtad\Ticket;
+use App\Role;
 use App\SalesQr;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
@@ -260,5 +261,52 @@ class AuthController extends Controller
         } else {
             return 'Falta el lugar o el tipo de gasolina';
         }
+    }
+    // Metodo para obtener los historiales de canjes
+    public function exchanges()
+    {
+        foreach (Role::find(5)->users as $user) {
+            if ($user->client == null) {
+                $data = ['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => 0, 'image' => $user->username, 'visits' => 0];
+                $user->client = Client::create($data);
+                $user->client->save();
+            }
+        }
+        return 'ok';
+        /* foreach (History::where('number_usuario', $user->username)->get() as $history) {
+            try {
+                $dataHistoryExchange = new Exchange();
+                $dataHistoryExchange->client_id = $user->client->id;
+                $dataHistoryExchange->exchange = $history->numero;
+                $dataHistoryExchange->station_id = $history->id_station;
+                $dataHistoryExchange->points = $history->points;
+                $dataHistoryExchange->value = $history->value;
+                $dataHistoryExchange->status = 14;
+                $dataHistoryExchange->admin_id = $history->id_admin;
+                $dataHistoryExchange->created_at = $history->created_at;
+                $dataHistoryExchange->updated_at = $history->updated_at;
+                $dataHistoryExchange->save();
+            } catch (Exception $e) {
+            }
+            $history->delete();
+        }
+        foreach (Canje::where('number_usuario', $user->username)->get() as $canje) {
+            try {
+                if (!(Exchange::where('exchange', $canje->conta)->exists())) {
+                    $dataExchange = new Exchange();
+                    $dataExchange->client_id = $user->client->id;
+                    $dataExchange->exchange = $canje->conta;
+                    $dataExchange->station_id = $canje->id_estacion;
+                    $dataExchange->points = $canje->punto;
+                    $dataExchange->value = $canje->value;
+                    $dataExchange->status = $canje->estado + 10;
+                    $dataExchange->created_at = $canje->created_at;
+                    $dataExchange->updated_at = $canje->updated_at;
+                    $dataExchange->save();
+                }
+            } catch (Exception $e) {
+            }
+            $canje->delete();
+        } */
     }
 }
