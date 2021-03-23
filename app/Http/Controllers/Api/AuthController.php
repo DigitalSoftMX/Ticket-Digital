@@ -262,30 +262,4 @@ class AuthController extends Controller
             return 'Falta el lugar o el tipo de gasolina';
         }
     }
-    // Metodo para obtener los historiales de canjes
-    public function exchanges()
-    {
-        foreach (Client::all() as $client) {
-            $user = $client->user;
-            foreach (Canje::where('number_usuario', $user->username)->get() as $canje) {
-                try {
-                    if (!(Exchange::where('exchange', $canje->conta)->exists())) {
-                        $dataExchange = new Exchange();
-                        $dataExchange->client_id = $user->client->id;
-                        $dataExchange->exchange = $canje->conta;
-                        $dataExchange->station_id = $canje->id_estacion;
-                        $dataExchange->points = $canje->punto;
-                        $dataExchange->value = $canje->value;
-                        $dataExchange->status = $canje->estado + 10;
-                        $dataExchange->created_at = $canje->created_at;
-                        $dataExchange->updated_at = $canje->updated_at;
-                        $dataExchange->save();
-                        $canje->delete();
-                    }
-                } catch (Exception $e) {
-                }
-            }
-        }
-        return 'ok';
-    }
 }
