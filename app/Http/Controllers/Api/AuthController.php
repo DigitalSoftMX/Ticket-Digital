@@ -267,43 +267,25 @@ class AuthController extends Controller
     {
         foreach (Client::all() as $client) {
             $user = $client->user;
-            foreach (History::where('number_usuario', $user->username)->get() as $history) {
+            foreach (Canje::where('number_usuario', $user->username)->get() as $canje) {
                 try {
-                    $dataHistoryExchange = new Exchange();
-                    $dataHistoryExchange->client_id = $user->client->id;
-                    $dataHistoryExchange->exchange = $history->numero;
-                    $dataHistoryExchange->station_id = $history->id_station;
-                    $dataHistoryExchange->points = $history->points;
-                    $dataHistoryExchange->value = $history->value;
-                    $dataHistoryExchange->status = 14;
-                    $dataHistoryExchange->admin_id = $history->id_admin;
-                    $dataHistoryExchange->created_at = $history->created_at;
-                    $dataHistoryExchange->updated_at = $history->updated_at;
-                    $dataHistoryExchange->save();
+                    if (!(Exchange::where('exchange', $canje->conta)->exists())) {
+                        $dataExchange = new Exchange();
+                        $dataExchange->client_id = $user->client->id;
+                        $dataExchange->exchange = $canje->conta;
+                        $dataExchange->station_id = $canje->id_estacion;
+                        $dataExchange->points = $canje->punto;
+                        $dataExchange->value = $canje->value;
+                        $dataExchange->status = $canje->estado + 10;
+                        $dataExchange->created_at = $canje->created_at;
+                        $dataExchange->updated_at = $canje->updated_at;
+                        $dataExchange->save();
+                        $canje->delete();
+                    }
                 } catch (Exception $e) {
                 }
-                $history->delete();
             }
         }
         return 'ok';
-        /* 
-        foreach (Canje::where('number_usuario', $user->username)->get() as $canje) {
-            try {
-                if (!(Exchange::where('exchange', $canje->conta)->exists())) {
-                    $dataExchange = new Exchange();
-                    $dataExchange->client_id = $user->client->id;
-                    $dataExchange->exchange = $canje->conta;
-                    $dataExchange->station_id = $canje->id_estacion;
-                    $dataExchange->points = $canje->punto;
-                    $dataExchange->value = $canje->value;
-                    $dataExchange->status = $canje->estado + 10;
-                    $dataExchange->created_at = $canje->created_at;
-                    $dataExchange->updated_at = $canje->updated_at;
-                    $dataExchange->save();
-                }
-            } catch (Exception $e) {
-            }
-            $canje->delete();
-        } */
     }
 }
