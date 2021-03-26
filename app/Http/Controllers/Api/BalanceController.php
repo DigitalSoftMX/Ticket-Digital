@@ -238,6 +238,7 @@ class BalanceController extends Controller
                     if (is_string($sale)) {
                         return $this->errorResponse($sale);
                     }
+                    // return $sale;
                     $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
                     $start = $dateSale->modify('+10 minute');
                     $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
@@ -282,11 +283,14 @@ class BalanceController extends Controller
                     return $this->errorResponse('Solo se puede realizar un canje de vale por día');
                 }
                 if (($range = $station->vouchers->where('status', 4)->first()) != null) {
+                    $lastExchange = $station->exchanges->where('exchange', '>=', $range->min)->where('exchange', '<=', $range->max)->sortByDesc('exchange')->first();
                     $voucher = 0;
                     for ($i = $range->min; $i <= $range->max; $i++) {
                         if (!(Canje::where('conta', $i)->exists()) && !(History::where('numero', $i)->exists()) && !(Exchange::where('exchange', $i)->exists())) {
-                            $voucher = $i;
-                            break;
+                            if ($lastExchange->exchange < $i) {
+                                $voucher = $i;
+                                break;
+                            }
                         }
                     }
                     if ($voucher == 0) {
