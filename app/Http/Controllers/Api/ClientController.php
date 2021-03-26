@@ -118,8 +118,9 @@ class ClientController extends Controller
                                 $data['points'] = $balance->points;
                                 $data['station'] = $balance->station->name;
                                 $data['invoice'] = $balance->exchange;
-                                $data['status'] = 'Puntos restados';
-                                $data['date'] = $balance->created_at->format('Y/m/d');
+                                $data['status'] = $balance->estado->name;
+                                $data['status_id'] = $balance->status;
+                                $data['date'] = $balance->created_at ? $balance->created_at->format('Y/m/d') : '';
                                 array_push($payments, $data);
                             }
                             return $this->successResponse('exchanges', $payments, null, null);
@@ -158,7 +159,6 @@ class ClientController extends Controller
         }
         if ($type == 'exchange') {
             $query = [['client_id', $user->client->id]];
-            $query[1] = ['status', $status];
         }
         if ($start == "" && $end == "") {
             $balances = $model::where($query)->get();
