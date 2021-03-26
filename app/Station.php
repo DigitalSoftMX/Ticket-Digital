@@ -36,4 +36,9 @@ class Station extends Model
     {
         return $this->hasMany(CountVoucher::class, 'id_station', 'id');
     }
+    // Relacion con los vales
+    public function exchanges()
+    {
+        return $this->hasMany(Exchange::class);
+    }
 }
