@@ -53,7 +53,7 @@ class AuthController extends Controller
                 }
                 return $this->errorResponse('Usuario no autorizado', null);
             default:
-                return ($u != null) ? $this->errorResponse('Correo duplicado. Ingrese un nuevo correo.', $u->id) : $this->errorResponse('Intente ingresar con su membresía.', null);
+                return ($u != null) ? $this->errorResponse('Correo duplicado. Ingrese un nuevo correo.', $u->id) : $this->errorResponse('Correo duplicado. Intente ingresar con su membresía.', null);
         }
     }
     // Metodo para registrar a un usuario nuevo
