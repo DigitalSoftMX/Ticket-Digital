@@ -231,6 +231,7 @@ class BalanceController extends Controller
                     return $this->addPointsEucomb($user, $data->points);
                 }
                 if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->exists()) {
+                    // verificar error de escaneo por otro cliente o el mismo
                     return $this->errorResponse('Esta venta fue registrada anteriormente');
                 }
                 if (count(SalesQr::where([['client_id', $user->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
@@ -267,7 +268,7 @@ class BalanceController extends Controller
                 }
                 return $this->errorResponse('Solo puedes validar 4 QR\'s por día');
             }
-            return $this->errorResponse('La estación no existe');
+            return $this->errorResponse('La estación no existe. Intente con el formulario.');
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -360,17 +361,17 @@ class BalanceController extends Controller
                 $sale = json_decode($contents, true);
                 switch ($sale['validation']) {
                     case 2:
-                        return 'El código es incorrecto';
+                        return 'El código es incorrecto. Verifique la información del ticket.';
                     case 3:
                         return 'Intente más tarde';
                     case 404:
-                        return 'El id de venta no existe';
+                        return 'El id de venta no existe en la estación.';
                 }
                 if ($sale['gasoline_id'] == 3) {
                     if ($saleQr != null) {
                         $saleQr->delete();
                     }
-                    return 'La suma de puntos no aplica para el producto diésel';
+                    return 'La suma de puntos no aplica para el producto diésel.';
                 }
                 return $sale;
             }
