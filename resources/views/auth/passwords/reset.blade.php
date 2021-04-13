@@ -5,7 +5,7 @@
     <!--div class="row pt-0 pb-0 mt-0 bg-success">
         <div class="col-sm-4 mt-0 pl-0 pr-0" >
             <div class="card m-0 p-0">
-                <div class="card-header">{{ __('Reestablecer contraseña') }}</div>
+                <div class="card-header">{{ __('Restablecer contraseña') }}</div>
 
                 <div class="card-body">
                     <form method="POST" action="{{ route('password.update') }}">
@@ -60,7 +60,7 @@
                         <div class="form-group row mb-0">
                             <div class="col-md-6 offset-md-4">
                                 <button type="submit" class="btn btn-primary">
-                                    {{ __('Reestablecer contraseña') }}
+                                    {{ __('Restablecer contraseña') }}
                                 </button>
                             </div>
                         </div>
@@ -132,7 +132,7 @@
                             <div class="form-group">
                                 <div>
                                     <button type="submit"  class="btn btn-outline-light">
-                                        {{ __('Reestablecer contraseña') }}
+                                        {{ __('Restablecer contraseña') }}
                                     </button>
                                 </div>
                             </div>

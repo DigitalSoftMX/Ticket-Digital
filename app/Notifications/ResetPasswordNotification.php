@@ -74,9 +74,9 @@ class ResetPasswordNotification extends Notification
 
         return (new MailMessage)
             ->greeting('Hola ' . $notifiable->name . ' ' . $notifiable->first_surname)
-            ->subject(Lang::get('Reestablecer contraseña Grupo Eucomb'))
-            ->line(Lang::get('Has recibido este mensaje para reestablecer la contraseña de tu cuenta Eucomb.'))
-            ->action(Lang::get('Reestablecer contraseña'), $url)
+            ->subject(Lang::get('Restablecer contraseña Grupo Eucomb'))
+            ->line(Lang::get('Has recibido este mensaje para restablecer la contraseña de tu cuenta Eucomb.'))
+            ->action(Lang::get('Restablecer contraseña'), $url)
             ->line(Lang::get('El enlace para reiniciar tu contraseña expira en :count minutos.', ['count' => config('auth.passwords.' . config('auth.defaults.passwords') . '.expire')]))
             ->line(Lang::get('Si no realizaste esta petición puedes ignorar este mensaje.'))
             ->salutation('¡Saludos!');
