@@ -231,7 +231,18 @@ class BalanceController extends Controller
                     return $this->addPointsEucomb($user, $data->points);
                 }
                 if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->exists()) {
-                    // verificar error de escaneo por otro cliente o el mismo
+                    $scanedTicket = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+                    if ($scanedTicket != null) {
+                        return $this->messageScanedTicket($scanedTicket->client_id, $user->client->id);
+                    }
+                    $scanedTicket = Sale::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+                    if ($scanedTicket != null) {
+                        return $this->messageScanedTicket($scanedTicket->client_id, $user->client->id);
+                    }
+                    $scanedTicket = Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->first();
+                    if ($scanedTicket != null) {
+                        return $this->messageScanedTicket($scanedTicket->number_usuario, $user->username);
+                    }
                     return $this->errorResponse('Esta venta fue registrada anteriormente');
                 }
                 if (count(SalesQr::where([['client_id', $user->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
@@ -246,7 +257,7 @@ class BalanceController extends Controller
                     $dateSale->modify('+10 minute');
                     $end = $dateSale->modify('+24 hours');
                     if (now() < $start) {
-                        return $this->errorResponse("Escanee su QR 10 minutos despues de su compra");
+                        return $this->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
                     }
                     if (now() > $end) {
                         return $this->errorResponse('Han pasado 24 hrs para escanear su QR');
@@ -433,6 +444,15 @@ class BalanceController extends Controller
             $newVal = intval($val);
         }
         return $newVal;
+    }
+    // Mensaje de ticket escaneado
+    private function messageScanedTicket($clientId, $saleClientId)
+    {
+        if ($clientId == $saleClientId) {
+            return $this->errorResponse('Ya has escaneado este ticket, verifica tus movimientos');
+        } else {
+            return $this->errorResponse('Esta venta fue registrada por otro usuario');
+        }
     }
     // Metodo para cerrar sesion
     private function logout($token)
