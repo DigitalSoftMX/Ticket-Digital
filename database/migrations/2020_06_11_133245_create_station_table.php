@@ -26,6 +26,8 @@ class CreateStationTable extends Migration
             $table->string('number_station', 5);
             $table->integer('active')->nullable();
             $table->boolean('lealtad');
+            $table->string('dns')->nullable();
+            $table->timestamp('fail')->nullable();
             $table->string('ip')->nullable();
             $table->string('image');
             $table->timestamps();

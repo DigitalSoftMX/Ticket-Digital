@@ -11,6 +11,7 @@ use App\SharedBalance;
 use App\User;
 use App\Deposit;
 use App\Empresa;
+use App\Events\MessageDns;
 use App\Exchange;
 use App\History;
 use App\Lealtad\Ticket;
@@ -217,9 +218,11 @@ class BalanceController extends Controller
                 return  $this->errorResponse($validator->errors());
             }
             if (($station = Station::where('number_station', $request->station)->first()) != null) {
+                $dns = $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
+                $ip = 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
                 $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
                 if ($saleQr != null && $saleQr->points == 0) {
-                    $sale = $this->getSaleOfStation($station, $request, $saleQr);
+                    $sale = $this->sendDnsMessage($station, $dns, $ip, $saleQr);
                     if (is_string($sale)) {
                         return $this->errorResponse($sale);
                     }
@@ -246,7 +249,7 @@ class BalanceController extends Controller
                     return $this->errorResponse('Esta venta fue registrada anteriormente');
                 }
                 if (count(SalesQr::where([['client_id', $user->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
-                    $sale = $this->getSaleOfStation($station, $request);
+                    $sale = $this->sendDnsMessage($station, $dns, $ip);
                     if (is_string($sale)) {
                         return $this->errorResponse($sale);
                     }
@@ -358,13 +361,13 @@ class BalanceController extends Controller
         return $this->successResponse('notification', \json_decode($response));
     }
     // Metodo para consultar la informacion de venta de una estacion
-    private function getSaleOfStation($station, $request, $saleQr = null)
+    private function getSaleOfStation($url, $saleQr = null)
     {
         try {
             ini_set("allow_url_fopen", 1);
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($curl, CURLOPT_URL, 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code);
+            curl_setopt($curl, CURLOPT_URL, $url);
             $contents = curl_exec($curl);
             curl_close($curl);
             if ($contents) {
@@ -453,6 +456,28 @@ class BalanceController extends Controller
         } else {
             return $this->errorResponse('Esta venta fue registrada por otro usuario');
         }
+    }
+    // Metodo para enviar un correo cuando el DNS falle
+    private function sendDnsMessage($station, $dns, $ip, $saleQr = null)
+    {
+        $sale = '';
+        if ($station->dns != null) {
+            $sale = $this->getSaleOfStation($dns, $saleQr);
+            $station->update(['fail' => null]);
+        }
+        if (is_string($sale)) {
+            if ($station->fail == null) {
+                $station->update(['fail' => now()]);
+                event(new MessageDns($station));
+            }
+            $diff = now()->diff($station->fail);
+            if ($diff->i > 0 && $diff->i % 30 == 0) {
+                $station->update(['fail' => now()]);
+                event(new MessageDns($station));
+            }
+            $sale = $this->getSaleOfStation($ip, $saleQr);
+        }
+        return $sale;
     }
     // Metodo para cerrar sesion
     private function logout($token)

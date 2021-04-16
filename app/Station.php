@@ -10,7 +10,7 @@ class Station extends Model
     /* Accediendo a la tabla station */
     protected $table = 'station';
 
-    protected $fillable = ['ip'];
+    protected $fillable = ['ip', 'fail'];
     /**
      * The attributes that should be hidden for arrays.
      *
