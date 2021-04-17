@@ -471,7 +471,7 @@ class BalanceController extends Controller
                 event(new MessageDns($station));
             }
             $diff = now()->diff($station->fail);
-            if ($diff->i > 0 && $diff->i % 30 == 0) {
+            if ($diff->i > 0 && $diff->i % 15 == 0) {
                 $station->update(['fail' => now()]);
                 event(new MessageDns($station));
             }
