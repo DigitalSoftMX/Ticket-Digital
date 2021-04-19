@@ -218,7 +218,7 @@ class BalanceController extends Controller
                 return  $this->errorResponse($validator->errors());
             }
             if (($station = Station::where('number_station', $request->station)->first()) != null) {
-                $dns = $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
+                $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
                 $ip = 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
                 $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
                 if ($saleQr != null && $saleQr->points == 0) {
