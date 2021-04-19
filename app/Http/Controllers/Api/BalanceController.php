@@ -319,7 +319,7 @@ class BalanceController extends Controller
                     $range->save();
                     $user->client->points -= $station->voucher->points;
                     $user->client->save();
-                    return $this->successResponse('message', 'Al recoger tu vale presenta una identificación oficial en la estación. <strong> Solo puedes recoger tu vale de lunes a viernes de 9 am a 7 pm. </strong>');
+                    return $this->successResponse('message', 'Al recoger tu vale presenta una identificación oficial en la estación. <br> <strong> Solo puedes recoger tu vale de lunes a viernes de 9 am a 7 pm. </strong>');
                 }
                 return $this->errorResponse('Intente más tarde');
             }
