@@ -298,7 +298,7 @@ class BalanceController extends Controller
                     return $this->errorResponse('Solo se puede realizar un canje de vale por día');
                 }
                 if (($range = $station->vouchers->where('status', 4)->first()) != null) {
-                    $lastExchange = $station->exchanges->where('exchange', '>=', $range->min)->where('exchange', '<=', $range->max)->sortByDesc('exchange')->first();
+                    $lastExchange = $station->exchanges()->where('exchange', '>=', $range->min)->where('exchange', '<=', $range->max)->sortByDesc('exchange')->first();
                     $voucher = 0;
                     for ($i = $range->min; $i <= $range->max; $i++) {
                         if (!(Canje::where('conta', $i)->exists()) && !(History::where('numero', $i)->exists()) && !(Exchange::where('exchange', $i)->exists())) {
