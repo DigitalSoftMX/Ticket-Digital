@@ -307,9 +307,10 @@ class BalanceController extends Controller
                                     $voucher = $i;
                                     break;
                                 }
+                            } else {
+                                $voucher = $i;
+                                break;
                             }
-                            $voucher = $i;
-                            break;
                         }
                     }
                     if ($voucher == 0) {
