@@ -473,12 +473,12 @@ class BalanceController extends Controller
         if (is_string($sale)) {
             if ($station->fail == null) {
                 $station->update(['fail' => now()]);
-                event(new MessageDns($station));
+                //event(new MessageDns($station));
             }
             $diff = now()->diff($station->fail);
             if ($diff->i > 0 && $diff->i % 15 == 0) {
                 $station->update(['fail' => now()]);
-                event(new MessageDns($station));
+                //event(new MessageDns($station));
             }
             $sale = $this->getSaleOfStation($ip, $saleQr);
         }
