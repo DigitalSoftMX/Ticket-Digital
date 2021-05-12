@@ -255,9 +255,9 @@ class BalanceController extends Controller
                     }
                     // return $sale;
                     $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                    $start = $dateSale->modify('+10 minute');
+                    $start = $dateSale->modify('+2 minute');
                     $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                    $dateSale->modify('+10 minute');
+                    $dateSale->modify('+2 minute');
                     $end = $dateSale->modify('+24 hours');
                     if (now() < $start) {
                         return $this->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
