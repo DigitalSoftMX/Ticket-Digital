@@ -23,6 +23,7 @@ class CreateSalesQrsTable extends Migration
             $table->unsignedBigInteger('station_id');
             $table->unsignedBigInteger('client_id');
             $table->integer('no_bomb');
+            $table->unsignedBigInteger('main_id');
             $table->timestamps();
 
             $table->foreign('gasoline_id')->references('id')->on('gasolines')
@@ -34,6 +35,10 @@ class CreateSalesQrsTable extends Migration
                 ->onUpdate('cascade');
 
             $table->foreign('client_id')->references('id')->on('clients')
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+
+            $table->foreign('main_id')->references('id')->on('user_id')
                 ->onDelete('cascade')
                 ->onUpdate('cascade');
         });

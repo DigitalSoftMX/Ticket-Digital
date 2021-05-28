@@ -52,4 +52,9 @@ class Client extends Model
     {
         return $this->hasMany(Exchange::class);
     }
+    // Relacion con los usuarioa a referencia
+    public function main()
+    {
+        return $this->belongsToMany(User::class, 'user_client');
+    }
 }

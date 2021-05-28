@@ -13,7 +13,6 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Lealtad\Tarjeta;
 use App\Lealtad\Ticket;
-use App\Role;
 use App\SalesQr;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
@@ -81,7 +80,7 @@ class AuthController extends Controller
         $password = $request->password;
         $request->merge(['username' => $membership, 'active' => 1, 'password' => Hash::make($request->password)]);
         $user = User::create($request->all());
-        $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => Empresa::find(1)->points, 'image' => $membership, 'visits' => 0]);
+        $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => Empresa::find(1)->points, 'image' => $membership, 'visits' => 0, 'active' => 0]);
         Client::create($request->all());
         $user->roles()->attach('5');
         if ($request->number_plate != "" || $request->type_car != "") {
@@ -127,7 +126,7 @@ class AuthController extends Controller
         $user->update(['remember_token' => $token]);
         if ($rol == 5) {
             if ($user->client == null) {
-                $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => 0, 'image' => $user->username, 'visits' => 0]);
+                $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => 0, 'image' => $user->username, 'visits' => 0, 'acive' => 0]);
                 $user->client = Client::create($request->except('ids'));
                 $user->client->save();
             }
