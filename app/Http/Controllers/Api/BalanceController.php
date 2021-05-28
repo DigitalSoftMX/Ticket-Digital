@@ -402,23 +402,24 @@ class BalanceController extends Controller
     // Método para validar status L
     private function status_L($sale, $request, $station, $user, $qr = null)
     {
-        if ($sale['status'] == 'L' || $sale['status'] == 'l') {
+        if ($sale['status'] == 'L' || $sale['status'] == 'l' || $sale['status'] == 'T' || $sale['status'] == 't' || $sale['status'] == 'V' || $sale['status'] == 'v') {
             if ($qr != null) {
                 $qr->delete();
             }
             return 'Esta venta pertenece a otro programa de recompensas';
         }
         $request->merge($sale);
+        $user->client->main->count() > 0 ? $request->merge(['main_id' => $user->client->main->first()->id]) : $request;
         $request->merge(['station_id' => $station->id, 'client_id' => $user->client->id, 'points' => $this->roundHalfDown($request->liters)]);
         return $request;
     }
     // Método para sumar los puntos de Eucomb
     private function addPointsEucomb($user, $points)
     {
-        $user->client->points += $points;
+        $user->client->main->count() > 0 ? $user->client->main->first()->client->points += $points : $user->client->points += $points;
         $user->client->visits++;
-        $user->client->save();
-        return $this->successResponse('points', 'Se han sumado sus puntos correctamente');
+        $user->client->main->count() > 0 ? $user->client->main->first()->client->save() : $user->client->save();
+        return $user->client->main->count() > 0 ? $this->successResponse('points', 'Haz sumado puntos a ' . $user->client->main->first()->username . ' correctamente') : $this->successResponse('points', 'Se han sumado sus puntos correctamente');
     }
     // Metodo para calcular puntos
     private function addEightyPoints($clientId, $liters)
