@@ -69,7 +69,6 @@ return array(
     'App\\SharedBalance' => $baseDir . '/app/SharedBalance.php',
     'App\\Station' => $baseDir . '/app/Station.php',
     'App\\User' => $baseDir . '/app/User.php',
-    'App\\Usersale' => $baseDir . '/app/Usersale.php',
     'App\\Voucher' => $baseDir . '/app/Voucher.php',
     'App\\Web\\Island' => $baseDir . '/app/Web/Island.php',
     'Attribute' => $vendorDir . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',

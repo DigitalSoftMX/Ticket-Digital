@@ -673,7 +673,6 @@ class ComposerStaticInitaab82abb8abc19bf7d34940c7817c179
         'App\\SharedBalance' => __DIR__ . '/../..' . '/app/SharedBalance.php',
         'App\\Station' => __DIR__ . '/../..' . '/app/Station.php',
         'App\\User' => __DIR__ . '/../..' . '/app/User.php',
-        'App\\Usersale' => __DIR__ . '/../..' . '/app/Usersale.php',
         'App\\Voucher' => __DIR__ . '/../..' . '/app/Voucher.php',
         'App\\Web\\Island' => __DIR__ . '/../..' . '/app/Web/Island.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',

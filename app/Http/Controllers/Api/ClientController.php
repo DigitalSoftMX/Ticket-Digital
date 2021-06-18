@@ -10,6 +10,7 @@ use App\Station;
 use App\Deposit;
 use App\Exchange;
 use App\SalesQr;
+use App\User;
 use Illuminate\Support\Facades\Auth;
 use Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -144,6 +145,25 @@ class ClientController extends Controller
             } catch (Exception $e) {
                 return $this->errorResponse('Error de consulta por fecha');
             }
+        }
+        return $this->logout(JWTAuth::getToken());
+    }
+    // Método para ingresar código de referidos
+    public function code(Request $request)
+    {
+        if (($user = Auth::user())->verifyRole(5)) {
+            if ($request->code == null)
+                return $this->errorResponse('Ingrese un código de referencia');
+            $reference = User::where('username', $request->code)->first();
+            if ($reference == null)
+                return $this->errorResponse('El código no es válido');
+            if ($reference->references->contains($user->client->id) || $user->client->reference->count() > 0)
+                return $this->errorResponse('Ya se ha ingresado un código anteriormente');
+            if ($reference->roles->first()->id == 7 || $reference->roles->first()->id == 4) {
+                $reference->references()->attach($user->client->id);
+                return $this->successResponse('message', 'Código ingresado correctamente', null, null);
+            }
+            return $this->errorResponse('El código no es válido');
         }
         return $this->logout(JWTAuth::getToken());
     }

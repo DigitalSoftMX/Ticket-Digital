@@ -411,6 +411,9 @@ class BalanceController extends Controller
         $request->merge($sale);
         $user->client->main->count() > 0 ? $request->merge(['main_id' => $user->client->main->first()->id]) : $request;
         $request->merge(['station_id' => $station->id, 'client_id' => $user->client->id, 'points' => $this->roundHalfDown($request->liters)]);
+        if (($reference = $user->client->reference->first()) != null) {
+            $request->merge(['reference' => $reference->username]);
+        }
         return $request;
     }
     // Método para sumar los puntos de Eucomb

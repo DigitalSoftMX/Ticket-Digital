@@ -57,4 +57,9 @@ class Client extends Model
     {
         return $this->belongsToMany(User::class, 'user_client');
     }
+    // Relacion entre los clientes principales y el admin de ventas
+    public function reference()
+    {
+        return $this->belongsToMany(User::class, 'sale_clients', 'client_id', 'sale_id');
+    }
 }

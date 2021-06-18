@@ -28,6 +28,7 @@ Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('main', 'Api\ClientController@index');
     Route::get('balance', 'Api\ClientController@getListStations');
     Route::get('balance/history', 'Api\ClientController@history');
+    Route::post('code', 'Api\ClientController@code');
 });
 // Rutas para los abonos
 Route::group(['middleware' => 'jwtAuth'], function () {
