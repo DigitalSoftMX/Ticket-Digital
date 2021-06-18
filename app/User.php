@@ -45,7 +45,11 @@ class User extends Authenticatable implements JWTSubject
         }
         abort(401, 'This action is unauthorized');
     }
-
+    // Relacion entre los clientes principales y el admin de ventas
+    public function references()
+    {
+        return $this->belongsToMany(Client::class, 'sale_clients', 'sale_id');
+    }
     /* funcion para buscar el rol del usuario */
     public function hasAnyRole($roles)
     {
