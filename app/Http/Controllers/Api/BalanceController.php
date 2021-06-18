@@ -316,7 +316,11 @@ class BalanceController extends Controller
                     if ($voucher == 0) {
                         return $this->errorResponse('Intente más tarde');
                     }
-                    Exchange::create(array('client_id' => $user->client->id, 'exchange' => $voucher, 'station_id' => $request->id, 'points' => $station->voucher->points, 'value' => $station->voucher->value, 'status' => 11));
+                    if (($reference = $user->client->reference->first()) != null) {
+                        Exchange::create(array('client_id' => $user->client->id, 'exchange' => $voucher, 'station_id' => $request->id, 'points' => $station->voucher->points, 'value' => $station->voucher->value, 'status' => 11, 'reference' => $reference->username));
+                    } else {
+                        Exchange::create(array('client_id' => $user->client->id, 'exchange' => $voucher, 'station_id' => $request->id, 'points' => $station->voucher->points, 'value' => $station->voucher->value, 'status' => 11));
+                    }
                     $range->remaining--;
                     if ($range->remaining == 0) {
                         $range->status = 8;
