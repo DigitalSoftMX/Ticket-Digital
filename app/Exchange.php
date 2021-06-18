@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Exchange extends Model
 {
-    protected $fillable = ['client_id', 'exchange', 'station_id', 'points', 'value', 'status', 'admin_id'];
+    protected $fillable = ['client_id', 'exchange', 'station_id', 'points', 'value', 'status', 'admin_id', 'reference'];
     // Relacion con las estaciones
     public function station()
     {
