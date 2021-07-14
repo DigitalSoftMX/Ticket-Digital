@@ -25,6 +25,16 @@ use Illuminate\Support\Facades\Validator;
 
 class BalanceController extends Controller
 {
+    private $user, $client;
+    public function __construct()
+    {
+        $this->user = auth()->user();
+        if ($this->user == null || $this->user->roles->first()->id != 5) {
+            $this->logout(JWTAuth::getToken());
+        } else {
+            $this->client = $this->user->client;
+        }
+    }
     // Funcion para obtener la lista de los abonos realizados por el usuario a su cuenta
     public function getPersonalPayments()
     {
@@ -161,46 +171,43 @@ class BalanceController extends Controller
     // Funcion para realizar un pago autorizado por el cliente
     public function makePayment(Request $request)
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if ($request->authorization == "true") {
-                try {
-                    $request->merge(['dispatcher_id' => $request->id_dispatcher, 'gasoline_id' => $request->id_gasoline, 'payment' => $request->price, 'schedule_id' => $request->id_schedule, 'station_id' => $request->id_station, 'client_id' => $user->client->id, 'time_id' => $request->id_time]);
-                    if ($request->tr_membership == "") {
-                        if (($deposit = $user->client->deposits->where('status', 4)->where('station_id', $request->id_station)->where('balance', '>=', $request->price)->first()) != null) {
-                            Sale::create($request->all());
-                            $deposit->balance -= $request->price;
-                            $deposit->save();
-                            if ($request->id_gasoline != 3) {
-                                $points = $this->addEightyPoints($user->client->id, $request->liters);
-                                $user->client->points += $points;
-                            }
-                            $user->client->visits++;
-                            $user->client->save();
-                        } else {
-                            return $this->errorResponse('Saldo insuficiente');
+        if ($request->authorization == "true") {
+            try {
+                $request->merge(['dispatcher_id' => $request->id_dispatcher, 'gasoline_id' => $request->id_gasoline, 'payment' => $request->price, 'schedule_id' => $request->id_schedule, 'station_id' => $request->id_station, 'client_id' => $this->client->id, 'time_id' => $request->id_time]);
+                if ($request->tr_membership == "") {
+                    if (($deposit = $this->client->deposits()->where([['status', 4], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {
+                        Sale::create($request->all());
+                        $deposit->balance -= $request->price;
+                        $deposit->save();
+                        if ($request->id_gasoline != 3) {
+                            $points = $this->addEightyPoints($this->client->id, $request->liters);
+                            $this->client->points += $points;
                         }
+                        $this->client->visits++;
+                        $this->client->save();
                     } else {
-                        $transmitter = User::where('username', $request->tr_membership)->first();
-                        if (($payment = $user->client->depositReceived->where('transmitter_id', $transmitter->client->id)->where('station_id', $request->id_station)->where('status', 4)->where('balance', '>=', $request->price)->first()) != null) {
-                            Sale::create($request->merge(['transmitter_id' => $transmitter->client->id])->all());
-                            $payment->balance -= $request->price;
-                            $payment->save();
-                            $transmitter->client->points += $this->roundHalfDown($request->liters);
-                            $transmitter->client->save();
-                            $user->client->visits++;
-                            $user->client->save();
-                        } else {
-                            return $this->errorResponse('Saldo insuficiente');
-                        }
+                        return $this->errorResponse('Saldo insuficiente');
                     }
-                    return $this->makeNotification($request->ids_dispatcher, $request->ids_client, 'Cobro realizado con éxito', 'Pago con QR');
-                } catch (Exception $e) {
-                    return $this->errorResponse('Error al registrar el cobro');
+                } else {
+                    $transmitter = User::where('username', $request->tr_membership)->first();
+                    if (($payment = $this->client->depositReceived->where('transmitter_id', $transmitter->client->id)->where('station_id', $request->id_station)->where('status', 4)->where('balance', '>=', $request->price)->first()) != null) {
+                        Sale::create($request->merge(['transmitter_id' => $transmitter->client->id])->all());
+                        $payment->balance -= $request->price;
+                        $payment->save();
+                        $transmitter->client->points += $this->roundHalfDown($request->liters);
+                        $transmitter->client->save();
+                        $this->client->visits++;
+                        $this->client->save();
+                    } else {
+                        return $this->errorResponse('Saldo insuficiente');
+                    }
                 }
+                return $this->makeNotification($request->ids_dispatcher, $request->ids_client, 'Cobro realizado con éxito', 'Pago con QR');
+            } catch (Exception $e) {
+                return $this->errorResponse('Error al registrar el cobro');
             }
-            return $this->makeNotification($request->ids_dispatcher, null, 'Cobro cancelado', 'Pago con QR');
         }
-        return $this->logout(JWTAuth::getToken());
+        return $this->makeNotification($request->ids_dispatcher, null, 'Cobro cancelado', 'Pago con QR');
     }
     // Metoodo para sumar de puntos QR o formulario
     public function addPoints(Request $request)
