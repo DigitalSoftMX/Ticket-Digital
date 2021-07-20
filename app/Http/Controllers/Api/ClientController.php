@@ -159,7 +159,7 @@ class ClientController extends Controller
                 return $this->errorResponse('El código no es válido');
             if ($reference->references->contains($user->client->id) || $user->client->reference->count() > 0)
                 return $this->errorResponse('Ya se ha ingresado un código anteriormente');
-            if ($reference->roles->first()->id == 7 || $reference->roles->first()->id == 4) {
+            if ($reference->roles->first()->id != 5 && $reference->roles->first()->id != 6) {
                 $reference->references()->attach($user->client->id);
                 return $this->successResponse('message', 'Código ingresado correctamente', null, null);
             }
