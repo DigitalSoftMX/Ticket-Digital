@@ -12,4 +12,9 @@ class SalesQr extends Model
     {
         return $this->belongsTo(Station::class);
     }
+    // Relacion con el cliente
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
 }
