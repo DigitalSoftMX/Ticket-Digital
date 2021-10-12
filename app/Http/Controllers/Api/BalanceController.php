@@ -445,6 +445,7 @@ class BalanceController extends Controller
         $points += SalesQr::where([['client_id', $clientId]])->whereDate('created_at', now()->format('Y-m-d'))->sum('points');
         $limit = Empresa::find(1)->double_points;
         if ($points > (80 * $limit)) {
+            // Aqui esta el bug, nunca estas multiplicando el valor de los puntos por 1 o 2
             $points -= $this->roundHalfDown($liters);
             if ($points <= (80 * $limit)) {
                 $points = (80 * $limit) - $points;
@@ -452,6 +453,7 @@ class BalanceController extends Controller
                 $points = 0;
             }
         } else {
+            // Aqui esta el bug, nunca estas multiplicando el valor de los puntos por 1 o 2
             $points = $this->roundHalfDown($liters);
         }
         return $points;
@@ -524,5 +526,39 @@ class BalanceController extends Controller
             'ok' => false,
             'message' => $message
         ]);
+    }
+
+
+    // Método temporal
+    public function sumar()
+    {
+        $lastclient = null;
+        $addedPoints = 0;
+        foreach (SalesQr::where('created_at', 'like', '2021-10-09%')->orderBy('client_id', 'asc')->get() as $sale) {
+            $points = $this->roundHalfDown($sale->liters);
+            $tempPoints = $points;
+            $points *= 2;
+            if ($points == ($sale->points * 2)) {
+                if ($lastclient and $lastclient == $sale->client_id) {
+                    $addedPoints += $points;
+                    if ($addedPoints >= 160) {
+                        $subtracted = $addedPoints - 160;
+                        $points -= $subtracted;
+                    }
+                    $tempPoints = $points / 2;
+                    $sale->update(['points' => $points]);
+                    $sale->client->points += $tempPoints;
+                    $sale->client->save();
+                } else {
+                    $lastclient = $sale->client_id;
+                    $addedPoints = 0;
+                    $addedPoints += $points;
+                    $sale->update(['points' => $points]);
+                    $sale->client->points += $tempPoints;
+                    $sale->client->save();
+                }
+            }
+        }
+        return response()->json(['sumados' => 'ok']);
     }
 }
