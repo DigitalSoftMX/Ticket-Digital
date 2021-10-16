@@ -277,10 +277,11 @@ class BalanceController extends Controller
                         return $this->errorResponse($data);
                     }
                     $qr = SalesQr::create($data->all());
-                    $points = $this->addEightyPoints($user->client->id, $request->liters);
+                    $pointsEucomb = Empresa::find(1)->double_points;
+                    $points = $this->addEightyPoints($user->client->id, $request->liters, $pointsEucomb);
                     if ($points == 0) {
                         $qr->delete();
-                        $limit = (Empresa::find(1)->double_points) * 80;
+                        $limit = $pointsEucomb * 80;
                         return $this->errorResponse("Ha llegado al límite de $limit puntos por día");
                     } else {
                         $qr->update(['points' => $points]);
@@ -436,7 +437,7 @@ class BalanceController extends Controller
         return $user->client->main->count() > 0 ? $this->successResponse('points', 'Haz sumado puntos a ' . $user->client->main->first()->username . ' correctamente') : $this->successResponse('points', 'Se han sumado sus puntos correctamente');
     }
     // Metodo para calcular puntos
-    private function addEightyPoints($clientId, $liters)
+    private function addEightyPoints($clientId, $liters, $pointsEucomb = 1)
     {
         $points = 0;
         foreach (Sale::where([['client_id', $clientId], ['transmitter_id', null]])->whereDate('created_at', now()->format('Y-m-d'))->get() as $payment) {
@@ -445,21 +446,19 @@ class BalanceController extends Controller
         $points += SalesQr::where([['client_id', $clientId]])->whereDate('created_at', now()->format('Y-m-d'))->sum('points');
         $limit = Empresa::find(1)->double_points;
         if ($points > (80 * $limit)) {
-            // Aqui esta el bug, nunca estas multiplicando el valor de los puntos por 1 o 2
-            $points -= $this->roundHalfDown($liters);
+            $points -= $this->roundHalfDown($liters, $pointsEucomb);
             if ($points <= (80 * $limit)) {
                 $points = (80 * $limit) - $points;
             } else {
                 $points = 0;
             }
         } else {
-            // Aqui esta el bug, nunca estas multiplicando el valor de los puntos por 1 o 2
-            $points = $this->roundHalfDown($liters);
+            $points = $this->roundHalfDown($liters, $pointsEucomb);
         }
         return $points;
     }
     // Funcion redonde de la mitad hacia abajo
-    private function roundHalfDown($val)
+    private function roundHalfDown($val, $limit = 1)
     {
         $liters = explode(".", $val);
         if (count($liters) > 1) {
@@ -468,7 +467,7 @@ class BalanceController extends Controller
         } else {
             $newVal = intval($val);
         }
-        return $newVal;
+        return $newVal * $limit;
     }
     // Mensaje de ticket escaneado
     private function messageScanedTicket($clientId, $saleClientId)
