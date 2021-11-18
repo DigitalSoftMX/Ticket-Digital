@@ -15,6 +15,7 @@ use App\Events\MessageDns;
 use App\Exchange;
 use App\History;
 use App\Lealtad\Ticket;
+use App\Repositories\ResponsesAndLogout;
 use App\SalesQr;
 use App\Station;
 use DateTime;
@@ -25,157 +26,147 @@ use Illuminate\Support\Facades\Validator;
 
 class BalanceController extends Controller
 {
-    private $user, $client;
-    public function __construct()
+    private $user, $client, $response;
+    public function __construct(ResponsesAndLogout $response)
     {
         $this->user = auth()->user();
-        if ($this->user == null || $this->user->roles->first()->id != 5) {
-            $this->logout(JWTAuth::getToken());
-        } else {
-            $this->client = $this->user->client;
-        }
+        $this->response = $response;
+        $this->user && $this->user->roles->first()->id == 5 ?
+            $this->client = $this->user->client :
+            $this->response->logout(JWTAuth::getToken());
     }
     // Funcion para obtener la lista de los abonos realizados por el usuario a su cuenta
-    public function getPersonalPayments()
+    public function getDeposits()
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if (count($payments = $user->client->deposits->where('status', 4)->where('balance', '>', 0)) > 0) {
-                $deposits = array();
-                foreach ($payments as $payment) {
-                    $data['id'] = $payment->id;
-                    $data['balance'] = $payment->balance;
-                    $data['status'] = $payment->status;
-                    $data['station']['name'] = $payment->station->name;
-                    $data['station']['number_station'] = $payment->station->number_station;
-                    array_push($deposits, $data);
-                }
-                return $this->successResponse('payments', $deposits);
+        $payments = $this->client->deposits()->where([['status', 4], ['balance', '>', 0]])->with('station')->get();
+        if ($payments->count() > 0) {
+            $deposits = array();
+            foreach ($payments as $payment) {
+                $data['id'] = $payment->id;
+                $data['balance'] = $payment->balance;
+                $data['status'] = $payment->status;
+                $data['station']['name'] = $payment->station->name;
+                $data['station']['number_station'] = $payment->station->number_station;
+                array_push($deposits, $data);
             }
-            return $this->errorResponse('No hay abonos realizados');
+            return $this->response->successResponse('payments', $deposits);
         }
-        return $this->logout(JWTAuth::getToken());
+        return $this->response->errorResponse('No hay abonos realizados');
     }
     // Funcion para realizar un abono a la cuenta de un usuario
     public function addBalance(Request $request)
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if ($request->deposit % 100 == 0 && $request->deposit > 0) {
-                // Obteniendo el archivo de imagen de pago
-                if (($file = $request->file('image')) != NULL) {
-                    if ((strpos($file->getClientMimeType(), 'image')) === false) {
-                        return $this->errorResponse('El archivo no es una imagen');
-                    }
-                    $request->merge(['client_id' => $user->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
-                    $deposit = new Deposit();
-                    $deposit->create($request->all());
-                    return $this->successResponse('message', 'Abono realizado correctamente');
+        if ($request->deposit % 100 == 0 && $request->deposit > 0) {
+            // Obteniendo el archivo de imagen de pago
+            if (($file = $request->file('image')) != NULL) {
+                if ((strpos($file->getClientMimeType(), 'image')) === false) {
+                    return $this->response->errorResponse('El archivo no es una imagen');
                 }
-                return $this->errorResponse('Debe subir su comprobante');
+                $request->merge(['client_id' => $this->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
+                $deposit = new Deposit();
+                $deposit->create($request->all());
+                return $this->response->successResponse('message', 'Abono realizado correctamente');
             }
-            return $this->errorResponse('La cantidad debe ser multiplo de $100');
+            return $this->response->errorResponse('Debe subir su comprobante');
         }
-        return $this->logout(JWTAuth::getToken());
+        return $this->response->errorResponse('La cantidad debe ser multiplo de $100');
     }
     // Funcion para devolver la membresía del cliente y la estacion
     public function useBalance(Request $request)
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if (($payment = $user->client->deposits->find($request->id_payment)) != null) {
-                $station['id'] = $payment->station->id;
-                $station['name'] = $payment->station->name;
-                $station['number_station'] = $payment->station->number_station;
-                return response()->json([
-                    'ok' => true,
-                    'membership' => $user->username,
-                    'station' => $station
-                ]);
-            }
-            return $this->errorResponse('No hay abono en la cuenta');
-        }
-        return $this->logout(JWTAuth::getToken());
+        $deposit = $this->client->deposits()->where([['id', $request->id_payment], ['balance', '>=', $request->balance]])->first();
+        if ($deposit)
+            return response()->json([
+                'ok' => true,
+                'membership' => $this->user->username,
+                'station' => [
+                    'id' => $deposit->station->id,
+                    'name' => $deposit->station->name,
+                    'number_station' => $deposit->station->number_station,
+                ],
+                'balance' => $request->balance
+            ]);
+        return $this->response->errorResponse('Saldo insuficiente en la cuenta');
     }
     // Funcion para enviar saldo a un contacto del usuario
     public function sendBalance(Request $request)
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if ($request->balance % 100 == 0 && $request->balance > 0) {
-                // Obteniendo el saldo disponible en la estacion correspondiente
-                $payment = $user->client->deposits->find($request->id_payment);
-                if ($payment != null && $payment->status == 4) {
-                    if ($payment->balance >= $request->balance) {
-                        $request->merge(['transmitter_id' => $user->client->id, 'receiver_id' => $request->id_contact, 'station_id' => $payment->station_id, 'status' => 5]);
-                        $sharedBalance = new SharedBalance();
-                        $sharedBalance->create($request->all());
-                        if (($receivedBalance = SharedBalance::where([['transmitter_id', $user->client->id], ['receiver_id', $request->id_contact], ['station_id', $payment->station_id], ['status', 4]])->first()) != null) {
-                            $receivedBalance->balance += $request->balance;
-                            $receivedBalance->save();
-                        } else {
-                            $sharedBalance = new SharedBalance();
-                            $sharedBalance->create($request->merge(['status' => 4])->all());
-                        }
-                        $payment->balance -= $request->balance;
-                        $payment->save();
-                        $this->makeNotification(Client::find($request->id_contact)->ids, null, 'Te han compartido saldo', 'Saldo compartido');
-                        return $this->successResponse('message', 'Saldo compartido correctamente');
-                    }
-                    return $this->errorResponse('Saldo insuficiente');
-                }
-                return $this->errorResponse('Saldo no disponible');
+        if ($request->balance % 100 != 0 or $request->balance <= 0)
+            return $this->response->errorResponse('La cantidad debe ser multiplo de $100');
+        // Obteniendo el saldo disponible en la estacion correspondiente
+        $payment = $this->client->deposits()->where([
+            ['id', $request->id_payment], ['status', 4], ['balance', '>=', $request->balance]
+        ])->first();
+        if ($payment) {
+            $request->merge(['transmitter_id' => $this->client->id, 'receiver_id' => $request->id_contact, 'station_id' => $payment->station_id, 'status' => 5]);
+            SharedBalance::create($request->all());
+            if ($receivedBalance = SharedBalance::where([['transmitter_id', $this->client->id], ['receiver_id', $request->id_contact], ['station_id', $payment->station_id], ['status', 4]])->first()) {
+                $receivedBalance->balance += $request->balance;
+                $receivedBalance->save();
+            } else {
+                SharedBalance::create($request->merge(['status' => 4])->all());
             }
-            return $this->errorResponse('La cantidad debe ser multiplo de $100');
+            $payment->balance -= $request->balance;
+            $payment->save();
+            $this->makeNotification(Client::find($request->id_contact)->ids, null, 'Te han compartido saldo', 'Saldo compartido');
+            return $this->response->successResponse('message', 'Saldo compartido correctamente');
         }
-        return $this->logout(JWTAuth::getToken());
+        return $this->response->errorResponse('Saldo insuficiente');
     }
     // Funcion que busca los abonos recibidos
     public function listReceivedPayments()
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if (count($balances = $user->client->depositReceived->where('status', 4)->where('balance', '>', 0)) > 0) {
-                $receivedBalances = array();
-                foreach ($balances as $balance) {
-                    $data['id'] = $balance->id;
-                    $data['balance'] = $balance->balance;
-                    $data['station']['name'] = $balance->station->name;
-                    $data['station']['number_station'] = $balance->station->number_station;
-                    $data['transmitter']['membership'] = $balance->transmitter->user->username;
-                    $data['transmitter']['user']['name'] = $balance->transmitter->user->name;
-                    $data['transmitter']['user']['first_surname'] = $balance->transmitter->user->first_surname;
-                    $data['transmitter']['user']['second_surname'] = $balance->transmitter->user->second_surname;
-                    array_push($receivedBalances, $data);
-                }
-                return $this->successResponse('payments', $receivedBalances);
+        if (($balances = $this->client->depositReceived()->where([['status', 4], ['balance', '>', 0]])->get())->count() > 0) {
+            $receivedBalances = [];
+            foreach ($balances as $balance) {
+                $data['id'] = $balance->id;
+                $data['balance'] = $balance->balance;
+                $data['station']['name'] = $balance->station->name;
+                $data['station']['number_station'] = $balance->station->number_station;
+                $data['transmitter']['membership'] = $balance->transmitter->user->username;
+                $data['transmitter']['user']['name'] = $balance->transmitter->user->name;
+                $data['transmitter']['user']['first_surname'] = $balance->transmitter->user->first_surname;
+                $data['transmitter']['user']['second_surname'] = $balance->transmitter->user->second_surname;
+                array_push($receivedBalances, $data);
             }
-            return $this->errorResponse('No hay abonos realizados');
+            return $this->response->successResponse('payments', $receivedBalances);
         }
-        return $this->logout(JWTAuth::getToken());
+        return $this->response->errorResponse('No hay abonos realizados');
     }
     // Funcion para devolver informacion de un saldo compartido
     public function useSharedBalance(Request $request)
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if (($deposit = $user->client->depositReceived->find($request->id_payment)) != null) {
-                $station['id'] = $deposit->station->id;
-                $station['name'] = $deposit->station->name;
-                $station['number_station'] = $deposit->station->number_station;
-                return response()->json([
-                    'ok' => true,
-                    'tr_membership' => $deposit->transmitter->user->username,
-                    'membership' => $deposit->receiver->user->username,
-                    'station' => $station
-                ]);
-            }
-            return $this->errorResponse('No hay abono en la cuenta');
+        $deposit = $this->client->depositReceived()
+            ->where([['id', $request->id_payment], ['balance', '>=', $request->balance]])
+            ->with(['station', 'transmitter', 'receiver'])->first();
+        if ($deposit) {
+            $station['id'] = $deposit->station->id;
+            $station['name'] = $deposit->station->name;
+            $station['number_station'] = $deposit->station->number_station;
+            return response()->json([
+                'ok' => true,
+                'tr_membership' => $deposit->transmitter->user->username,
+                'membership' => $deposit->receiver->user->username,
+                'station' => $station,
+                'balance' => $request->balance,
+            ]);
         }
-        return $this->logout(JWTAuth::getToken());
+        return $this->response->errorResponse('Saldo insuficiente en la cuenta');
     }
     // Funcion para realizar un pago autorizado por el cliente
     public function makePayment(Request $request)
     {
         if ($request->authorization == "true") {
+            if ($request->balance < $request->price)
+                return $this->response->errorResponse('Saldo seleccionado insuficiente');
             try {
-                $request->merge(['dispatcher_id' => $request->id_dispatcher, 'gasoline_id' => $request->id_gasoline, 'payment' => $request->price, 'schedule_id' => $request->id_schedule, 'station_id' => $request->id_station, 'client_id' => $this->client->id, 'time_id' => $request->id_time]);
-                if ($request->tr_membership == "") {
-                    if (($deposit = $this->client->deposits()->where([['status', 4], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first()) != null) {
+                $request->merge([
+                    'dispatcher_id' => $request->id_dispatcher, 'gasoline_id' => $request->id_gasoline,
+                    'payment' => $request->price, 'schedule_id' => $request->id_schedule,
+                    'station_id' => $request->id_station, 'client_id' => $this->client->id, 'time_id' => $request->id_time
+                ]);
+                if (!$request->tr_membership) {
+                    if (($deposit = $this->client->deposits()->where([['status', 4], ['station_id', $request->id_station], ['balance', '>=', $request->price]])->first())) {
                         Sale::create($request->all());
                         $deposit->balance -= $request->price;
                         $deposit->save();
@@ -186,11 +177,15 @@ class BalanceController extends Controller
                         $this->client->visits++;
                         $this->client->save();
                     } else {
-                        return $this->errorResponse('Saldo insuficiente');
+                        return $this->response->errorResponse('Saldo insuficiente');
                     }
                 } else {
                     $transmitter = User::where('username', $request->tr_membership)->first();
-                    if (($payment = $this->client->depositReceived->where('transmitter_id', $transmitter->client->id)->where('station_id', $request->id_station)->where('status', 4)->where('balance', '>=', $request->price)->first()) != null) {
+                    $payment = $this->client->depositReceived()->where([
+                        ['transmitter_id', $transmitter->client->id], ['station_id', $request->id_station],
+                        ['status', 4], ['balance', '>=', $request->price]
+                    ])->first();
+                    if ($payment) {
                         Sale::create($request->merge(['transmitter_id' => $transmitter->client->id])->all());
                         $payment->balance -= $request->price;
                         $payment->save();
@@ -199,12 +194,12 @@ class BalanceController extends Controller
                         $this->client->visits++;
                         $this->client->save();
                     } else {
-                        return $this->errorResponse('Saldo insuficiente');
+                        return $this->response->errorResponse('Saldo insuficiente');
                     }
                 }
                 return $this->makeNotification($request->ids_dispatcher, $request->ids_client, 'Cobro realizado con éxito', 'Pago con QR');
             } catch (Exception $e) {
-                return $this->errorResponse('Error al registrar el cobro');
+                return $this->response->errorResponse('Error al registrar el cobro');
             }
         }
         return $this->makeNotification($request->ids_dispatcher, null, 'Cobro cancelado', 'Pago con QR');
@@ -213,84 +208,73 @@ class BalanceController extends Controller
     public function addPoints(Request $request)
     {
         if (($user = Auth::user())->verifyRole(5)) {
-            if ($request->qr != '') {
+            if ($request->qr != '')
                 $request->merge(['code' => substr($request->qr, 0, 15), 'station' => substr($request->qr, 15, 5), 'sale' => substr($request->qr, 20)]);
-            }
             $validator = Validator::make($request->all(), [
                 'code' => 'required|string|min:15',
                 'station' => 'required|string|min:5',
                 'sale' => 'required|string',
             ]);
-            if ($validator->fails()) {
-                return  $this->errorResponse($validator->errors());
-            }
+            if ($validator->fails())
+                return  $this->response->errorResponse($validator->errors());
             if (($station = Station::where('number_station', $request->station)->first()) != null) {
                 $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
                 $ip = 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
                 $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
                 if ($saleQr != null && $saleQr->points == 0) {
                     $sale = $this->sendDnsMessage($station, $dns, $ip, $saleQr);
-                    if (is_string($sale)) {
-                        return $this->errorResponse($sale);
-                    }
+                    if (is_string($sale))
+                        return $this->response->errorResponse($sale);
                     $data = $this->status_L($sale, $request, $station, $user, $saleQr);
-                    if (is_string($data)) {
-                        return $this->errorResponse($data);
-                    }
+                    if (is_string($data))
+                        return $this->response->errorResponse($data);
                     $saleQr->update($data->all());
                     return $this->addPointsEucomb($user, $data->points);
                 }
                 if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->exists()) {
                     $scanedTicket = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                    if ($scanedTicket != null) {
+                    if ($scanedTicket != null)
                         return $this->messageScanedTicket($scanedTicket->client_id, $user->client->id);
-                    }
                     $scanedTicket = Sale::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                    if ($scanedTicket != null) {
+                    if ($scanedTicket != null)
                         return $this->messageScanedTicket($scanedTicket->client_id, $user->client->id);
-                    }
                     $scanedTicket = Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->first();
-                    if ($scanedTicket != null) {
+                    if ($scanedTicket != null)
                         return $this->messageScanedTicket($scanedTicket->number_usuario, $user->username);
-                    }
-                    return $this->errorResponse('Esta venta fue registrada anteriormente');
+                    return $this->response->errorResponse('Esta venta fue registrada anteriormente');
                 }
                 if (count(SalesQr::where([['client_id', $user->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
                     $sale = $this->sendDnsMessage($station, $dns, $ip);
-                    if (is_string($sale)) {
-                        return $this->errorResponse($sale);
-                    }
+                    if (is_string($sale))
+                        return $this->response->errorResponse($sale);
                     // return $sale;
                     $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
                     $start = $dateSale->modify('+2 minute');
                     $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
                     $dateSale->modify('+2 minute');
                     $end = $dateSale->modify('+24 hours');
-                    if (now() < $start) {
-                        return $this->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
-                    }
-                    if (now() > $end) {
-                        return $this->errorResponse('Han pasado 24 hrs para escanear su QR');
-                    }
+                    if (now() < $start)
+                        return $this->response->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
+                    if (now() > $end)
+                        return $this->response->errorResponse('Han pasado 24 hrs para escanear su QR');
                     $data = $this->status_L($sale, $request, $station, $user);
-                    if (is_string($data)) {
-                        return $this->errorResponse($data);
-                    }
+                    if (is_string($data))
+                        return $this->response->errorResponse($data);
                     $qr = SalesQr::create($data->all());
                     $pointsEucomb = Empresa::find(1)->double_points;
                     $points = $this->addEightyPoints($user->client->id, $request->liters, $pointsEucomb);
                     if ($points == 0) {
                         $qr->delete();
                         $limit = $pointsEucomb * 80;
-                        return $this->errorResponse("Ha llegado al límite de $limit puntos por día");
+                        return $this->response->errorResponse("Ha llegado al límite de $limit puntos por día");
                     } else {
                         $qr->update(['points' => $points]);
                     }
                     return $this->addPointsEucomb($user, $points);
                 }
-                return $this->errorResponse('Solo puedes validar 4 QR\'s por día');
+                return $this->response->errorResponse('Solo puedes validar 4 QR\'s por día');
             }
-            return $this->errorResponse('La estación no existe. Intente con el formulario.');
+            return $this->response->errorResponse('La estación no existe. Intente con el formulario.');
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -300,10 +284,10 @@ class BalanceController extends Controller
         if (($user = Auth::user())->verifyRole(5)) {
             if (($station = Station::find($request->id)) != null) {
                 if ($user->client->points < $station->voucher->points) {
-                    return $this->errorResponse('El canje no se puede realizar, no cuentas con puntos suficientes');
+                    return $this->response->errorResponse('El canje no se puede realizar, no cuentas con puntos suficientes');
                 }
                 if (Exchange::where('client_id', $user->client->id)->whereDate('created_at', now()->format('Y-m-d'))->exists()) {
-                    return $this->errorResponse('Solo se puede realizar un canje de vale por día');
+                    return $this->response->errorResponse('Solo se puede realizar un canje de vale por día');
                 }
                 if (($range = $station->vouchers->where('status', 4)->first()) != null) {
                     $lastExchange = $station->exchanges->where('exchange', '>=', $range->min)->where('exchange', '<=', $range->max)->sortByDesc('exchange')->first();
@@ -322,7 +306,7 @@ class BalanceController extends Controller
                         }
                     }
                     if ($voucher == 0) {
-                        return $this->errorResponse('Intente más tarde');
+                        return $this->response->errorResponse('Por el momento no hay vales disponibles en la estación');
                     }
                     if (($reference = $user->client->reference->first()) != null) {
                         Exchange::create(array('client_id' => $user->client->id, 'exchange' => $voucher, 'station_id' => $request->id, 'points' => $station->voucher->points, 'value' => $station->voucher->value, 'status' => 11, 'reference' => $reference->username));
@@ -336,11 +320,11 @@ class BalanceController extends Controller
                     $range->save();
                     $user->client->points -= $station->voucher->points;
                     $user->client->save();
-                    return $this->successResponse('message', 'Recuerda presentar una identificación oficial al recoger tu vale.');
+                    return $this->response->successResponse('message', 'Recuerda presentar una identificación oficial al recoger tu vale.');
                 }
-                return $this->errorResponse('Intente más tarde');
+                return $this->response->errorResponse('Por el momento no hay vales disponibles en la estación');
             }
-            return $this->errorResponse('La estación no existe');
+            return $this->response->errorResponse('La estación no existe');
         }
         return $this->logout(JWTAuth::getToken());
     }
@@ -348,7 +332,7 @@ class BalanceController extends Controller
     private function makeNotification($idsDispatcher, $idsClient, $message, $notification)
     {
         $ids = array("$idsDispatcher");
-        if ($idsClient != null) {
+        if ($idsClient) {
             $ids = array("$idsDispatcher", "$idsClient");
             $notification = '';
         }
@@ -375,7 +359,7 @@ class BalanceController extends Controller
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         $response = curl_exec($ch);
         curl_close($ch);
-        return $this->successResponse('notification', \json_decode($response));
+        return $this->response->successResponse('notification', \json_decode($response));
     }
     // Metodo para consultar la informacion de venta de una estacion
     private function getSaleOfStation($url, $saleQr = null)
@@ -434,7 +418,7 @@ class BalanceController extends Controller
         $user->client->main->count() > 0 ? $user->client->main->first()->client->points += $points : $user->client->points += $points;
         $user->client->visits++;
         $user->client->main->count() > 0 ? $user->client->main->first()->client->save() : $user->client->save();
-        return $user->client->main->count() > 0 ? $this->successResponse('points', 'Haz sumado puntos a ' . $user->client->main->first()->username . ' correctamente') : $this->successResponse('points', 'Se han sumado sus puntos correctamente');
+        return $user->client->main->count() > 0 ? $this->response->successResponse('points', 'Haz sumado puntos a ' . $user->client->main->first()->username . ' correctamente') : $this->response->successResponse('points', 'Se han sumado sus puntos correctamente');
     }
     // Metodo para calcular puntos
     private function addEightyPoints($clientId, $liters, $pointsEucomb = 1)
@@ -473,9 +457,9 @@ class BalanceController extends Controller
     private function messageScanedTicket($clientId, $saleClientId)
     {
         if ($clientId == $saleClientId) {
-            return $this->errorResponse('Ya has escaneado este ticket, verifica tus movimientos');
+            return $this->response->errorResponse('Ya has escaneado este ticket, verifica tus movimientos');
         } else {
-            return $this->errorResponse('Esta venta fue registrada por otro usuario');
+            return $this->response->errorResponse('Esta venta fue registrada por otro usuario');
         }
     }
     // Metodo para enviar un correo cuando el DNS falle
@@ -505,29 +489,11 @@ class BalanceController extends Controller
     {
         try {
             JWTAuth::invalidate(JWTAuth::parseToken($token));
-            return $this->errorResponse('Token invalido');
+            return $this->response->errorResponse('Token invalido');
         } catch (Exception $e) {
-            return $this->errorResponse('Token invalido');
+            return $this->response->errorResponse('Token invalido');
         }
     }
-    // Funcion mensaje correcto
-    private function successResponse($name, $data)
-    {
-        return response()->json([
-            'ok' => true,
-            $name => $data
-        ]);
-    }
-    // Funcion mensajes de error
-    private function errorResponse($message)
-    {
-        return response()->json([
-            'ok' => false,
-            'message' => $message
-        ]);
-    }
-
-
     // Método temporal
     public function sumar()
     {

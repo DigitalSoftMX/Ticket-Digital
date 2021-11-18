@@ -15,13 +15,13 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class DispatcherController extends Controller
 {
-    private $user, $dispatcher, $station, $time, $schedule, $todo;
-    public function __construct(ResponsesAndLogout $todo)
+    private $user, $dispatcher, $station, $time, $schedule, $response;
+    public function __construct(ResponsesAndLogout $response)
     {
-        $this->todo = $todo;
+        $this->response = $response;
         $this->user = auth()->user();
         if ($this->user == null || $this->user->roles->first()->id != 4) {
-            $this->todo->logout(JWTAuth::getToken());
+            $this->response->logout(JWTAuth::getToken());
         } else {
             $this->dispatcher = $this->user->dispatcher;
             $this->station = $this->user->dispatcher->station;
@@ -46,30 +46,29 @@ class DispatcherController extends Controller
         $data['schedule']['name'] = $this->schedule->name;
         $data['number_payments'] = count($payments);
         $data['total_payments'] = $totalPayment;
-        return $this->todo->successResponse('user', $data);
+        return $this->response->successResponse('user', $data);
     }
     // Registro de inicio de turno y termino de turno
     public function startEndTime(Request $request)
     {
         switch ($request->time) {
             case 'true':
-                if ($this->time != null) {
-                    if ($this->time->status == 6) {
-                        return $this->todo->errorResponse('Finalice el turno actual para iniciar otro');
-                    }
+                if ($this->time) {
+                    if ($this->time->status == 6)
+                        return $this->response->errorResponse('Finalice el turno actual para iniciar otro');
                 }
                 RegisterTime::create([
                     'dispatcher_id' => $this->dispatcher->id, 'station_id' => $this->station->id, 'schedule_id' => $this->schedule->id, 'status' => 6
                 ]);
-                return $this->todo->successResponse('message', 'Inicio de turno registrado');
+                return $this->response->successResponse('message', 'Inicio de turno registrado');
             case 'false':
-                if ($this->time != null) {
+                if ($this->time) {
                     $this->time->update(['status' => 8]);
-                    return $this->todo->successResponse('message', 'Fin de turno registrado');
+                    return $this->response->successResponse('message', 'Fin de turno registrado');
                 }
-                return $this->todo->errorResponse('Turno no registrado');
+                return $this->response->errorResponse('Turno no registrado');
         }
-        return $this->todo->errorResponse('Registro no valido');
+        return $this->response->errorResponse('Registro no valido');
     }
     // Metodo para obtner la lista de gasolina
     public function gasolineList()
@@ -85,7 +84,7 @@ class DispatcherController extends Controller
         $data['url'] = 'http://' . $this->station->dns . '/sales/public/record.php';
         $data['islands'] = $islands;
         $data['gasolines'] = $gasolines;
-        return $this->todo->successResponse('data', $data);
+        return $this->response->successResponse('data', $data);
     }
     // Obteniendo el valor de venta por bomba
     public function getSale(Request $request)
@@ -100,79 +99,91 @@ class DispatcherController extends Controller
             if ($contents) {
                 return \json_decode($contents, true);
             }
-            return $this->todo->errorResponse('Intente más tarde');
+            return $this->response->errorResponse('Intente más tarde');
         } catch (Exception $e) {
-            return $this->todo->errorResponse('La ip o la bomba son incorrectos');
+            return $this->response->errorResponse('La ip o la bomba son incorrectos');
         }
     }
     // Funcion para realizar el cobro hacia un cliente
     public function makeNotification(Request $request)
     {
-        if ($this->station->id == $request->id_station) {
-            if (Sale::where([['sale', $request->sale], ['station_id', $this->station->id]])->exists()) {
-                return $this->todo->errorResponse('La venta fue registrada anteriormente');
-            }
-            if (($client = User::where('username', $request->membership)->first()) != null) {
-                if ($request->tr_membership == "") {
-                    $deposit = $client->client->deposits()->where([['status', 4], ['station_id', $this->station->id], ['balance', '>=', $request->price]])->first();
-                } else {
-                    if (($transmitter = User::where('username', $request->tr_membership)->first()) == null) {
-                        return $this->todo->errorResponse('La membresía del receptor no esta disponible');
-                    }
-                    $deposit = $client->client->depositReceived->where('transmitter_id', $transmitter->client->id)->where('station_id', $this->station->id)->where('balance', '>=', $request->price)->where('status', 4)->first();
+        if (!$this->time)
+            return $this->response->errorResponse('Debe iniciar su turno');
+        if ($request->balance < $request->price)
+            return $this->response->errorResponse('Saldo seleccionado insuficiente');
+        if ($this->station->id != $request->id_station)
+            return $this->response->errorResponse('Estación incorrecta');
+        if (Sale::where([['sale', $request->sale], ['station_id', $this->station->id]])->exists())
+            return $this->response->errorResponse('La venta fue registrada anteriormente');
+        if ($client = User::where('username', $request->membership)->first()) {
+            if (!$request->tr_membership) {
+                $deposit = $client->client->deposits()
+                    ->where([
+                        ['status', 4], ['station_id', $this->station->id],
+                        ['balance', '>=', $request->price]
+                    ])->first();
+            } else {
+                if (!($transmitter = User::where('username', $request->tr_membership)->first())) {
+                    return $this->response->errorResponse('La membresía del receptor no esta disponible');
                 }
-                if ($deposit != null) {
-                    $gasoline = Gasoline::find($request->id_gasoline);
-                    $no_island = null;
-                    try {
-                        $no_island = $this->station->islands->where('bomb', $request->bomb_id)->first()->island;
-                    } catch (Exception $e) {
-                    }
-                    $fields = array(
-                        'app_id' => "62450fc4-bb2b-4f2e-a748-70e8300c6ddb",
-                        'data' => array(
-                            'id_dispatcher' => $this->dispatcher->id,
-                            'sale' => $request->sale,
-                            'id_gasoline' => $gasoline->id,
-                            "liters" => $request->liters,
-                            "price" => $request->price,
-                            'id_schedule' => $this->schedule->id,
-                            'id_station' => $this->station->id,
-                            'id_time' => $this->time->id,
-                            'no_island' => $no_island,
-                            'no_bomb' => $request->bomb_id,
-                            "gasoline" => $gasoline->name,
-                            "estacion" => $this->station->name,
-                            'ids_dispatcher' => $request->ids_dispatcher,
-                            'tr_membership' => $request->tr_membership
-                        ), 'contents' => array(
-                            "en" => "English message from postman",
-                            "es" => "Realizaste una solicitud de pago."
-                        ),
-                        'headings' => array(
-                            "en" => "English title from postman",
-                            "es" => "Pago con QR"
-                        ),
-                        'include_player_ids' => array("$request->ids_client"),
-                    );
-                    $fields = json_encode($fields);
-                    $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8'));
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                    curl_setopt($ch, CURLOPT_HEADER, FALSE);
-                    curl_setopt($ch, CURLOPT_POST, TRUE);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-                    $response = curl_exec($ch);
-                    curl_close($ch);
-                    return $this->todo->successResponse('notification', \json_decode($response));
-                }
-                return $this->todo->errorResponse('Saldo insuficiente');
+                $deposit = $client->client->depositReceived()
+                    ->where([
+                        ['transmitter_id', $transmitter->client->id], ['station_id', $this->station->id],
+                        ['balance', '>=', $request->price], ['status', 4]
+                    ])->first();
             }
-            return $this->todo->errorResponse('Membresía no disponible');
+            if ($deposit) {
+                $gasoline = Gasoline::find($request->id_gasoline);
+                $no_island = null;
+                try {
+                    $no_island = $this->station->islands->where('bomb', $request->bomb_id)->first()->island;
+                } catch (Exception $e) {
+                }
+                return $this->schedule->id;
+                $fields = array(
+                    'app_id' => "62450fc4-bb2b-4f2e-a748-70e8300c6ddb",
+                    'data' => array(
+                        'id_dispatcher' => $this->dispatcher->id,
+                        'sale' => $request->sale,
+                        'id_gasoline' => $gasoline->id,
+                        "liters" => $request->liters,
+                        "price" => $request->price,
+                        'id_schedule' => $this->schedule->id,
+                        'id_station' => $this->station->id,
+                        'id_time' => $this->time->id,
+                        'no_island' => $no_island,
+                        'no_bomb' => $request->bomb_id,
+                        "gasoline" => $gasoline->name,
+                        "estacion" => $this->station->name,
+                        'ids_dispatcher' => $request->ids_dispatcher,
+                        'tr_membership' => $request->tr_membership,
+                        'balance' => $request->balance,
+                    ), 'contents' => array(
+                        "en" => "English message from postman",
+                        "es" => "Realizaste una solicitud de pago."
+                    ),
+                    'headings' => array(
+                        "en" => "English title from postman",
+                        "es" => "Pago con QR"
+                    ),
+                    'include_player_ids' => array("$request->ids_client"),
+                );
+                $fields = json_encode($fields);
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8'));
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+                curl_setopt($ch, CURLOPT_HEADER, FALSE);
+                curl_setopt($ch, CURLOPT_POST, TRUE);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+                $response = curl_exec($ch);
+                curl_close($ch);
+                return $this->response->successResponse('notification', \json_decode($response));
+            }
+            return $this->response->errorResponse('Saldo insuficiente en la cuenta');
         }
-        return $this->todo->errorResponse('Estación incorrecta');
+        return $this->response->errorResponse('Membresía no disponible');
     }
     // Funcion para obtener la lista de horarios de una estacion
     public function getListSchedules()
@@ -182,15 +193,14 @@ class DispatcherController extends Controller
             $data = array('id' => $schedule->id, 'name' => $schedule->name);
             array_push($dataSchedules, $data);
         }
-        return $this->todo->successResponse('schedules', $dataSchedules);
+        return $this->response->successResponse('schedules', $dataSchedules);
     }
     // Funcion para obtener los cobros del dia
     public function getPaymentsNow()
     {
-        if ($this->time != null) {
+        if ($this->time)
             return $this->getPayments(['time_id', $this->time->id], now()->format('Y-m-d'));
-        }
-        return $this->todo->errorResponse('Aun no hay registro de cobros');
+        return $this->response->errorResponse('Aun no hay registro de cobros');
     }
     // Funcion para devolver la lista de cobros por fecha
     public function getListPayments(Request $request)
@@ -229,8 +239,8 @@ class DispatcherController extends Controller
             }
             $info['liters_product'] = array('Magna' => $magna, 'Premium' => $premium, 'Diésel' => $diesel);
             $info['payment'] = $dataPayment;
-            return $this->todo->successResponse('payments', $info);
+            return $this->response->successResponse('payments', $info);
         }
-        return $this->todo->errorResponse('Aun no hay registro de cobros');
+        return $this->response->errorResponse('Aun no hay registro de cobros');
     }
 }
