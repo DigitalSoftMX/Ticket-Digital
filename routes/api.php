@@ -1,16 +1,5 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
-
 // Rutas del usuario, login, registro y cierre de sesion
 Route::post('login', 'Api\AuthController@login');
 Route::post('register', 'Api\AuthController@register');
@@ -32,7 +21,7 @@ Route::group(['middleware' => 'jwtAuth'], function () {
 });
 // Rutas para los abonos
 Route::group(['middleware' => 'jwtAuth'], function () {
-    Route::get('payments', 'Api\BalanceController@getPersonalPayments');
+    Route::get('payments', 'Api\BalanceController@getDeposits');
     Route::post('balance/pay', 'Api\BalanceController@addBalance');
     Route::get('balance/use', 'Api\BalanceController@useBalance');
     Route::post('balance/contact/sendbalance', 'Api\BalanceController@sendBalance');

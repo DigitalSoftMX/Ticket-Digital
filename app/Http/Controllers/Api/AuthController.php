@@ -20,7 +20,6 @@ use App\Station;
 use App\User;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use SimpleXMLElement;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -67,18 +66,16 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
             'number_plate' => [Rule::unique((new DataCar())->getTable())],
         ]);
-        if ($validator->fails()) {
+        if ($validator->fails())
             return $this->errorResponse($validator->errors(), null);
-        }
         // Membresia aleatoria no repetible
         while (true) {
             $membership = 'E' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
-            if (!(User::where('username', $membership)->exists())) {
+            if (!(User::where('username', $membership)->exists()))
                 break;
-            }
         }
         $password = $request->password;
-        $request->merge(['username' => $membership, 'active' => 1, 'password' => Hash::make($request->password)]);
+        $request->merge(['username' => $membership, 'active' => 1, 'password' => bcrypt($request->password)]);
         $user = User::create($request->all());
         $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => Empresa::find(1)->points, 'image' => $membership, 'visits' => 0, 'active' => 0]);
         Client::create($request->all());
@@ -120,9 +117,8 @@ class AuthController extends Controller
     // Metodo para iniciar sesion, delvuelve el token
     private function getToken($request, $user, $rol)
     {
-        if (!$token = JWTAuth::attempt($request->only('email', 'password'))) {
+        if (!$token = JWTAuth::attempt($request->only('email', 'password')))
             return $this->errorResponse('Datos incorrectos', null);
-        }
         $user->update(['remember_token' => $token]);
         if ($rol == 5) {
             if ($user->client == null) {
