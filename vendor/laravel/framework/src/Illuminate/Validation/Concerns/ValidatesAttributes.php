@@ -1174,7 +1174,7 @@ trait ValidatesAttributes
             return false;
         }
 
-        if (! is_scalar($value) && ! method_exists($value, '__toString')) {
+        if (! is_scalar($value) && ! is_null($value) && ! method_exists($value, '__toString')) {
             return false;
         }
 
@@ -1918,7 +1918,6 @@ trait ValidatesAttributes
      *
      * @param  string  $attribute
      * @param  string  $rule
-     *
      * @return void
      */
     protected function shouldBeNumeric($attribute, $rule)
