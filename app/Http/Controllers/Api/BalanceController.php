@@ -62,7 +62,7 @@ class BalanceController extends Controller
                 if ((strpos($file->getClientMimeType(), 'image')) === false) {
                     return $this->response->errorResponse('El archivo no es una imagen');
                 }
-                $request->merge(['client_id' => $this->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
+                $request->merge(['client_id' => $this->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($this->user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
                 $deposit = new Deposit();
                 $deposit->create($request->all());
                 return $this->response->successResponse('message', 'Abono realizado correctamente');
