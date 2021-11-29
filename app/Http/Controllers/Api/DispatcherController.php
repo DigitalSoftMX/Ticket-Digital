@@ -138,8 +138,7 @@ class DispatcherController extends Controller
                 try {
                     $no_island = $this->station->islands->where('bomb', $request->bomb_id)->first()->island;
                 } catch (Exception $e) {
-                }
-                return $this->schedule->id;
+                }                
                 $fields = array(
                     'app_id' => "62450fc4-bb2b-4f2e-a748-70e8300c6ddb",
                     'data' => array(
