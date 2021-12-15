@@ -116,10 +116,13 @@ class UserController extends Controller
         $data = array(
             'id' => $user->id,
             'name' => $user->name,
-            'first_surname' => $user->first_surname,
-            'second_surname' => $user->second_surname,
-            'phone' => $user->phone,
-            'address' => $user->address
+            'first_surname' => $user->first_surname ?? '',
+            'second_surname' => $user->second_surname ?? '',
+            'phone' => $user->phone ?? '',
+            'address' => $user->address ?? ''
+
+
+
         );
         return $data;
     }
