@@ -52,9 +52,7 @@ class UserController extends Controller
                     'first_surname' => 'required|string',
                     'email' => 'required|email',
                 ]);
-                if ($validator->fails()) {
-                    return $this->errorResponse($validator->errors());
-                }
+                if ($validator->fails()) return $this->errorResponse($validator->errors());
                 // Registrando la informacion basica del cliente
                 $user->update($request->only('name', 'first_surname', 'second_surname', 'phone', 'address', 'sex'));
                 //registrando el correo
@@ -120,9 +118,6 @@ class UserController extends Controller
             'second_surname' => $user->second_surname ?? '',
             'phone' => $user->phone ?? '',
             'address' => $user->address ?? ''
-
-
-
         );
         return $data;
     }

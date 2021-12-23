@@ -72,7 +72,7 @@ class ClientController extends Controller
                 $payments = array();
                 switch ($request->type) {
                     case 'payment':
-                        if (count($balances = $this->getBalances(new Sale(), $request->start, $request->end, $user, null, null)) > 0) {
+                        if (count($balances = $this->getBalances(new Sale(), $request->start, $request->end, $user, null)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['balance'] = $balance->payment;
                                 $data['station'] = $balance->station->name;
@@ -89,7 +89,7 @@ class ClientController extends Controller
                         }
                         break;
                     case 'balance':
-                        if (count($balances = $this->getBalances(new Deposit(), $request->start, $request->end, $user, 4, null)) > 0) {
+                        if (count($balances = $this->getBalances(new Deposit(), $request->start, $request->end, $user, 4)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['balance'] = $balance->balance;
                                 $data['station'] = $balance->station->name;
@@ -128,7 +128,7 @@ class ClientController extends Controller
                         }
                         break;
                     case 'points':
-                        if (count($balances = $this->getBalances(new SalesQr(), $request->start, $request->end, $user, null, null)) > 0) {
+                        if (count($balances = $this->getBalances(new SalesQr(), $request->start, $request->end, $user, null)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['points'] = $balance->points;
                                 $data['station'] = $balance->station->name;
@@ -168,17 +168,14 @@ class ClientController extends Controller
         return $this->logout(JWTAuth::getToken());
     }
     // Funcion para devolver el arreglo de historiales
-    private function getBalances($model, $start, $end, $user, $status, $type)
+    private function getBalances($model, $start, $end, $user, $status, $type = null)
     {
         $query = [['client_id', $user->client->id]];
-        if ($type != null) {
-            $query = [[$type, $user->client->id]];
-        }
-        if ($status != null) {
-            $query[1] = ['status', '!=', $status];
-        }
+        if ($type) $query = [[$type, $user->client->id]];
+        if ($status) $query[1] = ['status', '!=', $status];
         if ($type == 'exchange') {
             $query = [['client_id', $user->client->id]];
+            $query[1] = ['status', $status];
         }
         if ($start == "" && $end == "") {
             $balances = $model::where($query)->get();
