@@ -175,7 +175,6 @@ class ClientController extends Controller
         if ($status) $query[1] = ['status', '!=', $status];
         if ($type == 'exchange') {
             $query = [['client_id', $user->client->id]];
-            $query[1] = ['status', $status];
         }
         if ($start == "" && $end == "") {
             $balances = $model::where($query)->get();
