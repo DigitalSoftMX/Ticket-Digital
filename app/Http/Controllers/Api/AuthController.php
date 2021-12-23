@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Lealtad\Tarjeta;
 use App\Lealtad\Ticket;
+use App\Repositories\ResponsesAndLogout;
 use App\SalesQr;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
@@ -26,32 +27,48 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
+    private $response;
+
+    public function __construct(ResponsesAndLogout $response)
+    {
+        $this->response = $response;
+    }
     // Metodo para inicar sesion
     public function login(Request $request)
     {
-        if (($u = User::where('username', $request->email)->first()) != null) {
-            if ($u->email != null) {
+        if ($u = User::where('username', $request->email)->first()) {
+            if ($u->email) {
                 $user = User::where('email', $u->email)->get();
                 $request->merge(['email' => $u->email]);
             } else {
-                return $this->errorResponse('No existe un correo electrónico registrado. Ingrese un correo electrónico.', $u->id);
+                return $this->response
+                    ->errorResponse(
+                        'No existe un correo electrónico registrado. Ingrese un correo electrónico.',
+                        $u->id
+                    );
             }
         } else {
             $user = User::where('email', $request->email)->get();
         }
-        switch (count($user)) {
+        switch ($user->count()) {
             case 0:
-                return $this->errorResponse('El usuario no existe', null);
+                return $this->response->errorResponse('Lo sentimos, la cuenta no esta registrada.', null);
             case 1:
-                foreach ($user[0]->roles as $rol) {
+                foreach ($user->first()->roles as $rol) {
                     if ($rol->id == 4 || $rol->id == 5) {
                         $validator = Validator::make($request->only('email'), ['email' => 'email']);
-                        return ($validator->fails()) ? $this->errorResponse('Su correo actual no es válido. Ingrese un nuevo correo.', $user[0]->id) : $this->getToken($request, $user[0], $rol->id);
+                        return ($validator->fails()) ?
+                            $this->response->errorResponse(
+                                'Por favor, ingrese un nuevo correo electrónico.',
+                                $user[0]->id
+                            ) : $this->getToken($request, $user[0], $rol->id);
                     }
                 }
-                return $this->errorResponse('Usuario no autorizado', null);
+                return $this->response->errorResponse('Usuario no autorizado', null);
             default:
-                return ($u != null) ? $this->errorResponse('Correo duplicado. Ingrese un nuevo correo.', $u->id) : $this->errorResponse('Correo duplicado. Intente ingresar con su membresía.', null);
+                return $u ?
+                    $this->response->errorResponse('Por favor, ingrese un nuevo correo electrónico.', $u->id) :
+                    $this->response->errorResponse('Intente ingresar con su membresía.', null);
         }
     }
     // Metodo para registrar a un usuario nuevo
@@ -60,14 +77,12 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string',
             'first_surname' => 'required|string',
-            'email' => [
-                'required', 'email', Rule::unique((new User)->getTable())
-            ],
+            'email' => ['required', 'email', Rule::unique((new User)->getTable())],
             'password' => 'required|string|min:6',
             'number_plate' => [Rule::unique((new DataCar())->getTable())],
         ]);
         if ($validator->fails())
-            return $this->errorResponse($validator->errors(), null);
+            return $this->response->errorResponse($validator->errors(), null);
         // Membresia aleatoria no repetible
         while (true) {
             $membership = 'E' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
@@ -98,7 +113,7 @@ class AuthController extends Controller
             ],
         ]);
         if ($validator->fails()) {
-            return $this->errorResponse($validator->errors(), $request->id);
+            return $this->response->errorResponse($validator->errors(), $request->id);
         }
         $user = User::find($request->id);
         $user->update($request->only('email'));
@@ -111,14 +126,14 @@ class AuthController extends Controller
             JWTAuth::invalidate(JWTAuth::parseToken($request->token));
             return $this->successReponse('message', 'Cierre de sesión correcto');
         } catch (Exception $e) {
-            return $this->errorResponse('Token inválido', null);
+            return $this->response->errorResponse('Token inválido', null);
         }
     }
     // Metodo para iniciar sesion, delvuelve el token
     private function getToken($request, $user, $rol)
     {
         if (!$token = JWTAuth::attempt($request->only('email', 'password')))
-            return $this->errorResponse('Datos incorrectos', null);
+            return $this->response->errorResponse('Datos incorrectos', null);
         $user->update(['remember_token' => $token]);
         if ($rol == 5) {
             if ($user->client == null) {
