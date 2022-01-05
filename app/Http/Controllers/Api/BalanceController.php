@@ -56,20 +56,19 @@ class BalanceController extends Controller
     // Funcion para realizar un abono a la cuenta de un usuario
     public function addBalance(Request $request)
     {
-        if ($request->deposit % 100 == 0 && $request->deposit > 0) {
-            // Obteniendo el archivo de imagen de pago
-            if (($file = $request->file('image')) != NULL) {
-                if ((strpos($file->getClientMimeType(), 'image')) === false) {
-                    return $this->response->errorResponse('El archivo no es una imagen');
-                }
-                $request->merge(['client_id' => $this->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($this->user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
-                $deposit = new Deposit();
-                $deposit->create($request->all());
-                return $this->response->successResponse('message', 'Abono realizado correctamente');
-            }
-            return $this->response->errorResponse('Debe subir su comprobante');
-        }
-        return $this->response->errorResponse('La cantidad debe ser multiplo de $100');
+        $validator = Validator::make(
+            $request->only(['deposit', 'id_station', 'image']),
+            [
+                'deposit' => 'required|integer|min:100',
+                'id_station' => 'integer',
+                'image' => 'required|image'
+            ]
+        );
+        if ($validator->fails())
+            return  $this->response->errorResponse($validator->errors());
+        $request->merge(['client_id' => $this->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($this->user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
+        Deposit::create($request->all());
+        return $this->response->successResponse('message', 'Abono realizado correctamente');
     }
     // Funcion para devolver la membresía del cliente y la estacion
     public function useBalance(Request $request)
