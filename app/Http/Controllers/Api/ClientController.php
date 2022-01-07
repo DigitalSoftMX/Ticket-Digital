@@ -54,7 +54,7 @@ class ClientController extends Controller
             }
             $exchanges = array();
             foreach ($user->client->exchanges->where('status', '!=', 14) as $exchange) {
-                $dataExchange['station'] = $exchange->station->name;
+                $dataExchange['station'] = $exchange->station->abrev;
                 $dataExchange['invoice'] = $exchange->exchange;
                 $dataExchange['status'] = $exchange->estado->name;
                 $dataExchange['date'] = $exchange->created_at->format('Y/m/d');
@@ -75,7 +75,7 @@ class ClientController extends Controller
                         if (count($balances = $this->getBalances(new Sale(), $request->start, $request->end, $user, null)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['balance'] = $balance->payment;
-                                $data['station'] = $balance->station->name;
+                                $data['station'] = $balance->station->abrev;
                                 $data['liters'] = $balance->liters;
                                 $data['date'] = $balance->created_at->format('Y/m/d');
                                 $data['hour'] = $balance->created_at->format('H:i:s');
@@ -92,7 +92,7 @@ class ClientController extends Controller
                         if (count($balances = $this->getBalances(new Deposit(), $request->start, $request->end, $user, 4)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['balance'] = $balance->balance;
-                                $data['station'] = $balance->station->name;
+                                $data['station'] = $balance->station->abrev;
                                 $data['status'] = $balance->deposit->name;
                                 $data['date'] = $balance->created_at->format('Y/m/d');
                                 $data['hour'] = $balance->created_at->format('H:i:s');
@@ -117,7 +117,7 @@ class ClientController extends Controller
                         if (count($balances = $this->getBalances(new Exchange(), $request->start, $request->end, $user, 14, 'exchange')) > 0) {
                             foreach ($balances as $balance) {
                                 $data['points'] = $balance->points;
-                                $data['station'] = $balance->station->name;
+                                $data['station'] = $balance->station->abrev;
                                 $data['invoice'] = $balance->exchange;
                                 $data['status'] = $balance->estado->name;
                                 $data['status_id'] = $balance->status;
@@ -131,7 +131,7 @@ class ClientController extends Controller
                         if (count($balances = $this->getBalances(new SalesQr(), $request->start, $request->end, $user, null)) > 0) {
                             foreach ($balances as $balance) {
                                 $data['points'] = $balance->points;
-                                $data['station'] = $balance->station->name;
+                                $data['station'] = $balance->station->abrev;
                                 $data['status'] = ($balance->points == 0) ? 'Intente escanear su ticket nuevamente' : 'Puntos sumados';
                                 $data['sale'] = $balance->sale;
                                 $data['date'] = $balance->created_at->format('Y/m/d');
@@ -192,10 +192,10 @@ class ClientController extends Controller
     {
         $payments = array();
         foreach ($balances as $balance) {
-            $payment['station'] = $balance->station->name;
+            $payment['station'] = $balance->station->abrev;
             $payment['balance'] = $balance->balance;
             $payment['membership'] = $balance->$person->user->username;
-            $payment['name'] = $balance->$person->user->name . ' ' . $balance->$person->user->first_surname . ' ' . $balance->$person->user->second_surname;
+            $payment['name'] = $balance->$person->user->name . ' ' . $balance->$person->user->first_surname;
             $payment['date'] = $balance->created_at->format('Y/m/d');
             array_push($payments, $payment);
         }
