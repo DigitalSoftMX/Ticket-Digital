@@ -79,7 +79,7 @@ class AuthController extends Controller
             'first_surname' => 'required|string',
             'email' => ['required', 'email', Rule::unique((new User)->getTable())],
             'password' => 'required|string|min:6',
-            'number_plate' => [Rule::unique((new DataCar())->getTable())],
+            'number_plate' => $request->number_plate ? [Rule::unique((new DataCar())->getTable())] : '',
         ]);
         if ($validator->fails())
             return $this->response->errorResponse($validator->errors(), null);
