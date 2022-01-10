@@ -206,76 +206,72 @@ class BalanceController extends Controller
     // Metoodo para sumar de puntos QR o formulario
     public function addPoints(Request $request)
     {
-        if (($user = Auth::user())->verifyRole(5)) {
-            if ($request->qr != '')
-                $request->merge(['code' => substr($request->qr, 0, 15), 'station' => substr($request->qr, 15, 5), 'sale' => substr($request->qr, 20)]);
-            $validator = Validator::make($request->all(), [
-                'code' => 'required|string|min:15',
-                'station' => 'required|string|min:5',
-                'sale' => 'required|string',
-            ]);
-            if ($validator->fails())
-                return  $this->response->errorResponse($validator->errors());
-            if (($station = Station::where('number_station', $request->station)->first()) != null) {
-                $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
-                $ip = 'http://' . $station->ip . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
-                $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                if ($saleQr != null && $saleQr->points == 0) {
-                    $sale = $this->sendDnsMessage($station, $dns, $ip, $saleQr);
-                    if (is_string($sale))
-                        return $this->response->errorResponse($sale);
-                    $data = $this->status_L($sale, $request, $station, $user, $saleQr);
-                    if (is_string($data))
-                        return $this->response->errorResponse($data);
-                    $saleQr->update($data->all());
-                    return $this->addPointsEucomb($user, $data->points);
-                }
-                if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->exists()) {
-                    $scanedTicket = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                    if ($scanedTicket != null)
-                        return $this->messageScanedTicket($scanedTicket->client_id, $user->client->id);
-                    $scanedTicket = Sale::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                    if ($scanedTicket != null)
-                        return $this->messageScanedTicket($scanedTicket->client_id, $user->client->id);
-                    $scanedTicket = Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->first();
-                    if ($scanedTicket != null)
-                        return $this->messageScanedTicket($scanedTicket->number_usuario, $user->username);
-                    return $this->response->errorResponse('Esta venta fue registrada anteriormente');
-                }
-                if (count(SalesQr::where([['client_id', $user->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
-                    $sale = $this->sendDnsMessage($station, $dns, $ip);
-                    if (is_string($sale))
-                        return $this->response->errorResponse($sale);
-                    // return $sale;
-                    $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                    $start = $dateSale->modify('+2 minute');
-                    $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
-                    $dateSale->modify('+2 minute');
-                    $end = $dateSale->modify('+24 hours');
-                    if (now() < $start)
-                        return $this->response->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
-                    if (now() > $end)
-                        return $this->response->errorResponse('Han pasado 24 hrs para escanear su QR');
-                    $data = $this->status_L($sale, $request, $station, $user);
-                    if (is_string($data))
-                        return $this->response->errorResponse($data);
-                    $qr = SalesQr::create($data->all());
-                    $pointsEucomb = Empresa::find(1)->double_points;
-                    $points = $this->addEightyPoints($user->client->id, $request->liters, $pointsEucomb);
-                    if ($points == 0) {
-                        $qr->delete();
-                        $limit = $pointsEucomb * 80;
-                        return $this->response->errorResponse("Ha llegado al límite de $limit puntos por día");
-                    } else {
-                        $qr->update(['points' => $points]);
-                    }
-                    return $this->addPointsEucomb($user, $points);
-                }
-                return $this->response->errorResponse('Solo puedes validar 4 QR\'s por día');
+        if ($request->qr)
+            $request->merge(['code' => substr($request->qr, 0, 15), 'station' => substr($request->qr, 15, 5), 'sale' => substr($request->qr, 20)]);
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|string|min:15',
+            'station' => 'required|string|min:5',
+            'sale' => 'required|string',
+        ]);
+        if ($validator->fails())
+            return  $this->response->errorResponse($validator->errors());
+        if ($station = Station::where('number_station', $request->station)->first()) {
+            $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
+            $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+            if ($saleQr && $saleQr->points == 0) {
+                $sale = $this->sendDnsMessage($station, $dns, $saleQr);
+                if (is_string($sale))
+                    return $this->response->errorResponse($sale);
+                $data = $this->status_L($sale, $request, $station, $this->user, $saleQr);
+                if (is_string($data))
+                    return $this->response->errorResponse($data);
+                $saleQr->update($data->all());
+                return $this->addPointsEucomb($this->user, $data->points);
             }
-            return $this->response->errorResponse('La estación no existe. Intente con el formulario.');
+            if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->exists()) {
+                $scanedTicket = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+                if ($scanedTicket)
+                    return $this->messageScanedTicket($scanedTicket->client_id, $this->client->id);
+                $scanedTicket = Sale::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+                if ($scanedTicket)
+                    return $this->messageScanedTicket($scanedTicket->client_id, $this->client->id);
+                $scanedTicket = Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->first();
+                if ($scanedTicket)
+                    return $this->messageScanedTicket($scanedTicket->number_usuario, $this->user->username);
+                return $this->response->errorResponse('Esta venta fue registrada anteriormente');
+            }
+            if (count(SalesQr::where([['client_id', $this->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
+                $sale = $this->sendDnsMessage($station, $dns);
+                if (is_string($sale))
+                    return $this->response->errorResponse($sale);
+                // return $sale;
+                $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                $start = $dateSale->modify('+2 minute');
+                $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                $dateSale->modify('+2 minute');
+                $end = $dateSale->modify('+24 hours');
+                if (now() < $start)
+                    return $this->response->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
+                if (now() > $end)
+                    return $this->response->errorResponse('Han pasado 24 hrs para escanear su QR');
+                $data = $this->status_L($sale, $request, $station, $this->user);
+                if (is_string($data))
+                    return $this->response->errorResponse($data);
+                $qr = SalesQr::create($data->all());
+                $pointsEucomb = Empresa::find(1)->double_points;
+                $points = $this->addEightyPoints($this->client->id, $request->liters, $pointsEucomb);
+                if ($points == 0) {
+                    $qr->delete();
+                    $limit = $pointsEucomb * 80;
+                    return $this->response->errorResponse("Ha llegado al límite de $limit puntos por día");
+                } else {
+                    $qr->update(['points' => $points]);
+                }
+                return $this->addPointsEucomb($this->user, $points);
+            }
+            return $this->response->errorResponse('Solo puedes validar 4 QR\'s por día');
         }
-        return $this->logout(JWTAuth::getToken());
+        return $this->response->errorResponse('La estación no existe. Intente con el formulario.');
     }
     // Método para realizar canjes
     public function exchange(Request $request)
@@ -398,7 +394,7 @@ class BalanceController extends Controller
     private function status_L($sale, $request, $station, $user, $qr = null)
     {
         if ($sale['status'] == 'L' || $sale['status'] == 'l' || $sale['status'] == 'T' || $sale['status'] == 't' || $sale['status'] == 'V' || $sale['status'] == 'v') {
-            if ($qr != null) {
+            if ($qr) {
                 $qr->delete();
             }
             return 'Esta venta pertenece a otro programa de recompensas';
@@ -462,10 +458,10 @@ class BalanceController extends Controller
         }
     }
     // Metodo para enviar un correo cuando el DNS falle
-    private function sendDnsMessage($station, $dns, $ip, $saleQr = null)
+    private function sendDnsMessage($station, $dns, $saleQr = null)
     {
         $sale = '';
-        if ($station->dns != null) {
+        if ($station->dns) {
             $sale = $this->getSaleOfStation($dns, $saleQr);
             $station->update(['fail' => null]);
         }
@@ -479,7 +475,6 @@ class BalanceController extends Controller
                 $station->update(['fail' => now()]);
                 //event(new MessageDns($station));
             }
-            $sale = $this->getSaleOfStation($ip, $saleQr);
         }
         return $sale;
     }
