@@ -169,7 +169,7 @@ class DispatcherController extends Controller
                 $response = $notification->sendNotification(
                     $request->ids_client,
                     'Realizaste una solicitud de pago.',
-                    null,
+                    'Pago con QR',
                     $data
                 );
                 return $this->response->successResponse('notification', $response);
