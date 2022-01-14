@@ -15,6 +15,7 @@ use App\Events\MessageDns;
 use App\Exchange;
 use App\History;
 use App\Lealtad\Ticket;
+use App\Repositories\Actions;
 use App\Repositories\ResponsesAndLogout;
 use App\SalesQr;
 use App\Station;
@@ -66,7 +67,11 @@ class BalanceController extends Controller
         );
         if ($validator->fails())
             return  $this->response->errorResponse($validator->errors());
-        $request->merge(['client_id' => $this->client->id, 'balance' => $request->deposit, 'image_payment' => $request->file('image')->store($this->user->username . '/' . $request->id_station, 'public'), 'station_id' => $request->id_station, 'status' => 1]);
+        $request->merge([
+            'client_id' => $this->client->id, 'balance' => $request->deposit,
+            'image_payment' => $request->file('image')->store($this->user->username . '/' . $request->id_station, 'public'),
+            'station_id' => $request->id_station, 'status' => 1
+        ]);
         Deposit::create($request->all());
         return $this->response->successResponse('message', 'Abono realizado correctamente');
     }
@@ -96,18 +101,29 @@ class BalanceController extends Controller
         $payment = $this->client->deposits()->where([
             ['id', $request->id_payment], ['status', 4], ['balance', '>=', $request->balance]
         ])->first();
+
         if ($payment) {
-            $request->merge(['transmitter_id' => $this->client->id, 'receiver_id' => $request->id_contact, 'station_id' => $payment->station_id, 'status' => 5]);
+            $request->merge([
+                'transmitter_id' => $this->client->id, 'receiver_id' => $request->id_contact,
+                'station_id' => $payment->station_id, 'status' => 5
+            ]);
+
             SharedBalance::create($request->all());
-            if ($receivedBalance = SharedBalance::where([['transmitter_id', $this->client->id], ['receiver_id', $request->id_contact], ['station_id', $payment->station_id], ['status', 4]])->first()) {
+
+            if ($receivedBalance = SharedBalance::where([
+                ['transmitter_id', $this->client->id],
+                ['receiver_id', $request->id_contact], ['station_id', $payment->station_id], ['status', 4]
+            ])->first()) {
                 $receivedBalance->balance += $request->balance;
                 $receivedBalance->save();
             } else {
                 SharedBalance::create($request->merge(['status' => 4])->all());
             }
+
             $payment->balance -= $request->balance;
             $payment->save();
-            $this->makeNotification(Client::find($request->id_contact)->ids, null, 'Te han compartido saldo', 'Saldo compartido');
+            $notification = new Actions();
+            $notification->sendNotification(Client::find($request->id_contact)->ids, 'Saldo compartido', 'Te han compartido saldo');
             return $this->response->successResponse('message', 'Saldo compartido correctamente');
         }
         return $this->response->errorResponse('Saldo insuficiente');
@@ -155,6 +171,7 @@ class BalanceController extends Controller
     // Funcion para realizar un pago autorizado por el cliente
     public function makePayment(Request $request)
     {
+        $notification = new Actions();
         if ($request->authorization == "true") {
             if ($request->balance < $request->price)
                 return $this->response->errorResponse('Saldo seleccionado insuficiente');
@@ -196,12 +213,12 @@ class BalanceController extends Controller
                         return $this->response->errorResponse('Saldo insuficiente');
                     }
                 }
-                return $this->makeNotification($request->ids_dispatcher, $request->ids_client, 'Cobro realizado con éxito', 'Pago con QR');
+                return $notification->sendNotification($request->ids_dispatcher, 'Cobro realizado con éxito', null);
             } catch (Exception $e) {
                 return $this->response->errorResponse('Error al registrar el cobro');
             }
         }
-        return $this->makeNotification($request->ids_dispatcher, null, 'Cobro cancelado', 'Pago con QR');
+        return $notification->sendNotification($request->ids_dispatcher, 'Cobro cancelado', null);
     }
     // Metoodo para sumar de puntos QR o formulario
     public function addPoints(Request $request)
@@ -322,39 +339,6 @@ class BalanceController extends Controller
             return $this->response->errorResponse('La estación no existe');
         }
         return $this->logout(JWTAuth::getToken());
-    }
-    // Funcion para enviar una notificacion
-    private function makeNotification($idsDispatcher, $idsClient, $message, $notification)
-    {
-        $ids = array("$idsDispatcher");
-        if ($idsClient) {
-            $ids = array("$idsDispatcher", "$idsClient");
-            $notification = '';
-        }
-        $fields = array(
-            'app_id' => "62450fc4-bb2b-4f2e-a748-70e8300c6ddb",
-            'contents' => array(
-                "en" => "English message from postman",
-                "es" => $message
-            ),
-            'headings' => array(
-                "en" => "English title from postman",
-                "es" => $notification
-            ),
-            'include_player_ids' => $ids,
-        );
-        $fields = json_encode($fields);
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8'));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-        curl_setopt($ch, CURLOPT_HEADER, FALSE);
-        curl_setopt($ch, CURLOPT_POST, TRUE);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-        $response = curl_exec($ch);
-        curl_close($ch);
-        return $this->response->successResponse('notification', \json_decode($response));
     }
     // Metodo para consultar la informacion de venta de una estacion
     private function getSaleOfStation($url, $saleQr = null)
