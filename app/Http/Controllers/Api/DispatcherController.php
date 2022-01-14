@@ -7,6 +7,7 @@ use App\Gasoline;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\RegisterTime;
+use App\Repositories\Actions;
 use App\Repositories\ResponsesAndLogout;
 use App\Schedule;
 use App\User;
@@ -32,8 +33,12 @@ class DispatcherController extends Controller
     // Funcion principal del despachador
     public function index()
     {
-        $payments = $this->time != null ? Sale::whereDate('created_at', now()->format('Y-m-d'))->where([['dispatcher_id', $this->dispatcher->id], ['station_id', $this->station->id], ['time_id', $this->time->id]])->get() : [];
-        $totalPayment = $this->time != null ? $payments->sum('payment') : 0;
+        $payments = $this->time ? Sale::whereDate('created_at', now()->format('Y-m-d'))
+            ->where([
+                ['dispatcher_id', $this->dispatcher->id], ['station_id', $this->station->id],
+                ['time_id', $this->time->id]
+            ])->get() : [];
+        $totalPayment = $this->time ? $payments->sum('payment') : 0;
         $data['id'] = $this->user->id;
         $data['name'] = $this->user->name;
         $data['first_surname'] = $this->user->first_surname;
@@ -109,12 +114,16 @@ class DispatcherController extends Controller
     {
         if (!$this->time)
             return $this->response->errorResponse('Debe iniciar su turno');
+
         if ($request->balance < $request->price)
             return $this->response->errorResponse('Saldo seleccionado insuficiente');
+
         if ($this->station->id != $request->id_station)
             return $this->response->errorResponse('Estación incorrecta');
+
         if (Sale::where([['sale', $request->sale], ['station_id', $this->station->id]])->exists())
             return $this->response->errorResponse('La venta fue registrada anteriormente');
+
         if ($client = User::where('username', $request->membership)->first()) {
             if (!$request->tr_membership) {
                 $deposit = $client->client->deposits()
@@ -138,47 +147,32 @@ class DispatcherController extends Controller
                 try {
                     $no_island = $this->station->islands->where('bomb', $request->bomb_id)->first()->island;
                 } catch (Exception $e) {
-                }                
-                $fields = array(
-                    'app_id' => "62450fc4-bb2b-4f2e-a748-70e8300c6ddb",
-                    'data' => array(
-                        'id_dispatcher' => $this->dispatcher->id,
-                        'sale' => $request->sale,
-                        'id_gasoline' => $gasoline->id,
-                        "liters" => $request->liters,
-                        "price" => $request->price,
-                        'id_schedule' => $this->schedule->id,
-                        'id_station' => $this->station->id,
-                        'id_time' => $this->time->id,
-                        'no_island' => $no_island,
-                        'no_bomb' => $request->bomb_id,
-                        "gasoline" => $gasoline->name,
-                        "estacion" => $this->station->name,
-                        'ids_dispatcher' => $request->ids_dispatcher,
-                        'tr_membership' => $request->tr_membership,
-                        'balance' => $request->balance,
-                    ), 'contents' => array(
-                        "en" => "English message from postman",
-                        "es" => "Realizaste una solicitud de pago."
-                    ),
-                    'headings' => array(
-                        "en" => "English title from postman",
-                        "es" => "Pago con QR"
-                    ),
-                    'include_player_ids' => array("$request->ids_client"),
+                }
+                $data = array(
+                    'id_dispatcher' => $this->dispatcher->id,
+                    'sale' => $request->sale,
+                    'id_gasoline' => $gasoline->id,
+                    "liters" => $request->liters,
+                    "price" => $request->price,
+                    'id_schedule' => $this->schedule->id,
+                    'id_station' => $this->station->id,
+                    'id_time' => $this->time->id,
+                    'no_island' => $no_island,
+                    'no_bomb' => $request->bomb_id,
+                    "gasoline" => $gasoline->name,
+                    "estacion" => $this->station->name,
+                    'ids_dispatcher' => $request->ids_dispatcher,
+                    'tr_membership' => $request->tr_membership,
+                    'balance' => $request->balance,
                 );
-                $fields = json_encode($fields);
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8'));
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                curl_setopt($ch, CURLOPT_HEADER, FALSE);
-                curl_setopt($ch, CURLOPT_POST, TRUE);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-                $response = curl_exec($ch);
-                curl_close($ch);
-                return $this->response->successResponse('notification', \json_decode($response));
+                $notification = new Actions();
+                $response = $notification->sendNotification(
+                    $request->ids_client,
+                    'Realizaste una solicitud de pago.',
+                    null,
+                    $data
+                );
+                return $this->response->successResponse('notification', $response);
             }
             return $this->response->errorResponse('Saldo insuficiente en la cuenta');
         }
