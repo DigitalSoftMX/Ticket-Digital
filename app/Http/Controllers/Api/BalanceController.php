@@ -213,12 +213,12 @@ class BalanceController extends Controller
                         return $this->response->errorResponse('Saldo insuficiente');
                     }
                 }
-                return $notification->sendNotification($request->ids_dispatcher, 'Cobro realizado con éxito', null);
+                return $notification->sendNotification($request->ids_dispatcher, 'Cobro realizado con éxito', 'Pago con QR');
             } catch (Exception $e) {
                 return $this->response->errorResponse('Error al registrar el cobro');
             }
         }
-        return $notification->sendNotification($request->ids_dispatcher, 'Cobro cancelado', null);
+        return $notification->sendNotification($request->ids_dispatcher, 'Cobro cancelado', 'Pago con QR');
     }
     // Metoodo para sumar de puntos QR o formulario
     public function addPoints(Request $request)
