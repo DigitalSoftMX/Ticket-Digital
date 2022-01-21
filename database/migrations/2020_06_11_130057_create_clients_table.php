@@ -16,10 +16,11 @@ class CreateClientsTable extends Migration
         Schema::create('clients', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id');
-            $table->double('shared_balance');
+            $table->double('current_balance')->default(0);
+            $table->double('shared_balance')->default(0);
             $table->integer('points');
-            $table->integer('visits');
-            $table->string('image');
+            $table->integer('visits')->default(0);
+            $table->string('image')->nullable();
             $table->string('birthdate')->nullable();
             $table->string('ids')->nullable();
             $table->timestamps();

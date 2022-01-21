@@ -21,17 +21,19 @@ use App\Station;
 use App\User;
 use Carbon\Carbon;
 use Exception;
+use Google_Client;
 use Illuminate\Support\Facades\Storage;
 use SimpleXMLElement;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
-    private $response;
+    private $response, $clientGoogle;
 
     public function __construct(ResponsesAndLogout $response)
     {
         $this->response = $response;
+        $this->clientGoogle = new Google_Client(['client_id' => '358591636304-5sehkr6cb2t13lutk9rb76vjocv9rj0v.apps.googleusercontent.com']);
     }
     // Metodo para inicar sesion
     public function login(Request $request)
@@ -54,6 +56,10 @@ class AuthController extends Controller
             case 0:
                 return $this->response->errorResponse('Lo sentimos, la cuenta no esta registrada.', null);
             case 1:
+
+                if ($user[0]->external_id)
+                    return $this->response->errorResponse('Intente iniciar sesión con su cuenta de google');
+
                 foreach ($user->first()->roles as $rol) {
                     if ($rol->id == 4 || $rol->id == 5) {
                         $validator = Validator::make($request->only('email'), ['email' => 'email']);
@@ -71,6 +77,60 @@ class AuthController extends Controller
                     $this->response->errorResponse('Intente ingresar con su membresía.', null);
         }
     }
+    public function loginGoogle(Request $request)
+    {
+        $userGoogle = $this->clientGoogle->verifyIdToken($request->idToken);
+
+        if ($userGoogle) {
+            $user = User::where('external_id', $userGoogle['sub'])->first();
+
+            if ($user) {
+                $request->merge(['email' => $user->email, 'password' => $user->username]);
+                return $this->getToken($request, $user, 5);
+            }
+
+            return $this->response->errorResponse('El usuario no ha sido registrado anteriormente');
+        }
+        return $this->response->errorResponse('Intente más tarde');
+    }
+    // Registro con Google
+    public function registerGoogle(Request $request)
+    {
+        // Verificacion del usuario de google
+        $userGoogle = $this->clientGoogle->verifyIdToken($request->idToken);
+
+        if ($userGoogle) {
+
+            $userExists = User::where('email', $userGoogle['email'])->first();
+            if (!$userExists) {
+                // Membresia aleatoria no repetible
+                while (true) {
+                    $membership = 'E' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
+                    if (!(User::where('username', $membership)->exists()))
+                        break;
+                }
+            
+                $request->merge([
+                    'username' => $membership, 'external_id' => $userGoogle['sub'],
+                    'email' => $userGoogle['email'], 'name' => $userGoogle['given_name'],
+                    'first_surname' => $userGoogle['family_name'], 'password' => bcrypt($membership)
+                ]);
+            
+                $user = User::create($request->all());
+                $request->merge(['user_id' => $user->id, 'points' => Empresa::find(1)->points, 'image' => $membership]);
+                Client::create($request->all());
+                $user->roles()->attach('5');
+                Storage::disk('public')->deleteDirectory($user->username);
+                $request->merge(['password' => $membership]);
+                return $this->getToken($request, $user, 5);
+            }
+
+            return $this->response->errorResponse('Ya existe un usuario con el correo electrónico');
+        }
+
+        return $this->response->errorResponse('Intente más tarde');
+    }
+
     // Metodo para registrar a un usuario nuevo
     public function register(Request $request)
     {
@@ -90,9 +150,9 @@ class AuthController extends Controller
                 break;
         }
         $password = $request->password;
-        $request->merge(['username' => $membership, 'active' => 1, 'password' => bcrypt($request->password)]);
+        $request->merge(['username' => $membership, 'password' => bcrypt($request->password)]);
         $user = User::create($request->all());
-        $request->merge(['user_id' => $user->id, 'current_balance' => 0, 'shared_balance' => 0, 'points' => Empresa::find(1)->points, 'image' => $membership, 'visits' => 0, 'active' => 0]);
+        $request->merge(['user_id' => $user->id, 'points' => Empresa::find(1)->points, 'image' => $membership]);
         Client::create($request->all());
         $user->roles()->attach('5');
         if ($request->number_plate != "" || $request->type_car != "") {

@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 // Rutas del usuario, login, registro y cierre de sesion
 Route::post('login', 'Api\AuthController@login');
 Route::post('register', 'Api\AuthController@register');
+Route::post('register/google', 'Api\AuthController@registerGoogle');
+Route::post('login/google', 'Api\AuthController@loginGoogle');
 Route::get('logout', 'Api\AuthController@logout');
 Route::post('email', 'Api\AuthController@updateEmail');
 Route::post('/ip/{station_id}', 'Api\AuthController@uploadIPStation');

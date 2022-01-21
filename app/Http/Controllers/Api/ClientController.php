@@ -25,7 +25,7 @@ class ClientController extends Controller
             $data['name'] = $user->name;
             $data['first_surname'] = $user->first_surname;
             $data['second_surname'] = $user->second_surname;
-            $data['email'] = $user->email;
+            $data['email'] = !$user->external_id ? $user->email : '';
             $data['client']['membership'] = $user->username;
             $data['client']['current_balance'] = $user->client->deposits->where('status', 4)->sum('balance');
             $data['client']['shared_balance'] = $user->client->depositReceived->where('status', 4)->sum('balance');

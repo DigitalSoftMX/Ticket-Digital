@@ -23,7 +23,8 @@ class UserController extends Controller
         switch (($user = Auth::user())->roles[0]->name) {
             case 'usuario':
                 $data = $this->getDataUser($user);
-                $data['email'] = $user->email;
+                $data['email'] = !$user->external_id ? $data['email'] = $user->email : '';
+                $data['social_network'] = $user->external_id ? true : false;
                 $data['sex'] = $user->sex;
                 $data['birthdate'] = $user->client->birthdate;
                 $car = $user->client->car;
@@ -55,14 +56,20 @@ class UserController extends Controller
                 if ($validator->fails()) return $this->errorResponse($validator->errors());
                 // Registrando la informacion basica del cliente
                 $user->update($request->only('name', 'first_surname', 'second_surname', 'phone', 'address', 'sex'));
+
                 //registrando el correo
-                if ($request->email != $user->email) {
-                    if (!(User::where('email', $request->email)->exists())) {
-                        $user->update($request->only('email'));
-                    } else {
-                        return $this->errorResponse('La dirección de correo ya existe');
+                // TODO verificacion del correo con otro cuenta de google
+                /* Por ahora no puede actualizar su correo si es de google */
+                if (!$user->external_id) {
+                    if ($request->email != $user->email) {
+                        if (!(User::where('email', $request->email)->exists())) {
+                            $user->update($request->only('email'));
+                        } else {
+                            return $this->errorResponse('La dirección de correo ya existe');
+                        }
                     }
                 }
+
                 $user->client->update($request->only('birthdate'));
                 // Registrando las datos del carro
                 if ($request->number_plate != "" || $request->type_car != "") {
@@ -84,10 +91,13 @@ class UserController extends Controller
                     }
                 }
                 // Registrando la contraseña
-                if ($request->password != "") {
-                    $user->update(['password' => bcrypt($request->password)]);
-                    $this->logout(JWTAuth::getToken());
-                    return $this->successResponse('message', 'Datos actualizados correctamente, inicie sesión nuevamente');
+                /* Si el usuario se registro con google no puede cambiar la contraseña */
+                if (!$user->external_id) {
+                    if ($request->password != "") {
+                        $user->update(['password' => bcrypt($request->password)]);
+                        $this->logout(JWTAuth::getToken());
+                        return $this->successResponse('message', 'Datos actualizados correctamente, inicie sesión nuevamente');
+                    }
                 }
                 break;
             case 'despachador':
