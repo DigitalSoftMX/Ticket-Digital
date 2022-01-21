@@ -176,13 +176,14 @@ class DispatcherController extends Controller
                 );
                 return $this->response->successResponse('notification', $response);
             }
-            
+
             $notification = new Actions();
-            $notification->sendNotification(
+            $response = $notification->sendNotification(
                 $request->ids_client,
                 'Saldo insuficiente en la cuenta',
                 'Pago con QR'
             );
+            return $this->response->successResponse('notification', $response);
 
             return $this->response->errorResponse('Saldo insuficiente en la cuenta');
         }
