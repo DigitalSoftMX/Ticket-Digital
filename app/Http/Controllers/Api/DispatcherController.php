@@ -112,11 +112,20 @@ class DispatcherController extends Controller
     // Funcion para realizar el cobro hacia un cliente
     public function makeNotification(Request $request)
     {
+        $notification = new Actions();
+
         if (!$this->time)
             return $this->response->errorResponse('Debe iniciar su turno');
 
-        if ($request->balance < $request->price)
+        if ($request->balance < $request->price) {
+            
+            $notification->sendNotification(
+                $request->ids_client,
+                'Saldo insuficiente en la cuenta',
+                'Pago con QR'
+            );
             return $this->response->errorResponse('Saldo seleccionado insuficiente');
+        }
 
         if ($this->station->id != $request->id_station)
             return $this->response->errorResponse('Estación incorrecta');
@@ -167,7 +176,7 @@ class DispatcherController extends Controller
                     'tr_membership' => $request->tr_membership,
                     'balance' => $request->balance,
                 );
-                $notification = new Actions();
+
                 $response = $notification->sendNotification(
                     $request->ids_client,
                     'Realizaste una solicitud de pago.',
@@ -176,14 +185,6 @@ class DispatcherController extends Controller
                 );
                 return $this->response->successResponse('notification', $response);
             }
-
-            $notification = new Actions();
-            $response = $notification->sendNotification(
-                $request->ids_client,
-                'Saldo insuficiente en la cuenta',
-                'Pago con QR'
-            );
-            return $this->response->successResponse('notification', $response);
 
             return $this->response->errorResponse('Saldo insuficiente en la cuenta');
         }
