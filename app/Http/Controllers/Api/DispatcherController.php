@@ -142,7 +142,6 @@ class DispatcherController extends Controller
                     ])->first();
             }
 
-            $notification = new Actions();
 
             if ($deposit) {
                 $gasoline = Gasoline::find($request->id_gasoline);
@@ -168,6 +167,7 @@ class DispatcherController extends Controller
                     'tr_membership' => $request->tr_membership,
                     'balance' => $request->balance,
                 );
+                $notification = new Actions();
                 $response = $notification->sendNotification(
                     $request->ids_client,
                     'Realizaste una solicitud de pago.',
@@ -176,13 +176,14 @@ class DispatcherController extends Controller
                 );
                 return $this->response->successResponse('notification', $response);
             }
-
+            
+            $notification = new Actions();
             $notification->sendNotification(
                 $request->ids_client,
                 'Saldo insuficiente en la cuenta',
                 'Pago con QR'
             );
-            
+
             return $this->response->errorResponse('Saldo insuficiente en la cuenta');
         }
         return $this->response->errorResponse('Membresía no disponible');
