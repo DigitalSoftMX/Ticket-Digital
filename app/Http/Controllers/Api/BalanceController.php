@@ -73,7 +73,7 @@ class BalanceController extends Controller
             'station_id' => $request->id_station, 'status' => 1
         ]);
         Deposit::create($request->all());
-        return $this->response->successResponse('message', 'Abono realizado correctamente');
+        return $this->response->successResponse('message', 'Solicitud realizada exitosamente');
     }
     // Funcion para devolver la membresía del cliente y la estacion
     public function useBalance(Request $request)
