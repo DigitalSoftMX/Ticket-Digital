@@ -68,6 +68,7 @@ class ClientController extends Controller
     public function history(Request $request)
     {
         if (($user = Auth::user())->verifyRole(5)) {
+            error_log('id:'.$user->id.'email:'.$user->email.' client:'.$user->client->id);
             try {
                 $payments = array();
                 switch ($request->type) {
@@ -135,6 +136,22 @@ class ClientController extends Controller
                                 $data['status'] = ($balance->points == 0) ? 'Intente escanear su ticket nuevamente' : 'Puntos sumados';
                                 $data['sale'] = $balance->sale;
                                 $data['date'] = $balance->created_at->format('Y/m/d');
+                                $data['concept'] = 'Litros Premia';
+                                array_push($payments, $data);
+                            }
+                            return $this->successResponse('points', $payments, null, null);
+                        }
+                        break;
+                    case 'sales':
+                        if (count($balances = $this->getBalances(new Sale(), $request->start, $request->end, $user, null, null,$request->type)) > 0) {
+                            foreach ($balances as $balance) {
+                                $data['points'] = round($balance->liters, 0, PHP_ROUND_HALF_DOWN);
+                                // $data['points'] = $balance->liters;
+                                $data['station'] = $balance->station->abrev;
+                                $data['status'] = ($balance->points == 0) ? 'Intente escanear su ticket nuevamente' : 'Puntos sumados';
+                                $data['sale'] = $balance->sale;
+                                $data['date'] = $balance->created_at->format('Y/m/d');
+                                $data['concept'] = 'Prepago Eucomb';
                                 array_push($payments, $data);
                             }
                             return $this->successResponse('points', $payments, null, null);
@@ -143,7 +160,7 @@ class ClientController extends Controller
                 }
                 return $this->errorResponse('Sin movimientos en la cuenta');
             } catch (Exception $e) {
-                return $this->errorResponse('Error de consulta por fecha');
+                return $this->errorResponse('Error de consulta por fecha '.$e->getMessage());
             }
         }
         return $this->logout(JWTAuth::getToken());
@@ -168,22 +185,28 @@ class ClientController extends Controller
         return $this->logout(JWTAuth::getToken());
     }
     // Funcion para devolver el arreglo de historiales
-    private function getBalances($model, $start, $end, $user, $status, $type = null)
+    private function getBalances($model, $start, $end, $user, $status, $type = null, $transmitter_id = null)
     {
+        // dd($model);
         $query = [['client_id', $user->client->id]];
         if ($type) $query = [[$type, $user->client->id]];
         if ($status) $query[1] = ['status', '!=', $status];
         if ($type == 'exchange') {
             $query = [['client_id', $user->client->id]];
         }
+
         if ($start == "" && $end == "") {
             $balances = $model::where($query)->get();
         } elseif ($start == "") {
             $balances = $model::where($query)->whereDate('created_at', '<=', $end)->get();
         } elseif ($end == "") {
             $balances = $model::where($query)->whereDate('created_at', '>=', $start)->get();
+        } elseif ($transmitter_id != null) {
+            $balances = ($start > $end) ? null : Sale::where('transmitter_id','=', $user->client->id)
+                ->whereDate('created_at', '>=', $start)->whereDate('created_at', '<=', $end)->get();
         } else {
-            $balances = ($start > $end) ? null : $model::where($query)->whereDate('created_at', '>=', $start)->whereDate('created_at', '<=', $end)->get();
+            $balances = ($start > $end) ? null : $model::where($query)->whereDate('created_at', '>=', $start)
+            ->whereDate('created_at', '<=', $end)->get();
         }
         return ($balances != null) ? $balances->sortByDesc('created_at') : null;
     }
