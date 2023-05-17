@@ -266,11 +266,11 @@ class BalanceController extends Controller
                 $start = $dateSale->modify('+2 minute');
                 $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
                 $dateSale->modify('+2 minute');
-                $end = $dateSale->modify('+24 hours');
+                $end = $dateSale->modify('+48 hours');
                 if (now() < $start)
                     return $this->response->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
                 if (now() > $end)
-                    return $this->response->errorResponse('Han pasado 24 hrs para escanear su QR');
+                    return $this->response->errorResponse('Han pasado 48 hrs para escanear su QR');
                 $data = $this->status_L($sale, $request, $station, $this->user);
                 if (is_string($data))
                     return $this->response->errorResponse($data);
