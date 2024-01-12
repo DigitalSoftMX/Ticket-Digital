@@ -10,6 +10,10 @@ Route::get('logout', 'Api\AuthController@logout');
 Route::post('email', 'Api\AuthController@updateEmail');
 Route::post('/ip/{station_id}', 'Api\AuthController@uploadIPStation');
 Route::post('password/email', 'Auth\ForgotPasswordController@sendResetLinkEmail');
+
+// Rutas Cronjobs
+Route::post('cron/clear/promodates', 'Api\BalanceController@clearPromotionDates');
+
 // Rutas para ver y editar perfiles de cliente y despachador
 Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('profile', 'Api\UserController@index');
