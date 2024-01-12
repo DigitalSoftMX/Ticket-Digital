@@ -24,6 +24,7 @@ use Exception;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class BalanceController extends Controller
 {
@@ -276,7 +277,7 @@ class BalanceController extends Controller
                     return $this->response->errorResponse($data);
                 $qr = SalesQr::create($data->all());
                 $pointsEucomb = Empresa::find(1)->double_points;
-                $points = $this->addEightyPoints($this->client->id, $request->liters, $pointsEucomb);
+                $points = $this->addEightyPoints($this->client->id, $request->liters, $pointsEucomb, $start);
                 if ($points == 0) {
                     $qr->delete();
                     $limit = $pointsEucomb * 80;
@@ -400,14 +401,36 @@ class BalanceController extends Controller
         return $user->client->main->count() > 0 ? $this->response->successResponse('points', 'Haz sumado puntos a ' . $user->client->main->first()->username . ' correctamente') : $this->response->successResponse('points', 'Se han sumado sus puntos correctamente');
     }
     // Metodo para calcular puntos
-    private function addEightyPoints($clientId, $liters, $pointsEucomb = 1)
+    private function addEightyPoints($clientId, $liters, $pointsEucomb = 1, $saleDate="")
     {
         $points = 0;
         foreach (Sale::where([['client_id', $clientId], ['transmitter_id', null]])->whereDate('created_at', now()->format('Y-m-d'))->get() as $payment) {
             $points += $this->roundHalfDown($payment->liters);
         }
         $points += SalesQr::where([['client_id', $clientId]])->whereDate('created_at', now()->format('Y-m-d'))->sum('points');
-        $limit = Empresa::find(1)->double_points;
+        if($saleDate==""){
+            $limit = Empresa::find(1)->double_points;
+            if($limit>1) { $limit=1; $pointsEucomb=1; } //No hay fechas para la promo por default sera 1
+        }else{
+            // date_default_timezone_set('America/Mexico_City'); //Define hora America/Mexico_City
+            $company = Empresa::find(1);
+            $limit = $company->double_points;
+
+            // Verificar si hay promocion y que la venta este dentro de las fechas validas
+            $startPromo = !empty($company->start_date) ? new DateTime($company->start_date ." 00:00") : "";
+            $endPromo = !empty($company->end_date) ? new DateTime($company->end_date ." 23:59") : "";
+            if(!empty($startPromo) && !empty($endPromo)){
+                if($saleDate >= $startPromo && $saleDate <= $endPromo){
+                    // $limit = ($limit>2) ? 2 :$limit; //Si aplica y tiene puntos dobles forzar a que sean solo 2 si tiene configurado 3 o mas
+                    $pointsEucomb = $limit;
+                }else{
+                    if($limit>1) { $limit=1; $pointsEucomb=1; } //Esta fuera del rango de fechas siempre sera 1
+                }
+            }else{
+                if($limit>1) { $limit=1; $pointsEucomb=1; } //No hay promo por default sera 1
+            }
+        }
+
         if ($points > (80 * $limit)) {
             $points -= $this->roundHalfDown($liters, $pointsEucomb);
             if ($points <= (80 * $limit)) {
@@ -503,5 +526,30 @@ class BalanceController extends Controller
             }
         }
         return response()->json(['sumados' => 'ok']);
+    }
+
+    // Cron para limpiar las fechas de promocion despues de 72 horas
+    public function clearPromotionDates()
+    {
+        date_default_timezone_set('America/Mexico_City'); //Define hora America/Mexico_City
+        $company = Empresa::find(1);
+        $end = $company->end_date;
+        if(!empty($end)){
+            $endDate = new DateTime($end);
+            $endDate->modify('+72 hours');
+            // $hour = now()->format('H'); //Hora actual
+            // $minute = now()->format('i'); //Minuto actual
+            // $endDate->setTime($hour, $minute);
+            $nowDate = now()->setTime(0, 0); // Establecer la hora, minutos en 0 a fecha actual
+
+            if ($nowDate > $endDate) {
+                DB::table('empresas')->where('id', 1)->update(['double_points'=>1, "start_date"=>NULL, "end_date"=>NULL, "updated_at"=>now()]);
+                return $this->response->successResponse('message', 'La promoción terminó, las fechas se eliminaron.');
+            }
+            // dd($nowDate, $endDate);
+            return $this->response->errorResponse('La promoción sigue vigente, no se permite limpiar fechas');
+        }
+
+        return $this->response->errorResponse('No hay fechas para limpiar');
     }
 }
