@@ -271,7 +271,7 @@ class BalanceController extends Controller
                 if (now() < $start)
                     return $this->response->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
                 if (now() > $end)
-                    return $this->response->errorResponse('Han pasado 48 hrs para escanear su QR');
+                    return $this->response->errorResponse('Han pasado 24 hrs para escanear su QR');
                 $data = $this->status_L($sale, $request, $station, $this->user);
                 if (is_string($data))
                     return $this->response->errorResponse($data);
