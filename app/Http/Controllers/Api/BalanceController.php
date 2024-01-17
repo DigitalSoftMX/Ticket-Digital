@@ -440,6 +440,9 @@ class BalanceController extends Controller
             }
         } else {
             $points = $this->roundHalfDown($liters, $pointsEucomb);
+            if ($points > (80 * $limit)) { //Verifica que los puntos no sean mayores a 80*limit
+                $points = (80 * $limit);
+            }
         }
         return $points;
     }
