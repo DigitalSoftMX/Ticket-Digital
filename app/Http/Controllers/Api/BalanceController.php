@@ -432,7 +432,8 @@ class BalanceController extends Controller
         }
 
         if ($points > (80 * $limit)) {
-            $points -= $this->roundHalfDown($liters, $pointsEucomb);
+            // $points -= $this->roundHalfDown($liters, $pointsEucomb);
+            $points -= $this->roundHalfDown($liters); //No aplica la opcion de puntos dobles porque no realiza la operacion correcta, el limit es 1
             if ($points <= (80 * $limit)) {
                 $points = (80 * $limit) - $points;
             } else {
