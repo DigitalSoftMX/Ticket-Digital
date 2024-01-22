@@ -18,6 +18,7 @@ Route::post('cron/clear/promodates', 'Api\BalanceController@clearPromotionDates'
 Route::group(['middleware' => 'jwtAuth'], function () {
     Route::get('profile', 'Api\UserController@index');
     Route::post('profile/update', 'Api\UserController@update');
+    Route::post('deactivate/account', 'Api\UserController@deactivateAccount');
 });
 //Rutas para los usuarios tipo cliente
 Route::group(['middleware' => 'jwtAuth'], function () {

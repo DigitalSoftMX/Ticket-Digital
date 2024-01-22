@@ -157,4 +157,22 @@ class UserController extends Controller
             'message' => $message
         ]);
     }
+
+    // Metodo para inactivar cuenta de usuario
+    public function deactivateAccount()
+    {
+        try {
+            $user = Auth::user();
+            if($user->roles[0]->name ==  'usuario'){
+                $changeEmail = "inactive_".$user->email;
+                if($user->update(['active'=>0, 'email'=>$changeEmail, 'remember_token'=>NULL, 'updated_at'=>now()])){
+                    $this->logout(JWTAuth::getToken());
+                    return $this->successResponse('message', 'La cuenta ha sido eliminada');
+                }
+            }
+            return $this->errorResponse('No eres un usuario válido para desactivar tu cuenta');
+        } catch (Exception $e) {
+            return $this->errorResponse('Error al intentar desactivar la cuenta.');
+        }
+    }
 }
