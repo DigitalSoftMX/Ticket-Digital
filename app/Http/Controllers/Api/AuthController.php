@@ -51,6 +51,11 @@ class AuthController extends Controller
             }
         } else {
             $user = User::where('email', $request->email)->get();
+
+            // Validar si el rol usuario esta activo
+            if(count($user)>0 && $user!=NULL && $user[0]->roles[0]->name == 'usuario' && $user[0]->active == 0){
+                return $this->response->errorResponse('Lo sentimos, la cuenta no esta activa.', null);
+            }
         }
         switch ($user->count()) {
             case 0:
@@ -109,13 +114,13 @@ class AuthController extends Controller
                     if (!(User::where('username', $membership)->exists()))
                         break;
                 }
-            
+
                 $request->merge([
                     'username' => $membership, 'external_id' => $userGoogle['sub'],
                     'email' => $userGoogle['email'], 'name' => $userGoogle['given_name'],
                     'first_surname' => $userGoogle['family_name'], 'password' => bcrypt($membership)
                 ]);
-            
+
                 $user = User::create($request->all());
                 $request->merge(['user_id' => $user->id, 'points' => Empresa::find(1)->points, 'image' => $membership]);
                 Client::create($request->all());
