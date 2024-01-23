@@ -421,7 +421,6 @@ class BalanceController extends Controller
             $endPromo = !empty($company->end_date) ? new DateTime($company->end_date ." 23:59") : "";
             if(!empty($startPromo) && !empty($endPromo)){
                 if($saleDate >= $startPromo && $saleDate <= $endPromo){
-                    // $limit = ($limit>2) ? 2 :$limit; //Si aplica y tiene puntos dobles forzar a que sean solo 2 si tiene configurado 3 o mas
                     $pointsEucomb = $limit;
                 }else{
                     if($limit>1) { $limit=1; $pointsEucomb=1; } //Esta fuera del rango de fechas siempre sera 1
@@ -431,9 +430,9 @@ class BalanceController extends Controller
             }
         }
 
+        $points += $this->roundHalfDown($liters, $pointsEucomb); // Suma antes para verificar que la suma no sea mayor a (80 * $limit)
         if ($points > (80 * $limit)) {
-            // $points -= $this->roundHalfDown($liters, $pointsEucomb);
-            $points -= $this->roundHalfDown($liters); //No aplica la opcion de puntos dobles porque no realiza la operacion correcta, el limit es 1
+            $points -= $this->roundHalfDown($liters, $pointsEucomb);
             if ($points <= (80 * $limit)) {
                 $points = (80 * $limit) - $points;
             } else {
