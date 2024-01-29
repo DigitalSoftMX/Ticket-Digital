@@ -430,7 +430,9 @@ class BalanceController extends Controller
             }
         }
 
-        $points += $this->roundHalfDown($liters); // Suma antes para verificar que la suma no sea mayor a (80 * $limit)
+        if($limit>1){ // Solo aplica para puntos dobles
+            $points += $this->roundHalfDown($liters); // Suma antes para verificar que la suma no sea mayor a (80 * $limit)
+        }
         if ($points > (80 * $limit)) {
             $points -= $this->roundHalfDown($liters, $pointsEucomb);
             if ($points <= (80 * $limit)) {
