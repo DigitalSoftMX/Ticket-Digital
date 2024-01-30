@@ -158,14 +158,27 @@ class UserController extends Controller
         ]);
     }
 
+    //Genera codigo de N digitos aleatorios
+    private function generateDigits($total=4) {
+        $code = "";
+        for ($i = 0; $i < $total; $i++) {
+            $code .= mt_rand(0, 9);
+        }
+        return $code;
+    }
+
     // Metodo para inactivar cuenta de usuario
     public function deactivateAccount()
     {
         try {
             $user = Auth::user();
             if($user->roles[0]->name ==  'usuario'){
-                $changeEmail = "inactive_".$user->email;
-                if($user->update(['active'=>0, 'email'=>$changeEmail, 'remember_token'=>NULL, 'updated_at'=>now()])){
+                while (true) {
+                    $newEmail = "inactive".$this->generateDigits(3)."_".$user->email; //Email no repetible
+                    if (!(User::where('email', $newEmail)->exists()))
+                        break;
+                }
+                if($user->update(['active'=>0, 'email'=>$newEmail, 'remember_token'=>NULL, 'updated_at'=>now()])){
                     $this->logout(JWTAuth::getToken());
                     return $this->successResponse('message', 'La cuenta ha sido eliminada');
                 }
