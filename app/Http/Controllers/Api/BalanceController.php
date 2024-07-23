@@ -240,7 +240,7 @@ class BalanceController extends Controller
                 $sale = $this->sendDnsMessage($station, $dns, $saleQr);
                 if (is_string($sale))
                     return $this->response->errorResponse($sale);
-                $data = $this->status_L($sale, $request, $station, $this->user, $saleQr);
+                $data = $this->status_L(0, $sale, $request, $station, $this->user, $saleQr);
                 if (is_string($data))
                     return $this->response->errorResponse($data);
                 $saleQr->update($data->all());
@@ -260,8 +260,8 @@ class BalanceController extends Controller
             }
             if (count(SalesQr::where([['client_id', $this->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
                 $sale = $this->sendDnsMessage($station, $dns);
-                if (is_string($sale))
-                    return $this->response->errorResponse($sale);
+                // if (is_string($sale))
+                //     return $this->response->errorResponse($sale);
                 // return $sale;
                 $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
                 $start = $dateSale->modify('+2 minute');
@@ -272,7 +272,7 @@ class BalanceController extends Controller
                     return $this->response->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
                 if (now() > $end)
                     return $this->response->errorResponse('Han pasado 24 hrs para escanear su QR');
-                $data = $this->status_L($sale, $request, $station, $this->user);
+                $data = $this->status_L(0, $sale, $request, $station, $this->user);
                 if (is_string($data))
                     return $this->response->errorResponse($data);
                 $qr = SalesQr::create($data->all());
@@ -291,6 +291,108 @@ class BalanceController extends Controller
         }
         return $this->response->errorResponse('La estación no existe. Intente con el formulario.');
     }
+
+    // Metodo para sumar puntos QR o formulario
+    public function addPointsAlvic(Request $request)
+    {
+        if ($request->qr)
+            $request->merge(['code' => $request->qr]);
+
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|string|min:16',
+            'type' => 'required|string|in:qr,form',
+            'hour' => 'required|date_format:H:i'
+        ],[
+            'hour.date_format' => 'El formato de hora no es válido',
+        ]);
+        if ($validator->fails())
+            return  $this->response->errorResponse($validator->errors());
+
+        if($request->type=="form"){ //si type es form es requerido el campo payment
+            $validator = Validator::make($request->all(), [
+                'payment' => 'required|string',
+            ]);
+            if ($validator->fails())
+                return  $this->response->errorResponse($validator->errors());
+        }
+
+        // Comprobar si ya existe codigo de referencia
+        if(SalesQr::where([['reference_code', trim($request->code)]])->exists())
+            return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
+
+        // Consultar informacion de venta desde Alvic
+        // $sale = $this->getSaleOfStationA(trim($request->code), 1); //1=Get, 2=Post
+        $sale = $this->getSaleOfStationA($request, 1); //1=Get, 2=Post
+        if (is_string($sale))
+            return $this->response->errorResponse($sale);
+
+        // Agregar datos al request
+        $request->merge(['station'=>trim($sale['station']), 'sale'=>trim($sale['sale']), 'reference_code'=>trim($sale['code'])]);
+
+        if ($station = Station::where('number_station_alvic', $request->station)->first()) {
+        // if ($station = Station::where('number_station', $request->station)->first()) {
+            // $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
+            $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+            if ($saleQr && $saleQr->points == 0) {
+                if ($sale['gasoline_id'] == 3) { //diesel
+                    $saleQr->delete();
+                    return $this->response->errorResponse('La suma de puntos no aplica para el producto diésel.');
+                }
+                // $sale = $this->sendDnsMessage($station, $dns, $saleQr);
+                // if (is_string($sale))
+                //     return $this->response->errorResponse($sale);
+                $data = $this->status_L(1, $sale, $request, $station, $this->user, $saleQr);
+                if (is_string($data))
+                    return $this->response->errorResponse($data);
+                $saleQr->update($data->all());
+                return $this->addPointsEucomb($this->user, $data->points);
+            }
+            if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->exists()) {
+                $scanedTicket = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+                if ($scanedTicket)
+                    return $this->messageScanedTicket($scanedTicket->client_id, $this->client->id);
+                $scanedTicket = Sale::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+                if ($scanedTicket)
+                    return $this->messageScanedTicket($scanedTicket->client_id, $this->client->id);
+                $scanedTicket = Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->first();
+                if ($scanedTicket)
+                    return $this->messageScanedTicket($scanedTicket->number_usuario, $this->user->username);
+                return $this->response->errorResponse('Esta venta fue registrada anteriormente');
+            }
+            if (count(SalesQr::where([['client_id', $this->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
+                // $sale = $this->sendDnsMessage($station, $dns);
+                // if (is_string($sale))
+                //     return $this->response->errorResponse($sale);
+                // return $sale;
+                $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                $start = $dateSale->modify('+2 minute');
+                $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                $dateSale->modify('+2 minute');
+                $end = $dateSale->modify('+48 hours');
+                if (now() < $start)
+                    return $this->response->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
+                if (now() > $end)
+                    return $this->response->errorResponse('Han pasado 24 hrs para escanear su QR');
+                $data = $this->status_L(1, $sale, $request, $station, $this->user);
+                if (is_string($data))
+                    return $this->response->errorResponse($data);
+                $qr = SalesQr::create($data->all());
+                $pointsEucomb = Empresa::find(1)->double_points;
+                $points = $this->addEightyPoints($this->client->id, $request->liters, $pointsEucomb, $start);
+                if ($points == 0) {
+                    $qr->delete();
+                    $limit = $pointsEucomb * 80;
+                    return $this->response->errorResponse("Ha llegado al límite de $limit puntos por día");
+                } else {
+                    $qr->update(['points' => $points]);
+                }
+                return $this->addPointsEucomb($this->user, $points);
+            }
+            return $this->response->errorResponse('Solo puedes validar 4 QR\'s por día');
+        }
+        return $this->response->errorResponse('La estación no existe. Intente con el formulario.');
+    }
+
     // Método para realizar canjes
     public function exchange(Request $request)
     {
@@ -376,14 +478,28 @@ class BalanceController extends Controller
         }
     }
     // Método para validar status L
-    private function status_L($sale, $request, $station, $user, $qr = null)
+    // $typeConn (0=Onexpo, 1=Alvic)
+    private function status_L($typeConn=0, $sale, $request, $station, $user, $qr = null)
     {
-        if ($sale['status'] == 'L' || $sale['status'] == 'l' || $sale['status'] == 'T' || $sale['status'] == 't' || $sale['status'] == 'V' || $sale['status'] == 'v') {
-            if ($qr) {
-                $qr->delete();
+        if($typeConn==0){
+            if ($sale['status'] == 'L' || $sale['status'] == 'l' || $sale['status'] == 'T' || $sale['status'] == 't' || $sale['status'] == 'V' || $sale['status'] == 'v') {
+                if ($qr) {
+                    $qr->delete();
+                }
+                return 'Esta venta pertenece a otro programa de recompensas';
             }
-            return 'Esta venta pertenece a otro programa de recompensas';
         }
+
+        if($typeConn==1){
+            // Comprobar que status sea diferente de vacio
+            if(empty($sale['status'])){
+                if ($qr) {
+                    $qr->delete();
+                }
+                return 'Esta venta pertenece a otro programa de recompensas';
+            }
+        }
+
         $request->merge($sale);
         $user->client->main->count() > 0 ? $request->merge(['main_id' => $user->client->main->first()->id]) : $request;
         $request->merge(['station_id' => $station->id, 'client_id' => $user->client->id, 'points' => $this->roundHalfDown($request->liters)]);
@@ -531,6 +647,152 @@ class BalanceController extends Controller
             }
         }
         return response()->json(['sumados' => 'ok']);
+    }
+
+    // Metodo para consultar la informacion de venta de una estacion
+    private function getSaleOfStationA($request=null, $type=1)
+    {
+        $code = trim($request->code);
+        $hour = trim($request->hour);
+        $typeA = trim($request->type);
+
+        // $host = "https://api-multioil.digitalquo.com/api/getsaletest"; //Cambiar por el correcto
+        $host = "https://gasofac.mx/AlvicFac/api_sales/getSale"; //Cambiar por el correcto
+        try {
+            // Get
+            if($type==1){
+                $code = urlencode(trim($request->code));
+                $hour = urlencode(trim($request->hour));
+                $typeA = urlencode(trim($request->type));
+                $payment = urlencode(trim($request->payment));
+
+                // $url = $host.'?code='.$code;
+                $url = $host.'?code='.$code.'&type='.$typeA.'&hour='.$hour;
+                if($request->type=="form"){ //si type es form es requerido el campo payment
+                    $url = $host.'?code='.$code.'&type='.$typeA.'&hour='.$hour.'&payment='.$payment;
+                }
+
+                ini_set("allow_url_fopen", 1);
+                $curl = curl_init();
+                curl_setopt($curl, CURLOPT_URL, $url);
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+                // curl_setopt($curl, CURLOPT_ENCODING, '');
+                // curl_setopt($curl, CURLOPT_MAXREDIRS, 10);
+                curl_setopt($curl, CURLOPT_TIMEOUT, 0);
+                curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+                // curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'GET');
+                $contents = curl_exec($curl);
+                $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE); // Obtener el código de estado HTTP
+                curl_close($curl);
+            }
+
+            // Post
+            if($type==2){
+                $curl = curl_init();
+                curl_setopt($curl, CURLOPT_URL, $host);
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+                // curl_setopt($curl, CURLOPT_ENCODING, '');
+                // curl_setopt($curl, CURLOPT_MAXREDIRS, 10);
+                curl_setopt($curl, CURLOPT_TIMEOUT, 0);
+                curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+                curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'POST');
+                // curl_setopt($curl, CURLOPT_POSTFIELDS, array('code'=>$code));  //Habilita si es form data
+                // curl_setopt($curl, CURLOPT_POSTFIELDS, '{"code": "'.$code.'"}'); // Habilita si es raw
+                // curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type: application/json')); // Habilita si es raw
+                // curl_setopt($curl, CURLOPT_POSTFIELDS, 'code='.$code); // Habilita si es urlencode
+                // curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded')); // Habilita si es urlencode
+
+                $params = array('code'=>$code, 'type'=>$typeA, 'hour'=>$hour);
+                if($request->type=="form"){ //si type es form es requerido el campo payment
+                    $params = array('code'=>$code, 'type'=>$typeA, 'hour'=>$hour, 'payment'=>trim($request->payment));
+                }
+                curl_setopt($curl, CURLOPT_POSTFIELDS, $params);  //Habilita si es form data
+
+                $contents = curl_exec($curl);
+                $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE); // Obtener el código de estado HTTP
+                curl_close($curl);
+            }
+
+            // Validaciones
+            if($httpCode==500){
+                return 'El servidor no pudo responder.';
+            }
+
+            if($httpCode==400 || $httpCode==404){
+                return 'El código es incorrecto. Verifique la información del ticket.';
+            }
+
+            if($httpCode==200){
+                if ($contents) {
+                    $contents = preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $contents);
+                    $sale = json_decode($contents, true);
+
+                    if (is_string($sale)){ return $sale; } //No continua
+
+                    if($sale['validation']==500){
+                        return 'El servidor no pudo responder.';
+                    }
+                    if($sale['validation']==404 && $sale['sale']!=''){
+                        return 'Verifica tus datos.';
+                    }
+                    if($sale['validation']==400 || $sale['validation']==404){
+                        return 'Esta venta no existe, verifica el texto escrito.';
+                    }
+                    if($sale['validation']==422){
+                        return 'Solamente puedes sumar tickets que incluyan combustible en la compra.';
+                    }
+
+                    if(!isset($sale['station'])){
+                        return 'No puede continuar la suma de puntos, falta el número de estación.';
+                    }
+
+                    if(isset($sale['no_bomb'])){
+                        if(empty($sale['no_bomb'])){
+                            $sale['no_bomb'] = 1;
+                        }
+                    }else{
+                        $sale['no_bomb'] = 1;
+                    }
+
+                    if ($sale['gasoline_id'] == 3) {
+                        // if ($saleQr != null) {
+                        //     $saleQr->delete();
+                        // }
+                        return 'La suma de puntos no aplica para el producto diésel.';
+                    }
+                    return $sale;
+                }
+            }
+            return 'Intente más tarde';
+        } catch (Exception $e) {
+            return 'Intente más tarde';
+        }
+    }
+
+    // Obtener listado de estaciones
+    public function getStationList(Request $request)
+    {
+        if (($user = Auth::user())->verifyRole(5)) {
+            $stations = [];
+            foreach (Station::all() as $key=>$item) {
+                $dataStation['number_station'] = $item->number_station;
+                $dataStation['name'] = $item->abrev . ' - ' . $item->name;
+                $dataStation['new_conn'] = 0;
+                if($item->number_station_alvic){
+                    $dataStation['number_station'] = $item->number_station_alvic;
+                    $dataStation['new_conn'] = 1;
+                }
+                array_push($stations, $dataStation);
+            }
+
+            if(count($stations)>0){
+                return $this->response->successResponse('data', $stations);
+            }
+            return $this->response->errorResponse('No hay estaciones disponibles');
+        }
+        return $this->logout(JWTAuth::getToken());
     }
 
     // Cron para limpiar las fechas de promocion despues de 72 horas
