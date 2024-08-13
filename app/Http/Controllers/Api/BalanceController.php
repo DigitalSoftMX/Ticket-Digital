@@ -260,8 +260,8 @@ class BalanceController extends Controller
             }
             if (count(SalesQr::where([['client_id', $this->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
                 $sale = $this->sendDnsMessage($station, $dns);
-                // if (is_string($sale))
-                //     return $this->response->errorResponse($sale);
+                if (is_string($sale))
+                    return $this->response->errorResponse($sale);
                 // return $sale;
                 $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
                 $start = $dateSale->modify('+2 minute');
