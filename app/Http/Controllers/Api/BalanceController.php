@@ -776,7 +776,10 @@ class BalanceController extends Controller
     {
         if (($user = Auth::user())->verifyRole(5)) {
             $stations = [];
-            foreach (Station::all() as $key=>$item) {
+            // $stationsCol = Station::all();
+            $stationsCol = Station::where('id', '!=', 9)->get();
+
+            foreach ($stationsCol as $key=>$item) {
                 $dataStation['number_station'] = $item->number_station;
                 $dataStation['name'] = $item->abrev . ' - ' . $item->name;
                 $dataStation['new_conn'] = 0;
