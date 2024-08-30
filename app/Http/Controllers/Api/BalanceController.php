@@ -347,18 +347,7 @@ class BalanceController extends Controller
                 $saleQr->update($data->all());
                 return $this->addPointsEucomb($this->user, $data->points);
             }
-            if (SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Sale::where([['sale', $request->sale], ['station_id', $station->id]])->exists() || Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->exists()) {
-                $scanedTicket = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                if ($scanedTicket)
-                    return $this->messageScanedTicket($scanedTicket->client_id, $this->client->id);
-                $scanedTicket = Sale::where([['sale', $request->sale], ['station_id', $station->id]])->first();
-                if ($scanedTicket)
-                    return $this->messageScanedTicket($scanedTicket->client_id, $this->client->id);
-                $scanedTicket = Ticket::where([['number_ticket', $request->sale], ['id_gas', $station->id]])->first();
-                if ($scanedTicket)
-                    return $this->messageScanedTicket($scanedTicket->number_usuario, $this->user->username);
-                return $this->response->errorResponse('Esta venta fue registrada anteriormente');
-            }
+
             if (count(SalesQr::where([['client_id', $this->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
                 // $sale = $this->sendDnsMessage($station, $dns);
                 // if (is_string($sale))
