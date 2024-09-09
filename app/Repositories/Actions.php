@@ -49,7 +49,7 @@ class Actions
     public function getBearerToken()
     {
         // URL para obtener el token
-        $url = 'https://api-onexpo.digitalquo.com/';
+        $url = 'http://api-onexpo.digitalquo.com/';
 
         // Iniciar cURL para la solicitud GET
         $ch = curl_init();
