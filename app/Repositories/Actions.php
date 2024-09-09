@@ -58,6 +58,10 @@ class Actions
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Connection: keep-alive'
+        ]);
 
         // Ejecutar la solicitud y obtener la respuesta
         $response = curl_exec($ch);
