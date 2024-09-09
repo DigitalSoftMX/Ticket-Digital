@@ -179,7 +179,7 @@ class DispatcherController extends Controller
 
                 // Convertir todos los valores integer o float a string
                 array_walk($data, function(&$value) {
-                    if (is_int($value) || is_float($value)) {
+                    if (is_int($value) || is_float($value) || is_null($value)) {
                         $value = (string) $value;
                     }
                 });
