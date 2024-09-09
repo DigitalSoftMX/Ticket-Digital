@@ -9,22 +9,27 @@ class Actions
     public function sendNotification($ids, $body, $title = 'Pago con QR', $data = null)
     {
         try {
+            $bearerToken = $this->getBearerToken();
+
             $fields = array(
-                'to' => $ids,
+                'token' => $ids,
                 'notification' =>
                 array(
                     'title' => $title,
                     'body' => $body
                 ),
-                "priority" => "high",
+                // "priority" => "high",
             );
 
             if ($data)
                 $fields['data'] = $data;
 
             // TODO el key debe estar en el .env igual que el url
-            $headers = array('Authorization: key=AAAAU326I1A:APA91bGEnntzkki0Y89cJFY3Chj0cO_pnw4j6PfL_XMCreHU_VzQSH_oIi_QHwDPYtat3g5F6xCwQDikAxErJu6orWQaOzxUuIPIRR8RHTGUElA3QMNBtUf540YZ_vgDK-4iv24K5u8v', 'Content-Type: application/json');
-            $url = 'https://fcm.googleapis.com/fcm/send';
+            $headers = array(
+                'Authorization: Bearer '. $bearerToken, // Reemplaza con tu Bearer Token
+                'Content-Type: application/json'
+            );
+            $url = 'https://fcm.googleapis.com/v1/projects/eucomb/messages:send';
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_POST, true);
@@ -39,5 +44,25 @@ class Actions
         } catch (Exception $e) {
             return false;
         }
+    }
+
+    public function getBearerToken()
+    {
+        // URL para obtener el token
+        $url = 'https://api-onexpo.digitalquo.com/';
+
+        // Iniciar cURL para la solicitud GET
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        // Ejecutar la solicitud y obtener la respuesta
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        // Decodificar el JSON de la respuesta
+        $data = json_decode($response, true);
+
+        return $data['token'] ?? null;
     }
 }
