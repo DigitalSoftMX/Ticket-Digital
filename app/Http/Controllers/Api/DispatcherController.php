@@ -118,7 +118,7 @@ class DispatcherController extends Controller
             return $this->response->errorResponse('Debe iniciar su turno');
 
         if ($request->balance < $request->price) {
-            
+
             $notification->sendNotification(
                 $request->ids_client,
                 'Saldo insuficiente en la cuenta',
@@ -176,6 +176,13 @@ class DispatcherController extends Controller
                     'tr_membership' => $request->tr_membership,
                     'balance' => $request->balance,
                 );
+
+                // Convertir todos los valores integer o float a string
+                array_walk($data, function(&$value) {
+                    if (is_int($value) || is_float($value)) {
+                        $value = (string) $value;
+                    }
+                });
 
                 $response = $notification->sendNotification(
                     $request->ids_client,
