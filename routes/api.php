@@ -59,3 +59,7 @@ Route::group(['middleware' => 'jwtAuth'], function () {
     Route::post('time', 'Api\DispatcherController@startEndTime');
     Route::get('getsale', 'Api\DispatcherController@getSale');
 });
+// Rutas para el usuario con rol despachador referido
+Route::post('register/referred/dispatcher', 'Api\AuthController@registerReferredDispatcher');
+Route::post('new/register', 'Api\AuthController@registerW'); // Nuevo registro del cliente con whatsapp
+Route::post('validate/account', 'Api\AuthController@validateAccount'); // Validar nuevo registro del cliente por whatsapp

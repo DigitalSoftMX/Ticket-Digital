@@ -68,4 +68,49 @@ class Actions
 
         return $data['token'] ?? null;
     }
+
+    // Notificar por whatsapp
+    public function notificationByWhatsapp($phone="", $body="", $imageUrl=""){
+        $token = 'euIeejcXs4ldrY49uTQlrGxiqfsL8qyFwCp2sKAI368cd73d';
+        $instanceID = '18697';
+        $url = "https://waapi.app/api/v1/instances/".$instanceID."/client/action/send-message"; //Waapi
+        // $url = "https://waapi.app/api/v1/instances/".$instanceID."/client/action/send-media"; //Waapi
+
+        // Wappi
+        $params=array(
+            'chatId' => "521".$phone."@c.us",
+            'message' => $body,
+            // 'mediaUrl' => $imageUrl,
+            // 'mediaCaption' => $body,
+        );
+
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => json_encode($params), // Encode data as JSON
+            CURLOPT_HTTPHEADER => array(  //Con Waapi
+                'accept: application/json',
+                'authorization: Bearer '.$token, // Use the token variable
+                'content-type: application/json'
+            ),
+        ));
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if($err){
+            return false;
+        } else {
+            return true;
+        }
+    }
 }
