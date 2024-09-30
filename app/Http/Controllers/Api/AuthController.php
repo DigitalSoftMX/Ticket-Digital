@@ -26,6 +26,10 @@ use Illuminate\Support\Facades\Storage;
 use SimpleXMLElement;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
+use App\DispatcherReference;
+use App\ReferredDispatcherClient;
+use App\Repositories\Actions;
+
 class AuthController extends Controller
 {
     private $response, $clientGoogle;
@@ -168,6 +172,91 @@ class AuthController extends Controller
         $request->merge(['password' => $password]);
         return $this->getToken($request, $user, 5);
     }
+
+    // Metodo para registrar a un usuario nuevo con whatsapp
+    public function registerW(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name'          => 'required|string|min:3',
+            'first_surname' => 'required|string|min:3',
+            'email'         => 'required|email|unique:users',
+            'phone'         => 'required|unique:users|min:10|regex:/^[0-9\+]{1,}[0-9\-]{3,15}$/',
+            'password'      => 'required|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
+            'referrer_code' => 'nullable|string|exists:dispatcher_references,referrer_code',  // Codigo de referencia que fu compartido por el despachador
+            'ids'           => 'nullable|string',
+        ],
+        [
+            'referrer_code.exists' => 'El código de referencia no existe en el sistema',
+        ]);
+        if ($validator->fails()){ return $this->response->errorResponse($validator->errors()); }
+
+        // Membresia aleatoria no repetible
+        while (true) {
+            $membership = 'E' . substr(Carbon::now()->format('Y'), 2) . rand(100000, 999999);
+            if (!(User::where('username', $membership)->exists()))
+                break;
+        }
+
+        $dReference = DispatcherReference::where('referrer_code', $request->referrer_code)->first(); // Obtener informacion del codigo de referencia
+
+        while (true) { $code = rand(100000,999999); if (!(User::where('username', $code)->exists())) break; } // Obtener codigo no repetible
+
+        $password = $request->password;
+        $request->merge(['username'=>$membership, 'password'=>bcrypt($request->password), 'active'=>0, 'verify_code'=>$code]);
+        // $user = User::create($request->all()); //Crea usuario
+        $user = User::create($request->only('name', 'first_surname', 'email', 'phone', 'password', 'referrer_code', 'username', 'active', 'verify_code')); //Crea usuario
+
+        $request->merge(['user_id'=>$user->id, 'points'=>Empresa::find(1)->points, 'image'=>$membership]);
+        Client::create($request->all()); // Crear cliente
+        $user->roles()->attach(5);
+
+        // Crear registro en referred dispatcher clients
+        if(!empty($request->referrer_code)) {
+            $request->merge(['client_id'=>$user->client->id, 'user_id'=>$dReference->user_id]);
+            ReferredDispatcherClient::create($request->only(['user_id', 'client_id']));
+        }
+
+        $data['id'] = $user->id;
+        $data['name'] = $user->name;
+        $data['first_surname'] = $user->first_surname;
+        $data['email'] = $user->email;
+        $data['phone'] = $user->phone;
+        $data['username'] = $user->username;
+        $data['active'] = $user->active;
+        $data['verify_code']= $user->verify_code;
+
+        $data['message'] = '';
+        $body = 'Hola, tu código para activar tu cuenta es: '.$code;
+        $action = new Actions();
+        $action->notificationByWhatsapp($user->phone, $body);
+        $data['message'] = "Por favor revise su WhatsApp, acaba de recibir un mensaje para activar su cuenta";
+
+        return $this->successReponse('data', $data);
+    }
+
+    // Validar cuenta para clientes de la app
+    public function validateAccount(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email'  => 'required|email|exists:users,email',
+            'code'   => 'required'
+        ]);
+        if ($validator->fails()){ return $this->response->errorResponse($validator->errors()); }
+
+        try {
+            if (!$user = User::where('email', $request->email)->where('verify_code', $request->code)->first())
+                return $this->response->errorResponse('El código no es correcto. Por favor, verifícalo', 404);
+
+            $user->update(['verify_code'=>null, 'active'=>1]);
+
+            $data['message'] = 'La cuenta se ha verificado correctamente';
+            return $this->successReponse('data',$data);
+        } catch (\Exception $e) {
+            error_log('Ocurrió un error interno al validar la cuenta: '.$e->getMessage());
+            return $this->response->errorResponse('Ocurrió un error interno al validar la cuenta');
+        }
+    }
+
     // Método para actualizar solo el correo eletrónico de un usuario
     public function updateEmail(Request $request)
     {
@@ -337,4 +426,73 @@ class AuthController extends Controller
             return 'Falta el lugar o el tipo de gasolina';
         }
     }
+
+    // >>>>>DESPACHADOR REFERIDO
+    // Metodo para registrar a un usuario despachador referido
+    public function createReferralCode($prefix_membership="")
+    {
+        $year = date('y');
+        $random = str_pad(rand(1, 99), 2, '0', STR_PAD_LEFT);
+        return $prefix_membership.$year.'-'. $random;
+    }
+
+    // Metodo para registrar a un usuario despachador referido
+    public function registerReferredDispatcher(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name'          => 'required|string|min:3',
+            'first_surname' => 'required|string|min:3',
+            'email'         => 'required|email|unique:users',
+            'phone'         => 'required|unique:users|min:10|regex:/^[0-9\+]{1,}[0-9\-]{3,15}$/',
+            'password'      => 'required|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
+            'station_id'    => 'required|integer|exists:station,id',  //Id de estacion
+            'adm_email'     => 'required|email|exists:users,email',  // Email del administrador
+        ],
+        [
+            'adm_email.exists' => 'El :attribute :input no existe en el sistema',
+        ]);
+        if ($validator->fails()){ return $this->response->errorResponse($validator->errors()); }
+
+        $user = User::where('email', $request->adm_email)->first();
+        $role = $user->roles->first()->name;
+
+        if ($role != 'admin_master' && $role != 'admin_eucomb')
+            return $this->response->errorResponse('Usuario no autorizado');
+
+        try {
+            $station = Station::where('id', $request->station_id)->first();
+            $prefix = $station->abrev ?? '';
+            while (true) { $referrerCode = $this->createReferralCode($prefix); if (!(User::where('name', $referrerCode)->exists())) break; } // Obtener codigo de referencia no repetible para el nuevo usuario
+
+            // Obtener username no repetible
+            while (true) { $username = substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 10); if (!(User::where('username', $username)->exists())) break; }
+
+            // Crea usuario
+            $password = $request->password;
+            $request->merge(['password'=>bcrypt($request->password), 'username'=>$username]);
+            $user = User::create($request->all());
+            $user->roles()->attach(8);
+
+            // Salvar codigo de referencia
+            $request->merge(['user_id'=>$user->id, 'referrer_code'=>$referrerCode]);
+            $dReference = DispatcherReference::create($request->all());
+
+            $data['id'] = $user->id;
+            $data['name'] = $user->name;
+            $data['first_surname'] = $user->first_surname;
+            $data['email'] = $user->email;
+            $data['phone'] = $user->phone;
+            $data['referrer_code'] = $dReference->referrer_code;
+            $data['dispatcher_id'] = $user->username;
+            $data['station']['id'] = $dReference->station->id;
+            $data['station']['name'] = $dReference->station->name;
+            $data['station']['number_station'] = $dReference->station->number_station_alvic ?? $dReference->station->number_station ?? '';
+
+            return $this->response->successResponse('data', $data);
+        } catch (\Exception $e) {
+            error_log('Ocurrió un error interno al crear registro '.$e->getMessage());
+            return $this->response->errorResponse('Ocurrió un error interno al crear registro');
+        }
+    }
+
 }
