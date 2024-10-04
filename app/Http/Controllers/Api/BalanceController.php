@@ -328,6 +328,15 @@ class BalanceController extends Controller
                 return  $this->response->errorResponse($validator->errors());
         }
 
+        $ip = $request->ip(); // Obtener la IP del cliente
+        Log::error('IP para bloquear alvic:'. $ip);
+        // Verificar si la IP está bloqueada
+        if(Cache::has('blocked_ip_' . $ip)) {
+            return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
+        }
+        Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 10 segundos
+        Log::info('IP bloqueado alvic:'. $ip .' para la venta:'.$request->sale .' - estacion: '.$request->station);
+
         // Comprobar si ya existe codigo de referencia
         if(SalesQr::where([['reference_code', trim($request->code)]])->exists())
             return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
