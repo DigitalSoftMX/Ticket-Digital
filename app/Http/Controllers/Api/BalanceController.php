@@ -26,6 +26,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class BalanceController extends Controller
 {
@@ -235,14 +236,14 @@ class BalanceController extends Controller
         if ($validator->fails())
             return  $this->response->errorResponse($validator->errors());
 
-        // $ip = $this->getClientIp($request);
         $ip = $request->ip(); // Obtener la IP del cliente
-        error_log('IP: '.$ip);
-        Log::error($ip);
+        Log::error('IP para bloquear:'. $ip);
         // Verificar si la IP está bloqueada
-        // if(Cache::has('blocked_ip_' . $ip)) {
-        //     return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
-        // }
+        if(Cache::has('blocked_ip_' . $ip)) {
+            return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
+        }
+        Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 10 segundos
+        Log::info('IP bloqueado:'. $ip .' para la venta:'.$request->sale .' - estacion: '.$request->station);
 
         if ($station = Station::where('number_station', $request->station)->first()) {
             $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
