@@ -335,7 +335,7 @@ class BalanceController extends Controller
             return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
         }
         Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 10 segundos
-        Log::info('IP bloqueado alvic:'. $ip .' para la venta:'.$request->sale .' - estacion: '.$request->station);
+        Log::info('IP bloqueado alvic:'. $ip .' para la venta:'.$request->code);
 
         // Comprobar si ya existe codigo de referencia
         if(SalesQr::where([['reference_code', trim($request->code)]])->exists())
