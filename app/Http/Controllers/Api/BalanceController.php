@@ -242,7 +242,7 @@ class BalanceController extends Controller
         if(Cache::has('blocked_ip_' . $ip)) {
             return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
         }
-        Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 10 segundos
+        Cache::put('blocked_ip_' . $ip, true, 15); // Bloquear la IP por 15 segundos
         Log::info('IP bloqueado:'. $ip .' para la venta:'.$request->sale .' - estacion: '.$request->station);
 
         if ($station = Station::where('number_station', $request->station)->first()) {
@@ -335,12 +335,11 @@ class BalanceController extends Controller
         if(Cache::has('blocked_ip_' . $ip)) {
             return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
         }
-        Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 10 segundos
-        Log::info('IP bloqueado alvic:'. $ip .' para la venta:'.$request->code);
+        Cache::put('blocked_ip_' . $ip, true, 15); // Bloquear la IP por 15 segundos
 
-        // Comprobar si ya existe codigo de referencia
-        if(SalesQr::where([['reference_code', trim($request->code)]])->exists())
-            return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
+        // // Comprobar si ya existe codigo de referencia
+        // if(SalesQr::where([['reference_code', trim($request->code)]])->exists())
+        //     return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
 
         // Consultar informacion de venta desde Alvic
         // $sale = $this->getSaleOfStationA(trim($request->code), 1); //1=Get, 2=Post
@@ -351,7 +350,12 @@ class BalanceController extends Controller
         // Agregar datos al request
         $request->merge(['station'=>trim($sale['station']), 'sale'=>trim($sale['sale']), 'reference_code'=>trim($sale['code'])]);
 
+        Log::info('IP bloqueado alvic:'. $ip .' para la venta:'.$request->sale .' - estacion: '.$request->station);
+
         if ($station = Station::where('number_station_alvic', $request->station)->first()) {
+            if(SalesQr::where('sale', $request->sale)->where('station_id', $station->id)->exists())
+                return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
+
         // if ($station = Station::where('number_station', $request->station)->first()) {
             // $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
             $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
