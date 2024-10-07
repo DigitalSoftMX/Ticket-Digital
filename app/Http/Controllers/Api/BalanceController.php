@@ -327,6 +327,7 @@ class BalanceController extends Controller
             if ($validator->fails())
                 return  $this->response->errorResponse($validator->errors());
         }
+        Log::info(json_encode($request->all())); // Registra parametros de solicitud
 
         $ip = $request->ip(); // Obtener la IP del cliente
         Log::error('IP para bloquear alvic:'. $ip);
