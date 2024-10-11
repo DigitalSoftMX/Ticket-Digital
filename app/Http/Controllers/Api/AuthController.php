@@ -462,7 +462,7 @@ class AuthController extends Controller
         try {
             $station = Station::where('id', $request->station_id)->first();
             $prefix = $station->abrev ?? '';
-            while (true) { $referrerCode = $this->createReferralCode($prefix); if (!(User::where('name', $referrerCode)->exists())) break; } // Obtener codigo de referencia no repetible para el nuevo usuario
+            while (true) { $referrerCode = $this->createReferralCode($prefix); if (!(DispatcherReference::where('referrer_code', $referrerCode)->exists())) break; } // Obtener codigo de referencia no repetible para el nuevo usuario
 
             // Obtener username no repetible
             while (true) { $username = substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 10); if (!(User::where('username', $username)->exists())) break; }
