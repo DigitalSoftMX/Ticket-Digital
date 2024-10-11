@@ -72,7 +72,7 @@ class Actions
     // Notificar por whatsapp
     public function notificationByWhatsapp($phone="", $body="", $imageUrl=""){
         $token = 'WA5KeBGQqd72AI3dLaAfLaQHaQT8PLK5noRvxnQp71f8327b';
-        $instanceID = '22451';
+        $instanceID = '22969';
         $url = "https://waapi.app/api/v1/instances/".$instanceID."/client/action/send-message"; //Waapi
         // $url = "https://waapi.app/api/v1/instances/".$instanceID."/client/action/send-media"; //Waapi
 
