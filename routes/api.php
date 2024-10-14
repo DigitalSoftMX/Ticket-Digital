@@ -63,3 +63,6 @@ Route::group(['middleware' => 'jwtAuth'], function () {
 Route::post('register/referred/dispatcher', 'Api\AuthController@registerReferredDispatcher');
 Route::post('new/register', 'Api\AuthController@registerW'); // Nuevo registro del cliente con whatsapp
 Route::post('validate/account', 'Api\AuthController@validateAccount'); // Validar nuevo registro del cliente por whatsapp
+Route::post('resend/code', 'Api\AuthController@resendCodeValidateAccount'); // Reenviar código para validar cuenta
+Route::post('correct/phone', 'Api\AuthController@updatePhoneNumber'); // Corregir teléfono y mandar código
+// Route::get('report/referred/dispatcher', 'Api\DispatcherController@reportReferredDispatcherClients'); // Generar reporte de referidos

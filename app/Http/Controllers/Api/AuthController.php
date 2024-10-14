@@ -173,6 +173,13 @@ class AuthController extends Controller
         return $this->getToken($request, $user, 5);
     }
 
+    // Metodo para enviar notificacion por whatsApp
+    private function sendNotificationByWhatsap($user, $body)
+    {
+        $action = new Actions();
+        $action->notificationByWhatsapp($user->phone, $body);
+    }
+
     // Metodo para registrar a un usuario nuevo con whatsapp
     public function registerW(Request $request)
     {
@@ -199,7 +206,7 @@ class AuthController extends Controller
 
         $dReference = DispatcherReference::where('referrer_code', $request->referrer_code)->first(); // Obtener informacion del codigo de referencia
 
-        while (true) { $code = rand(100000,999999); if (!(User::where('username', $code)->exists())) break; } // Obtener codigo no repetible
+        while (true) { $code = rand(100000,999999); if (!(User::where('verify_code', $code)->exists())) break; } // Obtener codigo no repetible
 
         $password = $request->password;
         $request->merge(['username'=>$membership, 'password'=>bcrypt($request->password), 'active'=>0, 'verify_code'=>$code]);
@@ -225,10 +232,8 @@ class AuthController extends Controller
         $data['active'] = $user->active;
         $data['verify_code']= $user->verify_code;
 
-        $data['message'] = '';
         $body = 'Hola, tu código para activar tu cuenta es: '.$code;
-        $action = new Actions();
-        $action->notificationByWhatsapp($user->phone, $body);
+        $this->sendNotificationByWhatsap($user,$body);
         $data['message'] = "Por favor revise su WhatsApp, acaba de recibir un mensaje para activar su cuenta";
 
         return $this->successReponse('data', $data);
@@ -247,13 +252,81 @@ class AuthController extends Controller
             if (!$user = User::where('email', $request->email)->where('verify_code', $request->code)->first())
                 return $this->response->errorResponse('El código no es correcto. Por favor, verifícalo', 404);
 
-            $user->update(['verify_code'=>null, 'active'=>1]);
+            $token = JWTAuth::fromUser($user); //Genera token
+            $user->update(['verify_code'=>null, 'active'=>1, 'remember_token'=>$token]);
 
+            $data['token'] = $token;
             $data['message'] = 'La cuenta se ha verificado correctamente';
             return $this->successReponse('data',$data);
         } catch (\Exception $e) {
             error_log('Ocurrió un error interno al validar la cuenta: '.$e->getMessage());
             return $this->response->errorResponse('Ocurrió un error interno al validar la cuenta');
+        }
+    }
+
+    // Metodo para reenviar codigo para validar cuenta
+    public function resendCodeValidateAccount(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email'         => 'required|email|exists:users,email',
+            'phone'         => 'required|min:10|regex:/^[0-9\+]{1,}[0-9\-]{3,15}$/',
+        ]);
+        if ($validator->fails()){ return $this->response->errorResponse($validator->errors()); }
+
+        try {
+            $user = User::where('email', $request->email)->first();
+            $role = $user->roles->first()->name;
+
+            if ($role != 'usuario')
+                return $this->response->errorResponse('Usuario no autorizado');
+
+            // Reenviar codigo
+            if($user->verify_code){
+                $code = $user->verify_code;
+            }else{
+                while (true) { $code = rand(100000,999999); if (!(User::where('verify_code', $code)->exists())) break; } // Obtener codigo no repetible
+            }
+            $user->update(['phone'=>$request->phone, 'active'=>0, 'verify_code'=>$code, 'remember_token'=>NULL]); // Actualiza datos
+
+            $body = 'Hola, tu código para activar tu cuenta es: '.$code;
+            $this->sendNotificationByWhatsap($user,$body);
+            $data['message'] = "Por favor revise su WhatsApp, acaba de recibir un mensaje para activar su cuenta";
+
+            return $this->successReponse('data', $data);
+        } catch (\Exception $e) {
+            error_log('Ocurrió un error interno al reenviar código '.$e->getMessage());
+            return $this->response->errorResponse('Ocurrió un error interno al reenviar código');
+        }
+    }
+
+    // Metodo para actualizar teléfono y enviar código para validar cuenta
+    public function updatePhoneNumber(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email'         => 'required|email|exists:users,email',
+            'phone'         => 'required|min:10|regex:/^[0-9\+]{1,}[0-9\-]{3,15}$/',
+        ]);
+        if ($validator->fails()){ return $this->response->errorResponse($validator->errors()); }
+
+        try {
+            $user = User::where('email', $request->email)->first();
+            $role = $user->roles->first()->name;
+
+            if ($role != 'usuario')
+                return $this->response->errorResponse('Usuario no autorizado');
+
+            while (true) { $code = rand(100000,999999); if (!(User::where('verify_code', $code)->exists())) break; } // Obtener codigo no repetible
+
+            $user->update(['phone'=>$request->phone, 'active'=>0, 'verify_code'=>$code, 'remember_token'=>NULL]); // Actualiza datos
+
+            $body = 'Hola, tu código para activar tu cuenta es: '.$code;
+            $this->sendNotificationByWhatsap($user,$body);
+            $data['message'] = "El número de teléfono se ha actualizado correctamente, por favor revise su WhatsApp, acaba de recibir un mensaje para activar su cuenta";
+
+            return $this->successReponse('data', $data);
+        } catch (\Exception $e) {
+            error_log('Ocurrió un error interno al actualizar teléfono '.$e->getMessage());
+            return $this->response->errorResponse('Ocurrió un error interno al actualizar teléfono');
         }
     }
 
@@ -428,7 +501,7 @@ class AuthController extends Controller
     }
 
     // >>>>>DESPACHADOR REFERIDO
-    // Metodo para registrar a un usuario despachador referido
+    // Metodo para crear codigo de referido
     public function createReferralCode($prefix_membership="")
     {
         $year = date('y');
