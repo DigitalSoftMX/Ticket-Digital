@@ -516,7 +516,8 @@ class AuthController extends Controller
             'name'          => 'required|string|min:3',
             'first_surname' => 'required|string|min:3',
             'email'         => 'required|email|unique:users',
-            'phone'         => 'required|unique:users|min:10|regex:/^[0-9\+]{1,}[0-9\-]{3,15}$/',
+            // 'phone'         => 'required|unique:users|min:10|regex:/^[0-9\+]{1,}[0-9\-]{3,15}$/',
+            'phone'         => 'required|min:10|regex:/^[0-9\+]{1,}[0-9\-]{3,15}$/',
             'password'      => 'required|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
             'station_id'    => 'required|integer|exists:station,id',  //Id de estacion
             'adm_email'     => 'required|email|exists:users,email',  // Email del administrador
