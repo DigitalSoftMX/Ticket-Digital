@@ -178,7 +178,7 @@ class UserController extends Controller
                     if (!(User::where('email', $newEmail)->exists()))
                         break;
                 }
-                if($user->update(['active'=>0, 'email'=>$newEmail, 'remember_token'=>NULL, 'updated_at'=>now()])){
+                if($user->update(['active'=>0, 'email'=>$newEmail, 'remember_token'=>NULL, 'updated_at'=>now(), 'phone'=>NULL])){
                     $this->logout(JWTAuth::getToken());
                     return $this->successResponse('message', 'La cuenta ha sido eliminada');
                 }
