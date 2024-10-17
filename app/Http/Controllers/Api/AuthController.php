@@ -234,7 +234,7 @@ class AuthController extends Controller
 
         $body = 'Hola, tu código para activar tu cuenta es: '.$code;
         $this->sendNotificationByWhatsap($user,$body);
-        $data['message'] = "Por favor revise su WhatsApp, acaba de recibir un mensaje para activar su cuenta";
+        $data['message'] = "Para validar tu cuenta ingresa el código que recibiste vía WhatsApp";
 
         return $this->successReponse('data', $data);
     }
@@ -250,7 +250,7 @@ class AuthController extends Controller
 
         try {
             if (!$user = User::where('email', $request->email)->where('verify_code', $request->code)->first())
-                return $this->response->errorResponse('El código no es correcto. Por favor, verifícalo', 404);
+                return $this->response->errorResponse('El código es incorrecto, verifica el código nuevamente', 404);
 
             $token = JWTAuth::fromUser($user); //Genera token
             $user->update(['verify_code'=>null, 'active'=>1, 'remember_token'=>$token]);
@@ -290,7 +290,7 @@ class AuthController extends Controller
 
             $body = 'Hola, tu código para activar tu cuenta es: '.$code;
             $this->sendNotificationByWhatsap($user,$body);
-            $data['message'] = "Por favor revise su WhatsApp, acaba de recibir un mensaje para activar su cuenta";
+            $data['message'] = "Para validar tu cuenta ingresa el código que recibiste vía WhatsApp";
 
             return $this->successReponse('data', $data);
         } catch (\Exception $e) {
@@ -321,7 +321,7 @@ class AuthController extends Controller
 
             $body = 'Hola, tu código para activar tu cuenta es: '.$code;
             $this->sendNotificationByWhatsap($user,$body);
-            $data['message'] = "El número de teléfono se ha actualizado correctamente, por favor revise su WhatsApp, acaba de recibir un mensaje para activar su cuenta";
+            $data['message'] = "Tu número ha sido actualizado, para validar tu cuenta ingresa el código que recibiste via WhatsApp";
 
             return $this->successReponse('data', $data);
         } catch (\Exception $e) {
