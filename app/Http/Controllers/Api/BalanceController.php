@@ -411,6 +411,15 @@ class BalanceController extends Controller
     // Método para realizar canjes
     public function exchange(Request $request)
     {
+        $ip = $request->ip(); // Obtener la IP del cliente
+        // Verificar si la IP está bloqueada
+        if(Cache::has('blocked_ip_' . $ip)) {
+            Log::error('Demasiadas solicitudes. Inténtalo de nuevo más tarde.');
+            return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
+        }
+        Cache::put('blocked_ip_' . $ip, true, 15); // Bloquear la IP por 15 segundos
+        Log::info('IP bloqueado:'. $ip);
+
         if (($user = Auth::user())->verifyRole(5)) {
             if (($station = Station::find($request->id)) != null) {
                 if ($user->client->points < $station->voucher->points) {
