@@ -9,7 +9,7 @@ Route::post('login/google', 'Api\AuthController@loginGoogle');
 Route::get('logout', 'Api\AuthController@logout');
 Route::post('email', 'Api\AuthController@updateEmail');
 Route::post('/ip/{station_id}', 'Api\AuthController@uploadIPStation');
-Route::post('password/email', 'Auth\ForgotPasswordController@sendResetLinkEmail');
+// Route::post('password/email', 'Auth\ForgotPasswordController@sendResetLinkEmail');
 
 // Rutas Cronjobs
 Route::post('cron/clear/promodates', 'Api\BalanceController@clearPromotionDates');
@@ -65,4 +65,5 @@ Route::post('new/register', 'Api\AuthController@registerW'); // Nuevo registro d
 Route::post('validate/account', 'Api\AuthController@validateAccount'); // Validar nuevo registro del cliente por whatsapp
 Route::post('resend/code', 'Api\AuthController@resendCodeValidateAccount'); // Reenviar código para validar cuenta
 Route::post('correct/phone', 'Api\AuthController@updatePhoneNumber'); // Corregir teléfono y mandar código
-// Route::get('report/referred/dispatcher', 'Api\DispatcherController@reportReferredDispatcherClients'); // Generar reporte de referidos
+Route::get('report/referred/dispatcher', 'Api\DispatcherController@reportReferredDispatcherClients'); // Generar reporte de referidos
+Route::post('password/email', 'Api\AuthController@recoverAccount');
