@@ -3,6 +3,9 @@
 namespace App\Repositories;
 
 use Exception;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Log;
 
 class Actions
 {
@@ -114,6 +117,39 @@ class Actions
             return false;
         } else {
             return true;
+        }
+    }
+
+    // Envío de correos electronicos por Brevo
+    public static function notificationByEmail($data){
+        // Renderizar el contenido del correo
+        $htmlContent = View::make($data['view'], [
+            'data' => $data
+        ])->render();
+        // Log::info($htmlContent); exit;
+
+        $apiKey = getenv("BREVO_KEY");
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+            'api-key' => $apiKey,
+        ])->post('https://api.brevo.com/v3/smtp/email', [
+            'sender' => [
+                'name' => 'Eucomb',
+                'email' => 'lealtad@eucombgasolineras.mx',
+            ],
+            'to' => [
+                [
+                    'email' => $data['email'],
+                ],
+            ],
+            'subject' => $data['subject'],
+            'htmlContent' => $htmlContent,
+        ]);
+
+        if ($response->successful()) {
+            return true;
+        }else {
+            return false;
         }
     }
 }

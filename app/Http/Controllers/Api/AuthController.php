@@ -299,6 +299,59 @@ class AuthController extends Controller
         }
     }
 
+    // Metodo para generar contraseñas alfanumericas
+    private function generatePasswords($long=6)
+    {
+        $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $password = '';
+        for ($i = 0; $i < $long; $i++) {
+            $index = rand(0, strlen($characters) - 1);
+            $password .= $characters[$index];
+        }
+        return $password;
+    }
+
+    // Enviar datos de acceso para el app
+    public function recoverAccount(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email'         => 'required|email|exists:users,email',
+            ],
+            [
+                'required'      => 'El :attribute es requerido',
+                'email'         => 'La dirección de correo electrónico no es válida',
+                'exists'        => 'El dato ingresado no existe en el sistema',
+            ]
+        );
+        if ($validator->fails()){ return $this->response->errorResponse($validator->errors()); }
+
+        try {
+            $user = User::where('email', $request->email)->first();
+            $role = $user->roles->first()->name;
+
+            if ($role != 'usuario')
+                return $this->response->errorResponse('Usuario no autorizado');
+
+            $password = $this->generatePasswords(8);
+            $user->password = bcrypt($password);
+            $user->save();
+
+            // Enviar email
+            $action = new Actions();
+            $dataTmp['subject'] = "Recuperar cuenta";
+            $dataTmp['email'] = $request->email;
+            $dataTmp['password'] = $password;
+            $dataTmp['view'] = 'emails.recover-account';
+            $action->notificationByEmail($dataTmp);
+            $data['message'] = 'La cuenta se ha recuperado de manera correcta, por favor cambie la contraseña en la sección de perfil';
+
+            return $this->successReponse('data', $data);
+        } catch (\Exception $e) {
+            error_log('Ocurrió un error interno al recuperar cuenta '.$e->getMessage());
+            return $this->response->errorResponse('Ocurrió un error interno al recuperar cuenta');
+        }
+    }
+
     // Metodo para actualizar teléfono y enviar código para validar cuenta
     public function updatePhoneNumber(Request $request)
     {
