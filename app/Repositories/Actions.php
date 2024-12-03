@@ -54,8 +54,7 @@ class Actions
     public function getBearerToken()
     {
         // URL para obtener el token
-        // $url = 'https://api-onexpo.digitalquo.com/';
-        $url = 'https://back-test.digitalquo.com/?app=1';
+        $url = 'https://api-firebase.digitalquo.net/?app=1';
 
         // Iniciar cURL para la solicitud GET
         $ch = curl_init();
