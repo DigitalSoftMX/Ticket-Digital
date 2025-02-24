@@ -343,7 +343,7 @@ class AuthController extends Controller
             $dataTmp['password'] = $password;
             $dataTmp['view'] = 'emails.recover-account';
             $action->notificationByEmail($dataTmp);
-            $data['message'] = 'La cuenta se ha recuperado de manera correcta, por favor cambie la contraseña en la sección de perfil';
+            $data['message'] = 'Tu nueva contraseña ha sido generada, por favor, revisa tu correo';
 
             return $this->successReponse('data', $data);
         } catch (\Exception $e) {
