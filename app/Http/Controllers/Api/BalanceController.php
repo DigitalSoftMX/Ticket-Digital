@@ -242,7 +242,7 @@ class BalanceController extends Controller
         if(Cache::has('blocked_ip_' . $ip)) {
             return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
         }
-        Cache::put('blocked_ip_' . $ip, true, 15); // Bloquear la IP por 15 segundos
+        Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 15 segundos
         Log::info('IP bloqueado:'. $ip .' para la venta:'.$request->sale .' - estacion: '.$request->station);
 
         if ($station = Station::where('number_station', $request->station)->first()) {
@@ -335,7 +335,7 @@ class BalanceController extends Controller
         if(Cache::has('blocked_ip_' . $ip)) {
             return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
         }
-        Cache::put('blocked_ip_' . $ip, true, 15); // Bloquear la IP por 15 segundos
+        Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 15 segundos
 
         // // Comprobar si ya existe codigo de referencia
         // if(SalesQr::where([['reference_code', trim($request->code)]])->exists())
@@ -347,6 +347,10 @@ class BalanceController extends Controller
         if (is_string($sale))
             return $this->response->errorResponse($sale);
 
+        //$sale["station"] = '-1';
+        //TODO:Validacion temporal para respuesta de estacion -1
+        if( $sale["station"] == "-1" ) return $this->response->errorResponse('Inténtelo más tarde');
+
         // Agregar datos al request
         $request->merge(['station'=>trim($sale['station']), 'sale'=>trim($sale['sale']), 'reference_code'=>trim($sale['code'])]);
 
@@ -356,7 +360,7 @@ class BalanceController extends Controller
             if(SalesQr::where('sale', $request->sale)->where('station_id', $station->id)->exists())
                 return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
 
-        // if ($station = Station::where('number_station', $request->station)->first()) {
+            // if ($station = Station::where('number_station', $request->station)->first()) {
             // $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
             $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
             if ($saleQr && $saleQr->points == 0) {
@@ -417,7 +421,7 @@ class BalanceController extends Controller
             Log::error('Demasiadas solicitudes. Inténtalo de nuevo más tarde.');
             return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
         }
-        Cache::put('blocked_ip_' . $ip, true, 15); // Bloquear la IP por 15 segundos
+        Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 15 segundos
         Log::info('IP bloqueado:'. $ip);
 
         if (($user = Auth::user())->verifyRole(5)) {
