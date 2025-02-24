@@ -346,10 +346,20 @@ class BalanceController extends Controller
         $sale = $this->getSaleOfStationA($request, 1); //1=Get, 2=Post
         if (is_string($sale))
             return $this->response->errorResponse($sale);
-
-        //$sale["station"] = '-1';
+        // echo json_encode($sale);
+        // die();
+        // $sale["station"] = '00010';
         //TODO:Validacion temporal para respuesta de estacion -1
-        if( $sale["station"] == "-1" ) return $this->response->errorResponse('Inténtelo más tarde');
+        if( $sale["station"] == "-1" ){
+            if( $sale["validation"] == 409 ){
+                return $this->response->errorResponse("Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.", 409);
+            }
+            return $this->response->errorResponse('Inténtelo más tarde');
+        }else{
+            if( $sale["validation"] == 409 ){
+                return $this->response->errorResponse("Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.", 409);
+            }
+        }
 
         // Agregar datos al request
         $request->merge(['station'=>trim($sale['station']), 'sale'=>trim($sale['sale']), 'reference_code'=>trim($sale['code'])]);
@@ -771,6 +781,15 @@ class BalanceController extends Controller
                     if($sale['validation']==422){
                         return 'Solamente puedes sumar tickets que incluyan combustible en la compra.';
                     }
+
+                    // if($sale['validation']==409){
+                    //     // $array = [];
+                    //     // $array["type"] = 'isMessageError409';
+                    //     // $array["message"] = "Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.";
+                    //     // $array["code"] = $sale["validation"] ;
+                    //     // return $array;
+                    //     return 'Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.';
+                    // }
 
                     if(!isset($sale['station'])){
                         return 'No puede continuar la suma de puntos, falta el número de estación.';

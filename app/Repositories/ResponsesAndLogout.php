@@ -18,9 +18,14 @@ class ResponsesAndLogout
         }
     }
     // Funcion mensajes de error
-    public function errorResponse($message)
+    public function errorResponse($message, $code = 0)
     {
-        return response()->json(['ok' => false, 'message' => $message]);
+        if ($code != 0 ){
+            return response()->json(['ok' => false, 'message' => $message, 'code' => $code]);
+        }else{
+            return response()->json(['ok' => false, 'message' => $message]);
+        }
+
     }
     // Funcion mensaje correcto
     public function successResponse($name, $data)
