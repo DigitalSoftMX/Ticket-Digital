@@ -307,27 +307,7 @@ class BalanceController extends Controller
     // Metodo para sumar puntos QR o formulario
     public function addPointsAlvic(Request $request)
     {
-        if ($request->qr)
-            $request->merge(['code' => $request->qr]);
-
-        $validator = Validator::make($request->all(), [
-            'code' => 'required|string|min:16',
-            'type' => 'required|string|in:qr,form',
-            'hour' => 'required|date_format:H:i'
-        ],[
-            'hour.date_format' => 'El formato de hora no es válido',
-        ]);
-        if ($validator->fails())
-            return  $this->response->errorResponse($validator->errors());
-
-        if($request->type=="form"){ //si type es form es requerido el campo payment
-            $validator = Validator::make($request->all(), [
-                'payment' => 'required|string',
-            ]);
-            if ($validator->fails())
-                return  $this->response->errorResponse($validator->errors());
-        }
-        Log::info(json_encode($request->all())); // Registra parametros de solicitud
+        $sale = "";
 
         $ip = $request->ip(); // Obtener la IP del cliente
         Log::error('IP para bloquear alvic:'. $ip);
@@ -337,13 +317,59 @@ class BalanceController extends Controller
         }
         Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 15 segundos
 
-        // // Comprobar si ya existe codigo de referencia
-        // if(SalesQr::where([['reference_code', trim($request->code)]])->exists())
-        //     return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
+        if ($request->qr)
+            $request->merge(['code' => $request->qr]);
 
-        // Consultar informacion de venta desde Alvic
-        // $sale = $this->getSaleOfStationA(trim($request->code), 1); //1=Get, 2=Post
-        $sale = $this->getSaleOfStationA($request, 1); //1=Get, 2=Post
+
+        //Si contiene station el ticket ya fue facturado
+        if( isset($request->station) ){
+
+            //Validacion de campos de un ticket ya facturado
+            $validator = Validator::make($request->all(), [
+            'station' => 'required|string|exists:station,number_station_alvic',
+            'sale'  => 'required|string',
+            'hour'  => 'required|date_format:H:i'
+            ]);
+            if ($validator->fails()) {return $this->response->errorResponse($validator->errors()); }
+
+            //Se verifica la informacion con alvic para proceder a la suma de puntos
+            $sale = $this->getSaleOfStationANumber( $request );
+            // echo json_encode( $sale );
+            Log::info(json_encode($request->all())); // Registra parametros de solicitud
+
+        }else{//Solo cuando el ticket no esta facturado
+
+            $validator = Validator::make($request->all(), [
+                'code' => 'required|string|min:16',
+                'type' => 'required|string|in:qr,form',
+                'hour' => 'required|date_format:H:i'
+            ],[
+                'hour.date_format' => 'El formato de hora no es válido',
+            ]);
+            if ($validator->fails())
+                return  $this->response->errorResponse($validator->errors());
+
+            if($request->type=="form"){ //si type es form es requerido el campo payment
+                $validator = Validator::make($request->all(), [
+                    'payment' => 'required|string',
+                ]);
+                if ($validator->fails())
+                    return  $this->response->errorResponse($validator->errors());
+            }
+            Log::info(json_encode($request->all())); // Registra parametros de solicitud
+
+
+
+            // // Comprobar si ya existe codigo de referencia
+            // if(SalesQr::where([['reference_code', trim($request->code)]])->exists())
+            //     return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
+
+            // Consultar informacion de venta desde Alvic
+            // $sale = $this->getSaleOfStationA(trim($request->code), 1); //1=Get, 2=Post
+            $sale = $this->getSaleOfStationA($request, 1); //1=Get, 2=Post
+        }
+        // echo json_encode($sale);
+
         if (is_string($sale))
             return $this->response->errorResponse($sale);
         // echo json_encode($sale);
@@ -421,6 +447,152 @@ class BalanceController extends Controller
         }
         return $this->response->errorResponse('La estación no existe. Intente con el formulario.');
     }
+
+
+
+     // Metodo para sumar puntos QR o formulario
+     public function addPointsAlvicNewSection(Request $request)
+     {
+         $sale = "";
+
+         $ip = $request->ip(); // Obtener la IP del cliente
+         Log::error('IP para bloquear alvic:'. $ip);
+         // Verificar si la IP está bloqueada
+         if(Cache::has('blocked_ip_' . $ip)) {
+             return  $this->response->errorResponse("Demasiadas solicitudes. Inténtalo de nuevo más tarde.");
+         }
+         Cache::put('blocked_ip_' . $ip, true, 10); // Bloquear la IP por 15 segundos
+
+         if ($request->qr)
+             $request->merge(['code' => $request->qr]);
+
+
+         //Si contiene station el ticket ya fue facturado
+         if( isset($request->station) ){
+
+             //Validacion de campos de un ticket ya facturado
+             $validator = Validator::make($request->all(), [
+             'station' => 'required|string|exists:station,number_station_alvic',
+             'sale'  => 'required|string',
+             'hour'  => 'required|date_format:H:i'
+             ]);
+             if ($validator->fails()) {return $this->response->errorResponse($validator->errors()); }
+
+             //Se verifica la informacion con alvic para proceder a la suma de puntos
+             $sale = $this->getSaleOfStationANumber( $request );
+             // echo json_encode( $sale );
+             Log::info(json_encode($request->all())); // Registra parametros de solicitud
+
+         }else{//Solo cuando el ticket no esta facturado
+
+             $validator = Validator::make($request->all(), [
+                 'code' => 'required|string|min:16',
+                 'type' => 'required|string|in:qr,form',
+                 'hour' => 'required|date_format:H:i'
+             ],[
+                 'hour.date_format' => 'El formato de hora no es válido',
+             ]);
+             if ($validator->fails())
+                 return  $this->response->errorResponse($validator->errors());
+
+             if($request->type=="form"){ //si type es form es requerido el campo payment
+                 $validator = Validator::make($request->all(), [
+                     'payment' => 'required|string',
+                 ]);
+                 if ($validator->fails())
+                     return  $this->response->errorResponse($validator->errors());
+             }
+             Log::info(json_encode($request->all())); // Registra parametros de solicitud
+
+
+
+             // // Comprobar si ya existe codigo de referencia
+             // if(SalesQr::where([['reference_code', trim($request->code)]])->exists())
+             //     return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
+
+             // Consultar informacion de venta desde Alvic
+             // $sale = $this->getSaleOfStationA(trim($request->code), 1); //1=Get, 2=Post
+             $sale = $this->getSaleOfStationA($request, 1); //1=Get, 2=Post
+         }
+         // echo json_encode($sale);
+
+         if (is_string($sale))
+             return $this->response->errorResponse($sale);
+         // echo json_encode($sale);
+         // die();
+         // $sale["station"] = '00010';
+         //TODO:Validacion temporal para respuesta de estacion -1
+         if( $sale["station"] == "-1" ){
+             if( $sale["validation"] == 409 ){
+                 return $this->response->errorResponse("Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.", 409);
+             }
+             return $this->response->errorResponse('Inténtelo más tarde');
+         }else{
+             if( $sale["validation"] == 409 ){
+                 return $this->response->errorResponse("Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.", 409);
+             }
+         }
+
+         // Agregar datos al request
+         $request->merge(['station'=>trim($sale['station']), 'sale'=>trim($sale['sale']), 'reference_code'=>trim($sale['code'])]);
+
+         Log::info('IP bloqueado alvic:'. $ip .' para la venta:'.$request->sale .' - estacion: '.$request->station);
+
+         if ($station = Station::where('number_station_alvic', $request->station)->first()) {
+             if(SalesQr::where('sale', $request->sale)->where('station_id', $station->id)->exists())
+                 return $this->response->errorResponse('Esta venta ya fue sumada anteriormente');
+
+             // if ($station = Station::where('number_station', $request->station)->first()) {
+             // $dns = 'http://' . $station->dns . '/sales/public/points.php?sale=' . $request->sale . '&code=' . $request->code;
+             $saleQr = SalesQr::where([['sale', $request->sale], ['station_id', $station->id]])->first();
+             if ($saleQr && $saleQr->points == 0) {
+                 if ($sale['gasoline_id'] == 3) { //diesel
+                     $saleQr->delete();
+                     return $this->response->errorResponse('La suma de puntos no aplica para el producto diésel.');
+                 }
+                 // $sale = $this->sendDnsMessage($station, $dns, $saleQr);
+                 // if (is_string($sale))
+                 //     return $this->response->errorResponse($sale);
+                 $data = $this->status_L(1, $sale, $request, $station, $this->user, $saleQr);
+                 if (is_string($data))
+                     return $this->response->errorResponse($data);
+                 $saleQr->update($data->all());
+                 return $this->addPointsEucomb($this->user, $data->points);
+             }
+
+             if (count(SalesQr::where([['client_id', $this->client->id]])->whereDate('created_at', now()->format('Y-m-d'))->get()) < 4) {
+                 // $sale = $this->sendDnsMessage($station, $dns);
+                 // if (is_string($sale))
+                 //     return $this->response->errorResponse($sale);
+                 // return $sale;
+                 $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                 $start = $dateSale->modify('+2 minute');
+                 $dateSale = new DateTime(substr($sale['date'], 0, 4) . '-' . substr($sale['date'], 4, 2) . '-' . substr($sale['date'], 6, 2) . ' ' . $sale['hour']);
+                 $dateSale->modify('+2 minute');
+                 $end = $dateSale->modify('+48 hours');
+                 if (now() < $start)
+                     return $this->response->errorResponse("Escanee su QR {$start->diff(now())->i} minutos despues de su compra");
+                 if (now() > $end)
+                     return $this->response->errorResponse('Han pasado 24 hrs para escanear su QR');
+                 $data = $this->status_L(1, $sale, $request, $station, $this->user);
+                 if (is_string($data))
+                     return $this->response->errorResponse($data);
+                 $qr = SalesQr::create($data->all());
+                 $pointsEucomb = Empresa::find(1)->double_points;
+                 $points = $this->addEightyPoints($this->client->id, $request->liters, $pointsEucomb, $start);
+                 if ($points == 0) {
+                     $qr->delete();
+                     $limit = $pointsEucomb * 80;
+                     return $this->response->errorResponse("Ha llegado al límite de $limit puntos por día");
+                 } else {
+                     $qr->update(['points' => $points]);
+                 }
+                 return $this->addPointsEucomb($this->user, $points);
+             }
+             return $this->response->errorResponse('Solo puedes validar 4 QR\'s por día');
+         }
+         return $this->response->errorResponse('La estación no existe. Intente con el formulario.');
+     }
 
     // Método para realizar canjes
     public function exchange(Request $request)
@@ -814,6 +986,97 @@ class BalanceController extends Controller
             }
             return 'Intente más tarde';
         } catch (Exception $e) {
+            return 'Intente más tarde';
+        }
+    }
+
+     /**
+     * *Metodo para consultar la informacion de una veta facturada
+     * @param object $request : Objeto que contiene la informacion enviada por post
+     */
+    private function getSaleOfStationANumber( $request = null ){
+        try {
+            $station = trim($request->station);
+            $sale = trim($request->sale);
+            $type = trim($request->type);
+            $hour = trim($request->hour);
+
+            $params = array('station'=>$station, 'sale'=>$sale, 'type'=>$type, 'hour' => $hour);
+            $payment = 0.0;
+            if( isset($request->payment) ){
+                $payment = $request->payment;
+                $params['payment'] = $payment;
+            }
+            $host = "https://gasofac.mx/AlvicFac/api_sales/getSaleByNumber";
+
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_URL, $host);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+            // curl_setopt($curl, CURLOPT_ENCODING, '');
+            // curl_setopt($curl, CURLOPT_MAXREDIRS, 10);
+            curl_setopt($curl, CURLOPT_TIMEOUT, 0);
+            curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'POST');
+            // curl_setopt($curl, CURLOPT_POSTFIELDS, array('code'=>$code));  //Habilita si es form data
+            // curl_setopt($curl, CURLOPT_POSTFIELDS, '{"code": "'.$code.'"}'); // Habilita si es raw
+            // curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type: application/json')); // Habilita si es raw
+            // curl_setopt($curl, CURLOPT_POSTFIELDS, 'code='.$code); // Habilita si es urlencode
+            // curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded')); // Habilita si es urlencode
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $params);  //Habilita si es form data
+
+            $contents = curl_exec($curl);
+            $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE); // Obtener el código de estado HTTP
+            curl_close($curl);
+            // echo json_encode($contents);
+            // Validaciones
+            if($httpCode==500){
+                return 'El servidor no pudo responder.';
+            }
+
+            if($httpCode==400 || $httpCode==404){
+                return 'El código es incorrecto. Verifique la información del ticket.';
+            }
+
+            if($httpCode==200){
+                if ($contents) {
+                    $contents = preg_replace('/[\x00-\x1F\x80-\xFF]/', '', $contents);
+                    $sale = json_decode($contents, true);
+
+                    if (is_string($sale)){ return $sale; } //No continua
+
+                    if($sale['validation']==500){
+                        return 'El servidor no pudo responder.';
+                    }
+                    if($sale['validation']==404 && $sale['sale']!=''){
+                        return 'Verifica tus datos.';
+                    }
+                    if($sale['validation']==400 || $sale['validation']==404){
+                        return 'Esta venta no existe, verifica el texto escrito.';
+                    }
+                    if($sale['validation']==422){
+                        return 'Solamente puedes sumar tickets que incluyan combustible en la compra.';
+                    }
+                    if(!isset($sale['station'])){
+                        return 'No puede continuar la suma de puntos, falta el número de estación.';
+                    }
+
+                    if(isset($sale['no_bomb'])){
+                        if(empty($sale['no_bomb'])){
+                            $sale['no_bomb'] = 1;
+                        }
+                    }else{
+                        $sale['no_bomb'] = 1;
+                    }
+
+                    if ($sale['gasoline_id'] == 3) {
+                        return 'La suma de puntos no aplica para el producto diésel.';
+                    }
+                    return $sale;
+                }
+            }
+            return 'Intente más tarde';
+        } catch (\Throwable $th) {
             return 'Intente más tarde';
         }
     }

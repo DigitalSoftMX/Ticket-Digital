@@ -39,6 +39,7 @@ Route::group(['middleware' => 'jwtAuth'], function () {
     Route::post('points', 'Api\BalanceController@addPoints');
     Route::post('exchange', 'Api\BalanceController@exchange');
     Route::post('points/alvic', 'Api\BalanceController@addPointsAlvic');
+    Route::post('points/alvic/new/section', 'Api\BalanceController@addPointsAlvicNewSection');
     Route::get('get/station/list', 'Api\BalanceController@getStationList');
 });
 //Rutas para contactos
