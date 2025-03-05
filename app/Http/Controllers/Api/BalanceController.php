@@ -226,6 +226,12 @@ class BalanceController extends Controller
     // Metoodo para sumar de puntos QR o formulario
     public function addPoints(Request $request)
     {
+        /**
+         * TODO: Mensaje de actualizacion de aplicacion
+         * Este mensaje trunca todo el proceso de suma de puntos Eucomb viejito
+         */
+        return $this->response->errorResponse("Para una mejor experiencia, actualiza tu aplicación");
+
         if ($request->qr)
             $request->merge(['code' => substr($request->qr, 0, 15), 'station' => substr($request->qr, 15, 5), 'sale' => substr($request->qr, 20)]);
         $validator = Validator::make($request->all(), [
