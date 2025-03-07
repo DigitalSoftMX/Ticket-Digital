@@ -230,7 +230,7 @@ class BalanceController extends Controller
          * TODO: Mensaje de actualizacion de aplicacion
          * Este mensaje trunca todo el proceso de suma de puntos Eucomb viejito
          */
-        //return $this->response->errorResponse("Para una mejor experiencia, actualiza tu aplicación");
+        return $this->response->errorResponse("Para una mejor experiencia, actualiza tu aplicación");
 
         if ($request->qr)
             $request->merge(['code' => substr($request->qr, 0, 15), 'station' => substr($request->qr, 15, 5), 'sale' => substr($request->qr, 20)]);
@@ -318,7 +318,7 @@ class BalanceController extends Controller
          * TODO: Mensaje de actualizacion de aplicacion
          * Este mensaje trunca todo el proceso de suma de puntos Eucomb viejito
          */
-        //return $this->response->errorResponse("Para una mejor experiencia, actualiza tu aplicación");
+        return $this->response->errorResponse("Para una mejor experiencia, actualiza tu aplicación");
 
         $sale = "";
 
