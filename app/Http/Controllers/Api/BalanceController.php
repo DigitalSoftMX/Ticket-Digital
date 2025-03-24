@@ -538,7 +538,8 @@ class BalanceController extends Controller
          //TODO:Validacion temporal para respuesta de estacion -1
          if( $sale["station"] == "-1" ){
              if( $sale["validation"] == 409 ){
-                 return $this->response->errorResponse("Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.", 409);
+                //  return $this->response->errorResponse("Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.", 409);
+                return $this->response->errorResponse("Esta venta no existe, verifica tus datos", 200);
              }
              return $this->response->errorResponse('Inténtelo más tarde');
          }else{
@@ -960,7 +961,7 @@ class BalanceController extends Controller
                         return 'El servidor no pudo responder.';
                     }
                     if($sale['validation']==404 && $sale['sale']!=''){
-                        return 'Verifica tus datos.';
+                        return 'Esta venta no existe, verifica tus datos.';
                     }
                     if($sale['validation']==400 || $sale['validation']==404){
                         return 'Esta venta no existe, verifica el texto escrito.';
