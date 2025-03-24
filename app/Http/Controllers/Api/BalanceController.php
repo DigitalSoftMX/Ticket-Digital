@@ -543,7 +543,8 @@ class BalanceController extends Controller
              return $this->response->errorResponse('Inténtelo más tarde');
          }else{
              if( $sale["validation"] == 409 ){
-                 return $this->response->errorResponse("Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.", 409);
+                // return $this->response->errorResponse("Esta venta ya fue facturada por lo cual se tiene que introducir el ticket de venta.", 409);
+                return $this->response->errorResponse("Esta venta no existe, verifica tus datos", 409);
              }
          }
 
