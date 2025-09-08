@@ -72,7 +72,11 @@ class Actions
     }
 
     // Notificar por whatsapp
-    public function notificationByWhatsapp($phone="", $body="", $imageUrl=""){
+    /**
+     * !DEPRECATED 2025-09-08
+     * Esta funcion se dejo de utilizar por que waapi dejo de funcionar
+     */
+    public function notificationByWhatsappDEPRECATED($phone="", $body="", $imageUrl=""){
         // Lalo
         // $token = 'WA5KeBGQqd72AI3dLaAfLaQHaQT8PLK5noRvxnQp71f8327b';
         // $instanceID = '22451';
@@ -118,6 +122,66 @@ class Actions
             return true;
         }
     }
+
+
+    public function notificationByWhatsapp($phone="", $body="", $imageUrl=""){
+        try {
+            $curl = curl_init();
+            $token = env("WASENDERAPI_TOKEN");
+
+            $params = [];
+            $params['to'] = "+52".$phone;
+            $params['text'] = $body;
+            if( $imageUrl != "" ){
+                 $params['imageUrl'] = $imageUrl;
+            }
+            // if( $type == "media" ){
+            //     if(!empty($file)){
+            //         $arrExtension = ['pdf', 'xls', 'xlsx', 'doc', 'docs', 'xml'];
+            //         $info = pathinfo($file);
+            //         $ext = strtolower($info['extension']);
+            //         if(in_array($ext, $arrExtension)) {
+            //             $params['documentUrl'] = $file;
+            //             $params['fileName'] = "document.".$info['extension'];
+            //         }else{
+            //             $params['imageUrl'] = $file;
+            //         }
+            //     }
+            // }
+
+            curl_setopt_array($curl, array(
+            CURLOPT_URL => 'https://wasenderapi.com/api/send-message',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($params),
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'Authorization: Bearer '.$token
+            ),
+            ));
+
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+            curl_close($curl);
+            // echo json_encode($response);
+            Log::info("Iniciando procesamiento de whatsapp: ".$phone);
+            Log::info( $response);
+            if($err){
+                Log::error("Ha ocurrido un error en: processMsgWhatsapp". $err);
+                return false;
+            } else {
+                return true;
+            }
+        } catch (\Throwable $th) {
+            Log::error("Ha ocurrido un error en el envio de whatsapp: ".$th);
+        }
+    }
+
 
     // Envío de correos electronicos por Brevo
     public static function notificationByEmail($data){
